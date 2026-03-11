@@ -1,0 +1,58 @@
+# ── Credenziali e token ───────────────────────────────────────────────────────
+.strava_token.json
+
+# ── Attività scaricate ────────────────────────────────────────────────────────
+activities/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# ── Ambienti virtuali ─────────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# ── File temporanei mappa ─────────────────────────────────────────────────────
+strava_map_*.html
+
+# ── Export generati ───────────────────────────────────────────────────────────
+*.pdf
+*.png
+*.csv
+
+# ── MongoDB dati locali ───────────────────────────────────────────────────────
+mongo-data/
+
+# ── IDE e editor ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*.swo
+*~
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini

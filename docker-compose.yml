@@ -1,0 +1,15 @@
+version: "3.8"
+services:
+  mongodb:
+    image: mongo:7
+    container_name: strava_mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - strava_mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: strava
+
+volumes:
+  strava_mongo_data:
