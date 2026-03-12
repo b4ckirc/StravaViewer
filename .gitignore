@@ -2,7 +2,7 @@
 .strava_token.json
 
 # ── Attività scaricate ────────────────────────────────────────────────────────
-activities/
+strava_activities/
 
 # ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
