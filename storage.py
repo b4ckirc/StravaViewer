@@ -6,7 +6,7 @@ Gestione storage corse:
 Entrambe espongono la stessa interfaccia.
 """
 
-import os, json, subprocess
+import os, json, subprocess, re
 from datetime import datetime
 from config import (MONGO_HOST, MONGO_PORT, MONGO_DB, MONGO_COLL, DOCKER_COMPOSE)
 
@@ -30,7 +30,7 @@ class JSONStorage:
         """Salva l'attività come file JSON. Ritorna il path del file."""
         act_id   = data.get("id", "unknown")
         date_str = (data.get("start_date_local", "")[:10]) or "nodate"
-        name     = data.get("name", "activity")[:40].replace("/", "-").replace("\\", "-")
+        name     = _sanitize_filename(data.get("name", "activity"))
         filename = f"{date_str}_{act_id}_{name}.json"
         path     = os.path.join(self.directory, filename)
         with open(path, "w", encoding="utf-8") as f:
@@ -241,6 +241,17 @@ def stop_mongo_container(compose_path: str) -> tuple[bool, str]:
 # ══════════════════════════════════════════════════════════════════════════════
 #  HELPERS INTERNI
 # ══════════════════════════════════════════════════════════════════════════════
+
+def _sanitize_filename(name: str, maxlen: int = 40) -> str:
+    """Rimuove caratteri non validi per nomi file (Windows/Unix) e tronca."""
+    # Caratteri vietati su Windows: < > : " / \ | ? * e caratteri di controllo
+    name = re.sub(r'[<>:"/\\|?*\x00-\x1f\x7f]', '-', name)
+    # Virgolette tipografiche e altri caratteri Unicode problematici
+    name = re.sub(r'[\u201c\u201d\u2018\u2019\u00ab\u00bb]', '-', name)
+    # Collassa trattini/spazi multipli e rimuovi bordi
+    name = re.sub(r'[-\s]{2,}', ' ', name).strip('-').strip()
+    return name[:maxlen]
+
 
 def _make_summary(data: dict, source: str, ref: str) -> dict:
     return {
