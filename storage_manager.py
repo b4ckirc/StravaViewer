@@ -139,3 +139,21 @@ class StorageManager:
         if self.mongo_ok and self.mongo_storage:
             return self.mongo_storage.stats_per_year()
         return []
+
+    def get_personal_records(self) -> dict:
+        """Miglior tempo per le principali distanze su tutto il database."""
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                return self.mongo_storage.get_best_efforts_records()
+            except Exception:
+                pass
+        return self.json_storage.get_best_efforts_records()
+
+    def scan_effort_names(self) -> set:
+        """Diagnostica: ritorna tutti i nomi di best effort presenti nel database."""
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                return self.mongo_storage.scan_effort_names()
+            except Exception:
+                pass
+        return self.json_storage.scan_effort_names()

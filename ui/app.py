@@ -3,8 +3,9 @@
 Finestra principale dell'applicazione Strava Viewer v3.0.
 """
 
-import json, tkinter as tk
+import json, os, tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+import config as _cfg
 from config import C, MAX_COMPARE, APP_NAME, APP_VERSION
 from models import ActivityData
 from storage_manager import StorageManager
@@ -69,7 +70,7 @@ class StravaApp(tk.Tk):
                  font=("Courier", 13, "bold"), fg=C["accent"],
                  bg=C["surface"]).pack(side="left", padx=20, pady=14)
 
-        # Status MongoDB (destra, prima degli altri bottoni)
+        # Status MongoDB (destra)
         self._mongo_status_var = tk.StringVar(value="MongoDB: …")
         self._mongo_status_lbl = tk.Label(
             topbar, textvariable=self._mongo_status_var,
@@ -78,12 +79,20 @@ class StravaApp(tk.Tk):
         self._mongo_status_lbl.pack(side="right", padx=20)
         self._mongo_status_lbl.bind("<Button-1>", lambda e: self._toggle_mongo())
 
+        # Bottoni destra → sinistra
         topbar_btn(topbar, "📂  APRI FILE",
                    self._open_file).pack(side="right", padx=4, pady=10)
         topbar_btn(topbar, "⬇  SCARICA DA STRAVA",
                    self._open_downloader, primary=True).pack(side="right", padx=4, pady=10)
         topbar_btn(topbar, "💾  ESPORTA",
                    self._export_menu).pack(side="right", padx=4, pady=10)
+        topbar_btn(topbar, "📦  DATABASE",
+                   self._database_menu).pack(side="right", padx=4, pady=10)
+
+        # Toggle tema
+        theme_lbl = "🌙  SCURO" if _cfg._current_theme[0] == "light" else "☀  CHIARO"
+        topbar_btn(topbar, theme_lbl,
+                   self._toggle_theme).pack(side="right", padx=4, pady=10)
 
         # Notebook
         style = ttk.Style()
@@ -116,7 +125,6 @@ class StravaApp(tk.Tk):
             setattr(self, attr, frame)
             self.nb.add(frame, text=label)
 
-        # Aggiorna libreria quando si clicca sulla tab
         self.nb.bind("<<NotebookTabChanged>>", self._on_tab_changed)
 
     def _on_tab_changed(self, event):
@@ -140,6 +148,31 @@ class StravaApp(tk.Tk):
                  font=("Courier", 12), fg=C["text_dim"], bg=C["bg"],
                  justify="center").pack(expand=True)
         self._render_library()
+
+    # ── Tema chiaro/scuro ─────────────────────────────────────────────────────
+
+    def _toggle_theme(self):
+        if _cfg._current_theme[0] == "dark":
+            C.update(_cfg.C_LIGHT)
+            _cfg._current_theme[0] = "light"
+        else:
+            C.update(_cfg.C_DARK)
+            _cfg._current_theme[0] = "dark"
+        self._rebuild()
+
+    def _rebuild(self):
+        """Distrugge e ricostruisce tutta la UI con la palette C aggiornata."""
+        act = self.activity
+        cmp = list(self.cmp_list)
+        for w in self.winfo_children():
+            w.destroy()
+        self.configure(bg=C["bg"])
+        self._build_ui()
+        self.cmp_list = cmp
+        if act:
+            self._load_activity(act)
+        else:
+            self._show_welcome()
 
     # ── Apertura file JSON singolo ────────────────────────────────────────────
 
@@ -209,7 +242,6 @@ class StravaApp(tk.Tk):
         if not self.activity and not self.cmp_list:
             messagebox.showinfo("Info", "Seleziona almeno un'attività.")
             return
-        # Se non c'è attività principale, usa la prima della lista
         if self.activity:
             all_acts = [self.activity] + self.cmp_list
         else:
@@ -236,14 +268,14 @@ class StravaApp(tk.Tk):
             import threading
             threading.Thread(target=self._try_connect_mongo, daemon=True).start()
 
-    # ── Export ────────────────────────────────────────────────────────────────
+    # ── Export attività corrente ───────────────────────────────────────────────
 
     def _export_menu(self):
         if not self.activity:
             messagebox.showinfo("Info", "Apri prima un'attività da analizzare.")
             return
         win = tk.Toplevel(self)
-        win.title("Esporta")
+        win.title("Esporta attività")
         win.configure(bg=C["bg"])
         win.geometry("340x250")
         win.resizable(False, False)
@@ -252,14 +284,106 @@ class StravaApp(tk.Tk):
                  bg=C["bg"]).pack(pady=(20, 12))
         b = dict(font=("Courier", 10, "bold"), bd=0, pady=10,
                  cursor="hand2", relief="flat", width=28)
-        tk.Button(win, text="📊  PNG — Grafici",     bg=C["surface2"], fg=C["text"],
+        tk.Button(win, text="📊  PNG — Grafici",  bg=C["surface2"], fg=C["text"],
                   command=lambda: [win.destroy(), self._export_png()], **b).pack(pady=4)
-        tk.Button(win, text="📄  PDF — Report",      bg=C["surface2"], fg=C["text"],
+        tk.Button(win, text="📄  PDF — Report",   bg=C["surface2"], fg=C["text"],
                   command=lambda: [win.destroy(), self._export_pdf()], **b).pack(pady=4)
-        tk.Button(win, text="📋  CSV — Splits",      bg=C["surface2"], fg=C["text"],
+        tk.Button(win, text="📋  CSV — Splits",   bg=C["surface2"], fg=C["text"],
                   command=lambda: [win.destroy(), self._export_csv()], **b).pack(pady=4)
-        tk.Button(win, text="✕  Annulla",            bg=C["bg"],       fg=C["text_dim"],
+        tk.Button(win, text="✕  Annulla",         bg=C["bg"],       fg=C["text_dim"],
                   command=win.destroy, **b).pack(pady=(8, 0))
+
+    # ── Database backup/restore ────────────────────────────────────────────────
+
+    def _database_menu(self):
+        win = tk.Toplevel(self)
+        win.title("Database")
+        win.configure(bg=C["bg"])
+        win.geometry("340x220")
+        win.resizable(False, False)
+        tk.Label(win, text="GESTIONE DATABASE",
+                 font=("Courier", 10, "bold"), fg=C["accent"],
+                 bg=C["bg"]).pack(pady=(20, 12))
+        b = dict(font=("Courier", 10, "bold"), bd=0, pady=10,
+                 cursor="hand2", relief="flat", width=28)
+        tk.Button(win, text="📦  Esporta tutto (ZIP)",  bg=C["surface2"], fg=C["text"],
+                  command=lambda: [win.destroy(), self._export_zip()], **b).pack(pady=4)
+        tk.Button(win, text="📥  Importa da ZIP",       bg=C["surface2"], fg=C["text"],
+                  command=lambda: [win.destroy(), self._import_zip()], **b).pack(pady=4)
+        tk.Button(win, text="✕  Annulla",               bg=C["bg"],       fg=C["text_dim"],
+                  command=win.destroy, **b).pack(pady=(8, 0))
+
+    def _export_zip(self):
+        import zipfile
+        path = filedialog.asksaveasfilename(
+            defaultextension=".zip",
+            initialfile="strava_backup.zip",
+            filetypes=[("ZIP", "*.zip")])
+        if not path:
+            return
+        try:
+            count = 0
+            with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
+                if self.storage.mongo_ok and self.storage.mongo_storage:
+                    # Esporta da MongoDB
+                    cursor = self.storage.mongo_storage._coll.find({})
+                    for doc in cursor:
+                        doc.pop("_id", None)
+                        act_id   = doc.get("id", "unknown")
+                        date_str = (doc.get("start_date_local", "")[:10]) or "nodate"
+                        raw_name = doc.get("name", "activity")[:40]
+                        import re as _re
+                        safe_name = _re.sub(r'[<>:"/\\|?*\x00-\x1f]', '-', raw_name).strip()
+                        fname = f"{date_str}_{act_id}_{safe_name}.json"
+                        zf.writestr(fname,
+                                    json.dumps(doc, ensure_ascii=False, indent=2))
+                        count += 1
+                else:
+                    # Esporta da file JSON locali
+                    json_dir = self.storage.json_storage.directory
+                    for fname in os.listdir(json_dir):
+                        if fname.endswith(".json"):
+                            zf.write(os.path.join(json_dir, fname), fname)
+                            count += 1
+            messagebox.showinfo("Export ZIP",
+                                f"Backup completato.\n{count} corse esportate in:\n{path}")
+        except Exception as e:
+            messagebox.showerror("Errore export ZIP", str(e))
+
+    def _import_zip(self):
+        import zipfile
+        path = filedialog.askopenfilename(
+            title="Seleziona backup ZIP",
+            filetypes=[("ZIP", "*.zip"), ("Tutti", "*.*")])
+        if not path:
+            return
+        try:
+            new_count  = 0
+            skip_count = 0
+            err_count  = 0
+            with zipfile.ZipFile(path, "r") as zf:
+                names = [n for n in zf.namelist() if n.endswith(".json")]
+                for name in names:
+                    try:
+                        data = json.loads(zf.read(name).decode("utf-8"))
+                        sid  = data.get("id")
+                        if sid and self.storage.exists(sid):
+                            skip_count += 1
+                            continue
+                        self.storage.json_storage.save(data)
+                        if self.storage.mongo_ok and self.storage.mongo_storage:
+                            self.storage.mongo_storage.save(data)
+                        new_count += 1
+                    except Exception:
+                        err_count += 1
+            messagebox.showinfo("Import ZIP",
+                                f"Importazione completata:\n"
+                                f"• {new_count} corse importate\n"
+                                f"• {skip_count} già presenti (saltate)\n"
+                                f"• {err_count} errori")
+            self._render_library()
+        except Exception as e:
+            messagebox.showerror("Errore import ZIP", str(e))
 
     def _export_png(self):
         if not self.activity:

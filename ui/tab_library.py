@@ -73,6 +73,14 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     tk.Label(fbar, text="(YYYY-MM-DD)", font=("Courier", 7),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left", padx=(4, 12))
 
+    races_var = tk.BooleanVar(value=False)
+    tk.Checkbutton(
+        fbar, text="Solo gare", variable=races_var,
+        font=("Courier", 8), fg=C["text"], bg=C["surface"],
+        selectcolor=C["surface2"], activebackground=C["surface"],
+        activeforeground=C["text"],
+    ).pack(side="left", padx=(4, 8))
+
     count_var = tk.StringVar(value="")
     tk.Label(fbar, textvariable=count_var, font=("Courier", 8),
              fg=C["green"], bg=C["surface"]).pack(side="right", padx=12)
@@ -172,6 +180,8 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
                 filters["date_to"] = datetime.strptime(date_to_var.get(), "%Y-%m-%d")
         except ValueError:
             pass
+        if races_var.get():
+            filters["races_only"] = True
 
         state["summaries"] = get_summaries(filters)
         state["page"]      = 0

@@ -23,6 +23,30 @@ C = {
     "orange":   "#f0883e",
 }
 
+# Copia immutabile del tema scuro (usata per ripristino)
+C_DARK = dict(C)
+
+# Tema chiaro
+C_LIGHT = {
+    "bg":       "#f0f2f5",
+    "surface":  "#ffffff",
+    "surface2": "#e2e8f0",
+    "border":   "#c4cdd6",
+    "accent":   "#fc4c02",
+    "accent2":  "#d43d00",
+    "text":     "#1c2128",
+    "text_dim": "#57606a",
+    "green":    "#1a7f37",
+    "blue":     "#0969da",
+    "purple":   "#6e40c9",
+    "yellow":   "#7d6514",
+    "red":      "#cf222e",
+    "orange":   "#953800",
+}
+
+# Stato corrente del tema ("dark" o "light") — lista mutabile per reference condivisa
+_current_theme = ["dark"]
+
 # Colori per confronto multiplo
 COMPARE_COLORS  = ["#58a6ff", "#fc4c02", "#3fb950", "#bc8cff", "#d29922"]
 COMPARE_MARKERS = ["o", "s", "^", "D", "P"]

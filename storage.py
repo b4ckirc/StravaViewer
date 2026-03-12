@@ -77,6 +77,55 @@ class JSONStorage:
                 return True
         return False
 
+    def scan_effort_names(self) -> set:
+        """Ritorna tutti i nomi di best effort univoci trovati nei file (diagnostica)."""
+        names = set()
+        for fname in sorted(os.listdir(self.directory)):
+            if not fname.endswith(".json"):
+                continue
+            path = os.path.join(self.directory, fname)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception:
+                continue
+            for effort in data.get("best_efforts") or []:
+                n = effort.get("name", "")
+                if n:
+                    names.add(n)
+        return names
+
+    def get_best_efforts_records(self) -> dict:
+        """Scansiona tutti i file e ritorna il miglior tempo per le distanze principali."""
+        target = _build_effort_target()
+        records = {}
+        for fname in sorted(os.listdir(self.directory)):
+            if not fname.endswith(".json"):
+                continue
+            path = os.path.join(self.directory, fname)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception:
+                continue
+            act_name = data.get("name", "–")
+            act_date = (data.get("start_date_local") or "")[:10]
+            for effort in data.get("best_efforts") or []:
+                raw_name = effort.get("name", "")
+                canonical = target.get(raw_name)
+                if not canonical:
+                    continue
+                t = effort.get("elapsed_time")
+                if not t:
+                    continue
+                if canonical not in records or t < records[canonical]["elapsed_time"]:
+                    records[canonical] = {
+                        "elapsed_time": t,
+                        "activity_name": act_name,
+                        "date": act_date,
+                    }
+        return records
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  MONGODB STORAGE
@@ -111,7 +160,7 @@ class MongoStorage:
             "start_date_local": 1, "distance": 1, "moving_time": 1,
             "elapsed_time": 1, "total_elevation_gain": 1,
             "average_speed": 1, "average_heartrate": 1,
-            "calories": 1, "description": 1, "_id": 1,
+            "calories": 1, "description": 1, "workout_type": 1, "_id": 1,
         }).sort("start_date_local", -1)
         results = []
         for doc in cursor:
@@ -170,6 +219,43 @@ class MongoStorage:
 
     def close(self):
         self._client.close()
+
+    def scan_effort_names(self) -> set:
+        """Ritorna tutti i nomi di best effort univoci nel database (diagnostica)."""
+        pipeline = [
+            {"$unwind": "$best_efforts"},
+            {"$group": {"_id": "$best_efforts.name"}},
+        ]
+        return {doc["_id"] for doc in self._coll.aggregate(pipeline) if doc.get("_id")}
+
+    def get_best_efforts_records(self) -> dict:
+        """Ritorna il miglior tempo per le distanze principali via aggregazione MongoDB."""
+        target_map = _build_effort_target()
+        all_raw_names = list(target_map.keys())
+        pipeline = [
+            {"$unwind": "$best_efforts"},
+            {"$match": {"best_efforts.name": {"$in": all_raw_names}}},
+            {"$sort": {"best_efforts.elapsed_time": 1}},
+            {"$group": {
+                "_id": "$best_efforts.name",
+                "elapsed_time": {"$first": "$best_efforts.elapsed_time"},
+                "activity_name": {"$first": "$name"},
+                "date": {"$first": "$start_date_local"},
+            }},
+        ]
+        result = {}
+        for doc in self._coll.aggregate(pipeline):
+            canonical = target_map.get(doc["_id"])
+            if not canonical:
+                continue
+            existing = result.get(canonical)
+            if not existing or doc["elapsed_time"] < existing["elapsed_time"]:
+                result[canonical] = {
+                    "elapsed_time": doc["elapsed_time"],
+                    "activity_name": doc.get("activity_name", "–"),
+                    "date": (doc.get("date") or "")[:10],
+                }
+        return result
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -242,6 +328,41 @@ def stop_mongo_container(compose_path: str) -> tuple[bool, str]:
 #  HELPERS INTERNI
 # ══════════════════════════════════════════════════════════════════════════════
 
+# Mappa raw_name → canonical_key per i best effort Strava.
+# Copre le varianti note dell'API (inglese, formati alternativi).
+_EFFORT_ALIASES: dict[str, str] = {
+    # 1 km — Strava API usa "1K" (uppercase K)
+    "1K":           "1k",
+    "1k":           "1k",
+    "1 km":         "1k",
+    "1 kilometer":  "1k",
+    "1 Kilometer":  "1k",
+    # 5 km — Strava API usa "5K"
+    "5K":            "5k",
+    "5k":            "5k",
+    "5 km":          "5k",
+    "5 kilometers":  "5k",
+    "5 Kilometers":  "5k",
+    # 10 km — Strava API usa "10K"
+    "10K":            "10k",
+    "10k":            "10k",
+    "10 km":          "10k",
+    "10 kilometers":  "10k",
+    "10 Kilometers":  "10k",
+    # mezza maratona — Strava API usa "Half-Marathon"
+    "Half-Marathon":  "Half-Marathon",
+    "Half Marathon":  "Half-Marathon",
+    "half-marathon":  "Half-Marathon",
+    "half marathon":  "Half-Marathon",
+    # maratona — Strava API usa "Marathon"
+    "Marathon":  "Marathon",
+    "marathon":  "Marathon",
+}
+
+def _build_effort_target() -> dict[str, str]:
+    """Ritorna la mappa raw_name → canonical (es. '1k' → '1k')."""
+    return dict(_EFFORT_ALIASES)
+
 def _sanitize_filename(name: str, maxlen: int = 40) -> str:
     """Rimuove caratteri non validi per nomi file (Windows/Unix) e tronca."""
     # Caratteri vietati su Windows: < > : " / \ | ? * e caratteri di controllo
@@ -255,20 +376,21 @@ def _sanitize_filename(name: str, maxlen: int = 40) -> str:
 
 def _make_summary(data: dict, source: str, ref: str) -> dict:
     return {
-        "source":      source,        # "json" | "mongo"
-        "ref":         ref,            # path file o ObjectId
-        "strava_id":   data.get("id"),
-        "name":        data.get("name", "–"),
-        "sport_type":  data.get("sport_type", data.get("type", "Run")),
-        "start_date":  data.get("start_date_local", ""),
-        "distance":    data.get("distance", 0),
-        "moving_time": data.get("moving_time", 0),
-        "elapsed_time":data.get("elapsed_time", 0),
-        "elev_gain":   data.get("total_elevation_gain", 0),
-        "avg_speed":   data.get("average_speed", 0),
-        "avg_hr":      data.get("average_heartrate"),
-        "calories":    data.get("calories"),
-        "description": data.get("description") or "",
+        "source":       source,        # "json" | "mongo"
+        "ref":          ref,            # path file o ObjectId
+        "strava_id":    data.get("id"),
+        "name":         data.get("name", "–"),
+        "sport_type":   data.get("sport_type", data.get("type", "Run")),
+        "start_date":   data.get("start_date_local", ""),
+        "distance":     data.get("distance", 0),
+        "moving_time":  data.get("moving_time", 0),
+        "elapsed_time": data.get("elapsed_time", 0),
+        "elev_gain":    data.get("total_elevation_gain", 0),
+        "avg_speed":    data.get("average_speed", 0),
+        "avg_hr":       data.get("average_heartrate"),
+        "calories":     data.get("calories"),
+        "description":  data.get("description") or "",
+        "workout_type": data.get("workout_type"),
     }
 
 def _passes(summary: dict, filters: dict) -> bool:
@@ -300,6 +422,8 @@ def _passes(summary: dict, filters: dict) -> bool:
         combined = (summary.get("name", "") + " " + summary.get("description", "")).lower()
         if name_q not in combined:
             return False
+    if filters.get("races_only") and summary.get("workout_type") != 1:
+        return False
     return True
 
 def _mongo_query(filters: dict) -> dict:
@@ -315,4 +439,6 @@ def _mongo_query(filters: dict) -> dict:
             q["start_date_local"]["$gte"] = date_from.isoformat()
         if date_to:
             q["start_date_local"]["$lte"] = date_to.isoformat()
+    if filters.get("races_only"):
+        q["workout_type"] = 1
     return q

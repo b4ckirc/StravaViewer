@@ -65,7 +65,7 @@ Confronto side-by-side di fino a 5 attività:
 ### Libreria
 Elenco di tutte le corse salvate nel database, con:
 - **Paginazione** — 100 righe per pagina con navigazione ◀ ▶
-- **Filtri** per nome/descrizione, distanza (min–max km), intervallo di date
+- **Filtri** per nome/descrizione, distanza (min–max km), intervallo di date, e **Solo gare** (filtra le attività con `workout_type = race`)
 - Apertura attività con 📂, aggiunta al confronto con ➕, eliminazione con 🗑
 - Indicatore della fonte dati attiva (MongoDB o File JSON)
 
@@ -74,6 +74,15 @@ Statistiche aggregate su **tutte** le corse nel database (ignora filtri e pagina
 - Totali: corse, km, ore, dislivello, passo medio, HR media, calorie, km/settimana
 - Tabella per anno con km, corse, tempo, passo medio, dislivello
 - Grafici: km per anno, corse per anno, distribuzione distanze (torta)
+- **Record personali** — tabella con il miglior tempo personale per le distanze canoniche (1 km, 5 km, 10 km, Mezza Maratona, Maratona), con nome attività e data in cui è stato realizzato
+
+### Database
+Dal menu **DATABASE** nella topbar:
+- **Esporta ZIP** — esporta tutte le attività del database in un archivio `.zip` (file JSON per ogni corsa); utile come backup o per spostare il database su un'altra macchina
+- **Importa ZIP** — importa un archivio `.zip` precedentemente esportato; le attività già presenti vengono saltate (deduplicazione per Strava ID); le nuove vengono salvate su JSON e, se disponibile, su MongoDB
+
+### Tema
+La topbar include un pulsante **☀ CHIARO / 🌙 SCURO** per passare tra il tema scuro (default, ispirato a GitHub/Strava) e il tema chiaro. La preferenza non viene salvata tra le sessioni.
 
 ### Export
 Dal menu **ESPORTA** (richiede un'attività aperta):

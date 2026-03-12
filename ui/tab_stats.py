@@ -198,6 +198,75 @@ def render(tab, storage_mgr):
         cnv3.draw()
         cnv3.get_tk_widget().pack()
 
+    # ── Record personali ──────────────────────────────────────────────────────
+    section_label(body, "RECORD PERSONALI")
+    rec_outer = tk.Frame(body, bg=C["surface2"],
+                         highlightthickness=1, highlightbackground=C["border"])
+    rec_outer.pack(fill="x", padx=20, pady=(0, 24))
+
+    hrow = tk.Frame(rec_outer, bg=C["surface"])
+    hrow.pack(fill="x")
+    for col_text, w in [("DISTANZA", 18), ("TEMPO", 10), ("ATTIVITÀ", 34), ("DATA", 14)]:
+        tk.Label(hrow, text=col_text, font=("Courier", 8, "bold"),
+                 fg=C["text_dim"], bg=C["surface"],
+                 width=w, anchor="center", pady=8).pack(side="left", padx=3)
+
+    try:
+        records = storage_mgr.get_personal_records()
+    except Exception:
+        records = {}
+
+    DIST_ORDER = [
+        ("1k",            "🏃 1 km"),
+        ("5k",            "🏃 5 km"),
+        ("10k",           "🏃 10 km"),
+        ("Half-Marathon", "🏃 Mezza Maratona"),
+        ("Marathon",      "🏃 Maratona"),
+    ]
+    found_any = False
+    for i, (key, label) in enumerate(DIST_ORDER):
+        r = records.get(key)
+        bg = C["surface2"] if i % 2 == 0 else C["surface"]
+        row = tk.Frame(rec_outer, bg=bg)
+        row.pack(fill="x")
+        if r:
+            found_any = True
+            label_txt = label.replace("🏃", "🏆")
+            time_str  = fmt_time(r["elapsed_time"])
+            act_name  = (r["activity_name"] or "–")[:33]
+            date_str  = r["date"]
+        else:
+            label_txt = label.replace("🏃", "  ")
+            time_str  = "–"
+            act_name  = "nessun dato"
+            date_str  = "–"
+        for v, col, w, anc in [
+            (label_txt, C["accent"],   18, "w"),
+            (time_str,  C["green"],    10, "center"),
+            (act_name,  C["text"],     34, "w"),
+            (date_str,  C["text_dim"], 14, "center"),
+        ]:
+            tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
+                     width=w, anchor=anc, pady=7, padx=4).pack(side="left")
+
+    if not found_any:
+        try:
+            found_names = storage_mgr.scan_effort_names()
+        except Exception:
+            found_names = set()
+        if found_names:
+            sample = ", ".join(f'"{n}"' for n in sorted(found_names)[:8])
+            hint = (f"  Nomi trovati nel database: {sample}\n"
+                    f"  I nomi attesi sono: \"1k\", \"5k\", \"10k\", "
+                    f"\"Half-Marathon\", \"Marathon\".\n"
+                    f"  Segnala i nomi trovati per aggiornare il riconoscimento.")
+        else:
+            hint = ("  Nessun best effort trovato. Le corse scaricate con activity:read_all\n"
+                    "  includono automaticamente i best efforts.")
+        tk.Label(rec_outer, text=hint,
+                 font=("Courier", 8), fg=C["text_dim"], bg=C["surface2"],
+                 pady=10, wraplength=760, justify="left").pack(anchor="w", padx=16)
+
 
 # ── Helper ────────────────────────────────────────────────────────────────────
 
