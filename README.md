@@ -31,10 +31,21 @@ Cinque grafici embedded nell'interfaccia:
 - Scatter plot HR vs passo con linea di tendenza e bande di zona
 
 ### Mappa GPS
-- Genera una mappa interattiva con percorso arancione su sfondo scuro (CartoDB dark matter)
-- Marker di inizio (verde) e fine (rosso) con popup informativi
-- La mappa si apre nel **browser predefinito** (Chrome, Edge, Firefox…)
-- Richiede il permesso Strava `activity:read_all` per la polyline GPS
+La mappa si apre nel **browser predefinito** (Chrome, Edge, Firefox…) e include:
+
+- **Layer switcher** — quattro sfondi selezionabili dal pannello in alto a destra:
+  - *Dark* (CartoDB dark matter, default)
+  - *OpenStreetMap*
+  - *Satellite* (Esri WorldImagery, immagini satellitari reali, senza API key)
+  - *Chiaro* (CartoDB positron)
+- **Tracciato colorato per passo** — la polyline è spezzata km per km con un gradiente verde → giallo → rosso (verde = km più veloce, rosso = km più lento); passando il mouse su ogni segmento compare il tooltip con passo, FC e dislivello del km
+- **Marker chilometrici** — un indicatore numerato per ogni km completato; cliccando si apre un popup con passo, FC media e dislivello di quel chilometro
+- **Popup Start/End arricchiti** — marker verde (inizio) e rosso (fine) con popup completi: data, distanza, tempo, passo medio/massimo, FC, dislivello, calorie, Suffer Score
+- **Overlay statistiche** — barra fissa in cima alla mappa con le metriche chiave dell'attività (nome, distanza, tempo, passo, FC, dislivello)
+- **Pulsante FullScreen** — espande la mappa a tutto schermo nel browser
+- **MiniMap** — mappa panoramica 150×150 nell'angolo in basso a destra per orientarsi durante lo zoom; togglable
+
+Richiede il permesso Strava `activity:read_all` per la polyline GPS e una connessione internet per caricare i tile nel browser.
 
 ### Splits
 Tabella scrollabile con i dati chilometro per chilometro:
@@ -212,7 +223,7 @@ I dati MongoDB vengono salvati in un volume Docker persistente e sopravvivono ai
 
 - La prima volta che si scaricano le corse viene aperto il browser per l'autenticazione Strava; nelle sessioni successive il token viene rinnovato automaticamente senza aprire il browser
 - Il download è incrementale: le corse già presenti nel database vengono saltate automaticamente
-- La mappa GPS richiede una connessione internet per caricare i tile CartoDB nel browser
+- La mappa GPS richiede una connessione internet per caricare i tile nel browser (CartoDB, OpenStreetMap, Esri Satellite)
 - L'export PDF richiede `matplotlib` installato
 
 ## Utilizzo IA

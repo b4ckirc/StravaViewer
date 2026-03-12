@@ -1,25 +1,80 @@
 # ── ui/tab_map.py ─────────────────────────────────────────────────────────────
 """
-Tab mappa: genera HTML folium e lo apre nel browser di sistema.
-Nessun widget embedded — zero interferenze con tkinter.
+Tab mappa: genera HTML folium interattivo e lo apre nel browser.
+Funzionalità:
+  A – Layer switcher: Dark / OpenStreetMap / Satellite (Esri) / Chiaro
+  B – Tracciato colorato per passo al km (verde=veloce → rosso=lento)
+  C – Marker chilometrici cliccabili con popup (passo, FC, dislivello)
+  D – Pulsante FullScreen
+  E – MiniMap nell'angolo
+  F – Popup ricco su Start/End + overlay statistiche in cima alla mappa
 """
 
-import os, tempfile, tkinter as tk, webbrowser
+import colorsys
+import os
+import tempfile
+import tkinter as tk
+import webbrowser
+
 from config import C
-from models import fmt_dist, fmt_time
-from ui.widgets import no_data, clear
+from models import fmt_dist, fmt_time, fmt_pace, speed_to_pace, pace_label
+from ui.widgets import clear
 
 try:
     import folium
+    import folium.plugins
     HAS_FOLIUM = True
 except ImportError:
     HAS_FOLIUM = False
 
 
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+def _val_to_color(t: float) -> str:
+    """t: 0.0 (veloce/ottimo) → 1.0 (lento/peggio) → colore verde→giallo→rosso."""
+    hue = (1.0 - max(0.0, min(1.0, t))) * 0.333
+    r, g, b = colorsys.hls_to_rgb(hue, 0.45, 1.0)
+    return f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}"
+
+
+def _distribute_pts(pts: list, splits: list) -> list[list]:
+    """
+    Distribuisce i punti GPS tra gli split proporzionalmente alla distanza.
+    Ritorna lista di segmenti (ognuno è una lista di punti GPS).
+    I segmenti si sovrappongono di 1 punto per eliminare i gap visuali.
+    """
+    if not splits:
+        return [pts]
+    total_dist = sum(s.get("distance", 0) for s in splits)
+    if total_dist <= 0:
+        return [pts]
+    n = len(pts)
+    segments = []
+    prev_idx = 0
+    cumulative = 0.0
+    for i, split in enumerate(splits):
+        cumulative += split.get("distance", 0) / total_dist
+        end_idx = n - 1 if i == len(splits) - 1 else min(round(cumulative * n), n - 1)
+        seg = pts[prev_idx: end_idx + 1]
+        if len(seg) >= 2:
+            segments.append(seg)
+        prev_idx = end_idx  # overlap di 1 punto → nessun gap tra segmenti
+    return segments if segments else [pts]
+
+
+def _gps_pos_at_dist(pts: list, target_m: float, total_dist: float):
+    """Ritorna il punto GPS alla distanza target_m lungo la route."""
+    if target_m >= total_dist or total_dist <= 0:
+        return None
+    idx = min(round(target_m / total_dist * len(pts)), len(pts) - 1)
+    return pts[idx]
+
+
+# ── Render ─────────────────────────────────────────────────────────────────────
+
 def render(tab, activity):
     clear(tab)
 
-    # Contenuto statico: solo label e pulsante, nessun canvas/frame espandibile
     if not HAS_FOLIUM:
         tk.Label(tab,
                  text="⚠️  Installa folium per la mappa:\n  pip install folium",
@@ -37,7 +92,6 @@ def render(tab, activity):
 
     a = activity
 
-    # Titolo
     tk.Label(tab,
              text=f"🗺  {a.name}",
              font=("Courier", 14, "bold"), fg=C["text"], bg=C["bg"]
@@ -53,10 +107,9 @@ def render(tab, activity):
              ).place(relx=0.5, rely=0.38, anchor="center")
 
     status_var = tk.StringVar(value="")
-    status_lbl = tk.Label(tab, textvariable=status_var,
-                          font=("Courier", 9), fg=C["text_dim"], bg=C["bg"],
-                          justify="center")
-    status_lbl.place(relx=0.5, rely=0.62, anchor="center")
+    tk.Label(tab, textvariable=status_var,
+             font=("Courier", 9), fg=C["text_dim"], bg=C["bg"],
+             justify="center").place(relx=0.5, rely=0.62, anchor="center")
 
     def _open_map():
         status_var.set("⏳ Generazione mappa…")
@@ -64,26 +117,196 @@ def render(tab, activity):
         try:
             pts    = a.gps_points
             center = pts[len(pts) // 2]
-            m = folium.Map(location=center, zoom_start=14,
-                           tiles="CartoDB dark_matter")
-            folium.PolyLine(pts, color="#fc4c02", weight=4.5,
-                            opacity=0.9, tooltip=a.name).add_to(m)
-            folium.Marker(pts[0],
-                          popup=f"🏁 Inizio — {a.date_str}",
+
+            # ── Mappa base (tiles=None → aggiungiamo i layer manualmente) ─────
+            m = folium.Map(location=center, zoom_start=14, tiles=None)
+
+            # ── A: Layer switcher ─────────────────────────────────────────────
+            folium.TileLayer(
+                "CartoDB dark_matter",
+                name="Dark (default)", overlay=False, control=True
+            ).add_to(m)
+            folium.TileLayer(
+                "OpenStreetMap",
+                name="OpenStreetMap", overlay=False, control=True
+            ).add_to(m)
+            folium.TileLayer(
+                tiles=("https://server.arcgisonline.com/ArcGIS/rest/services/"
+                       "World_Imagery/MapServer/tile/{z}/{y}/{x}"),
+                attr="Esri &mdash; Source: Esri, Maxar, GeoEye, Earthstar Geographics",
+                name="Satellite", overlay=False, control=True
+            ).add_to(m)
+            folium.TileLayer(
+                "CartoDB positron",
+                name="Chiaro", overlay=False, control=True
+            ).add_to(m)
+
+            # ── B: Tracciato colorato per passo ───────────────────────────────
+            splits = a.splits or []
+            if splits:
+                paces = [speed_to_pace(s.get("average_speed", 0))
+                         for s in splits if (s.get("average_speed") or 0) > 0]
+                pace_min = min(paces) if len(paces) > 1 else None
+                pace_max = max(paces) if len(paces) > 1 else None
+                segments = _distribute_pts(pts, splits)
+
+                for i, (seg, split) in enumerate(zip(segments, splits)):
+                    spd   = split.get("average_speed") or 0
+                    pace  = speed_to_pace(spd)
+                    hr    = split.get("average_heartrate")
+                    elev  = split.get("elevation_difference") or 0
+
+                    if pace and pace_min and pace_max and pace_max > pace_min:
+                        t = (pace - pace_min) / (pace_max - pace_min)
+                    else:
+                        t = 0.5
+                    color = _val_to_color(t)
+
+                    parts = [f"Km {i + 1}", f"Passo: {pace_label(pace)} /km"]
+                    if hr:
+                        parts.append(f"FC: {hr:.0f} bpm")
+                    if elev:
+                        parts.append(f"Δalt: {elev:+.0f} m")
+                    tooltip = "  •  ".join(parts)
+
+                    if len(seg) >= 2:
+                        folium.PolyLine(seg, color=color, weight=5.5,
+                                        opacity=0.95, tooltip=tooltip).add_to(m)
+            else:
+                # Fallback: polyline singola colore Strava
+                folium.PolyLine(pts, color="#fc4c02", weight=5.0,
+                                opacity=0.9, tooltip=a.name).add_to(m)
+
+            # ── C: Marker chilometrici ─────────────────────────────────────────
+            for i, split in enumerate(splits):
+                km_num   = i + 1
+                spd      = split.get("average_speed") or 0
+                pace     = speed_to_pace(spd)
+                hr       = split.get("average_heartrate")
+                elev     = split.get("elevation_difference") or 0
+                dist_m   = km_num * 1000
+                pos      = _gps_pos_at_dist(pts, dist_m, a.distance)
+                if pos is None:
+                    continue
+
+                rows = [f"<b>Km {km_num}</b>",
+                        f"Passo: <b>{pace_label(pace)} /km</b>"]
+                if hr:
+                    rows.append(f"FC: <b>{hr:.0f} bpm</b>")
+                if elev:
+                    rows.append(f"Dislivello: <b>{elev:+.0f} m</b>")
+                popup_html = (
+                    "<div style='font-family:monospace;font-size:13px;"
+                    "min-width:150px;padding:4px 6px;line-height:1.6'>"
+                    + "<br>".join(rows) + "</div>"
+                )
+                folium.Marker(
+                    pos,
+                    popup=folium.Popup(popup_html, max_width=200),
+                    icon=folium.DivIcon(
+                        html=(
+                            f"<div style='background:#1a1a2e;color:#fff;"
+                            f"border:2px solid #fc4c02;border-radius:50%;"
+                            f"width:22px;height:22px;line-height:18px;"
+                            f"text-align:center;font-size:9px;"
+                            f"font-weight:bold;font-family:monospace;"
+                            f"box-shadow:0 1px 4px rgba(0,0,0,.6)'>{km_num}</div>"
+                        ),
+                        icon_size=(22, 22),
+                        icon_anchor=(11, 11),
+                    )
+                ).add_to(m)
+
+            # ── F: Marker Start/End con popup ricco ───────────────────────────
+            start_rows = [
+                f"<b style='color:#2a9d5c;font-size:14px'>▶ Inizio</b>",
+                f"📅 {a.date_str}",
+                f"📏 {fmt_dist(a.distance)}",
+                f"⏱ {fmt_time(a.moving_time)}",
+                f"👟 {a.avg_pace_str} /km",
+            ]
+            if a.avg_hr:
+                start_rows.append(f"❤️ {a.avg_hr:.0f} bpm media")
+            start_rows.append(f"⛰ +{a.elev_gain:.0f} m")
+            if a.calories:
+                start_rows.append(f"🔥 {a.calories} kcal")
+            if a.suffer_score:
+                start_rows.append(f"💢 Suffer score: {a.suffer_score}")
+
+            end_rows = [
+                f"<b style='color:#e63946;font-size:14px'>⏹ Arrivo</b>",
+                f"📏 {fmt_dist(a.distance)}",
+                f"⏱ totale {fmt_time(a.elapsed_time)}",
+            ]
+            if a.max_speed:
+                end_rows.append(f"👟 max {a.max_pace_str} /km")
+            if a.max_hr:
+                end_rows.append(f"❤️ max {a.max_hr:.0f} bpm")
+
+            def _popup(rows):
+                body = "<br>".join(rows)
+                return folium.Popup(
+                    f"<div style='font-family:monospace;font-size:12px;"
+                    f"min-width:170px;padding:6px 8px;line-height:1.7'>"
+                    f"{body}</div>",
+                    max_width=220,
+                )
+
+            folium.Marker(pts[0],  popup=_popup(start_rows), tooltip="▶ Inizio",
                           icon=folium.Icon(color="green", icon="play")).add_to(m)
-            folium.Marker(pts[-1],
-                          popup=f"🏁 Fine — {fmt_dist(a.distance)}",
+            folium.Marker(pts[-1], popup=_popup(end_rows),   tooltip="⏹ Arrivo",
                           icon=folium.Icon(color="red",   icon="stop")).add_to(m)
 
+            # ── F: Overlay statistiche (barra in cima) ────────────────────────
+            hr_part  = f"&nbsp;|&nbsp; ❤️ {a.avg_hr:.0f} bpm" if a.avg_hr else ""
+            cal_part = f"&nbsp;|&nbsp; 🔥 {a.calories} kcal" if a.calories else ""
+            overlay_html = (
+                "<div style='"
+                "position:fixed;top:10px;left:50%;transform:translateX(-50%);"
+                "z-index:1000;background:rgba(13,17,23,0.88);color:#e6edf3;"
+                "font-family:monospace;font-size:12px;padding:7px 18px;"
+                "border-radius:6px;border:1px solid #fc4c02;"
+                "pointer-events:none;white-space:nowrap;"
+                "box-shadow:0 2px 8px rgba(0,0,0,.5)'>"
+                f"<b style='color:#fc4c02'>{a.name}</b>"
+                f"&nbsp;|&nbsp; 📏 {fmt_dist(a.distance)}"
+                f"&nbsp;|&nbsp; ⏱ {fmt_time(a.moving_time)}"
+                f"&nbsp;|&nbsp; 👟 {a.avg_pace_str}/km"
+                f"{hr_part}"
+                f"&nbsp;|&nbsp; ⛰ +{a.elev_gain:.0f} m"
+                f"{cal_part}"
+                "</div>"
+            )
+            m.get_root().html.add_child(folium.Element(overlay_html))
+
+            # ── D: FullScreen ─────────────────────────────────────────────────
+            folium.plugins.Fullscreen(
+                position="topright",
+                title="Schermo intero",
+                title_cancel="Esci da schermo intero",
+                force_separate_button=True,
+            ).add_to(m)
+
+            # ── E: MiniMap ────────────────────────────────────────────────────
+            folium.plugins.MiniMap(
+                toggle_display=True,
+                position="bottomright",
+                width=150, height=150,
+            ).add_to(m)
+
+            # ── Layer control (dopo D/E per posizione corretta) ───────────────
+            folium.LayerControl(collapsed=False, position="topright").add_to(m)
+
+            # ── Salva e apri nel browser ──────────────────────────────────────
             tmp = tempfile.NamedTemporaryFile(
                 suffix=".html", prefix="strava_map_", delete=False)
             map_path = tmp.name
             tmp.close()
             m.save(map_path)
-
             webbrowser.open(f"file:///{map_path.replace(os.sep, '/')}")
-            status_var.set(f"✅ Mappa aperta nel browser.")
+            status_var.set("✅ Mappa aperta nel browser.")
             btn.config(text="🗺  Riapri nel browser")
+
         except Exception as e:
             status_var.set(f"❌ Errore: {e}")
 
