@@ -136,7 +136,7 @@ Il flusso OAuth2 in `downloader.py`:
 ### Dipendenze Python
 
 ```
-pip install requests folium matplotlib pymongo
+pip install requests folium matplotlib pymongo tkinterweb
 ```
 
 | Libreria | Uso |
