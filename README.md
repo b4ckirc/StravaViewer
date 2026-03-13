@@ -89,6 +89,9 @@ Statistiche aggregate su **tutte** le corse nel database (ignora filtri e pagina
   - *ATL (Fatica)* — media ponderata esponenziale a 7 giorni
   - *TSB (Forma)* — CTL − ATL (positivo = riposato, negativo = affaticato)
 - **Record personali** — tabella con il miglior tempo personale per le distanze canoniche (1 km, 5 km, 10 km, Mezza Maratona, Maratona), con nome attività e data in cui è stato realizzato
+- **Analisi pendenza (Grade Analysis)** — grafico a barre del passo mediano suddiviso per 6 fasce di gradiente (da discesa ripida <−8% a salita >8%), calcolato dai split di 1 km registrati da Strava; filtri "Ultimi giorni" e "Solo gare"; i dati di questo grafico alimentano la correzione dislivello personalizzata della Previsione Prestazioni; pulsante ℹ con guida per fascia e suggerimenti di allenamento
+- **Curva di performance** — plot log-log distanza vs tempo sui best effort (da 400m alla maratona) con fit della legge di potenza `t = A × d^b`; i tempi usati sono il `moving_time` (escluse le pause); filtri "Ultimi giorni" e "Solo gare"; l'esponente `b` rivela il profilo atletico (velocista vs fondista, confronto con b=1.06 di Riegel); pulsante ℹ con teoria e guida interpretativa
+- **Previsione prestazioni (Monte Carlo)** — stima del tempo su qualsiasi distanza con simulazione di 5000 scenari; parametri configurabili: distanza target (standard o personalizzata in km), dislivello positivo del percorso, finestra temporale dello storico (ultimi N giorni), lunghezza minima e massima delle corse da cui reperire i best effort (km min/max), filtro solo gare; la correzione dislivello è personalizzata: viene calcolata tramite regressione lineare sui tuoi split reali (sec/km per 1% di pendenza), con fallback al modello Minetti se i dati sono insufficienti; il risultato è un istogramma con i percentili P10/P25/P50/P75/P90 e un pannello diagnostico con i dati usati nel fit, il coefficiente b e il tempo base grezzo; pulsante ℹ con guida completa su parametri, calcolo e interpretazione dei risultati
 
 ### Database
 Dal menu **DATABASE** nella topbar:
@@ -174,7 +177,7 @@ Il flusso OAuth2 in `downloader.py`:
 ### Dipendenze Python
 
 ```
-pip install requests folium matplotlib pymongo tkinterweb
+pip install requests folium matplotlib numpy pymongo tkinterweb
 ```
 
 | Libreria | Uso |
@@ -182,6 +185,7 @@ pip install requests folium matplotlib pymongo tkinterweb
 | `requests` | Chiamate API Strava |
 | `folium` | Generazione mappa HTML |
 | `matplotlib` | Grafici, export PNG/PDF |
+| `numpy` | Fit legge di potenza e simulazione Monte Carlo (curva performance + previsione gara) |
 | `pymongo` | Connessione MongoDB |
 | `tkinter` | Interfaccia grafica (incluso in Python standard) |
 

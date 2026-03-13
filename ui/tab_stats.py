@@ -190,6 +190,18 @@ def render(tab, storage_mgr):
     if HAS_MPL:
         _render_training_load(body, all_summaries)
 
+    # ── Analisi pendenza ──────────────────────────────────────────────────────
+    if HAS_MPL:
+        _render_grade_analysis(body, storage_mgr)
+
+    # ── Curva di performance ──────────────────────────────────────────────────
+    if HAS_MPL:
+        _render_performance_curve(body, storage_mgr)
+
+    # ── Previsione prestazioni ─────────────────────────────────────────────────
+    if HAS_MPL:
+        _render_race_prediction(body, storage_mgr)
+
     # ── Distribuzione distanze ─────────────────────────────────────────────────
     if HAS_MPL and dists:
         section_label(body, "DISTRIBUZIONE DISTANZE")
@@ -698,4 +710,840 @@ Un CTL crescente nel tempo = stai migliorando la tua capacità di sopportare il 
 ---
 
 NOTA DEL COACH: i valori assoluti di CTL, ATL e TSB dipendono dalla tua storia di allenamento e contano meno del trend. Non confrontare i tuoi numeri con quelli degli altri: confronta i tuoi numeri di oggi con quelli di 3, 6, 12 mesi fa. Se CTL è più alto della stessa settimana dell'anno scorso, stai progredendo.
+"""
+
+
+# ── Sezione analisi pendenza (Grade Analysis) ──────────────────────────────────
+
+_GRADE_BINS = [
+    ("< −8%",    -1e9, -8,  "#4477cc"),
+    ("−8 a −3%", -8,   -3,  "#66aadd"),
+    ("−3 a 0%",  -3,    0,  "#55aa55"),
+    ("0 a 3%",    0,    3,  "#ddaa33"),
+    ("3 a 8%",    3,    8,  "#dd7722"),
+    ("> 8%",      8,   1e9, "#cc3333"),
+]
+
+
+def _render_grade_analysis(body, storage_mgr):
+    section_label(body, "ANALISI PENDENZA  (passo mediano per gradiente)")
+
+    ctrl_f = tk.Frame(body, bg=C["bg"])
+    ctrl_f.pack(fill="x", padx=20, pady=(0, 4))
+    for label, _, _, col in _GRADE_BINS:
+        tk.Label(ctrl_f, text=f"■ {label}", font=("Courier", 7),
+                 fg=col, bg=C["bg"]).pack(side="left", padx=6)
+
+    def _refresh():
+        try:
+            db = int(days_var.get())
+        except ValueError:
+            db = 0
+        _redraw_grade(chart_f, storage_mgr, races_var.get(), db)
+
+    races_var = tk.BooleanVar(value=False)
+    tk.Checkbutton(ctrl_f, text="Solo gare", font=("Courier", 8),
+                   variable=races_var, fg=C["text"], bg=C["bg"],
+                   selectcolor=C["surface2"], activebackground=C["bg"],
+                   command=_refresh).pack(side="right", padx=8)
+    info_btn(ctrl_f, "Analisi Pendenza — Come leggere il grafico",
+             _INFO_GRADE).pack(side="right", padx=4)
+
+    days_var = tk.StringVar(value="365")
+    tk.Entry(ctrl_f, textvariable=days_var, width=5,
+             font=("Courier", 8), bg=C["surface2"], fg=C["text"],
+             insertbackground=C["text"], relief="flat",
+             highlightthickness=1, highlightbackground=C["border"]
+             ).pack(side="right", padx=(0, 2))
+    tk.Label(ctrl_f, text="Ultimi giorni:", font=("Courier", 8),
+             fg=C["text_dim"], bg=C["bg"]).pack(side="right", padx=(8, 0))
+    tk.Button(ctrl_f, text="↻", font=("Courier", 9, "bold"),
+              bg=C["surface2"], fg=C["accent"], bd=0, padx=6, pady=2,
+              cursor="hand2", command=_refresh).pack(side="right", padx=4)
+
+    chart_f = tk.Frame(body, bg=C["bg"])
+    chart_f.pack(fill="x", padx=20, pady=(0, 20))
+    _redraw_grade(chart_f, storage_mgr, False, 365)
+
+
+def _redraw_grade(chart_f, storage_mgr, races_only: bool, days_back: int = 0):
+    for w in chart_f.winfo_children():
+        w.destroy()
+
+    from datetime import date, timedelta
+    splits = storage_mgr.get_grade_splits(races_only=races_only)
+    if days_back > 0:
+        cutoff = (date.today() - timedelta(days=days_back)).isoformat()
+        splits = [s for s in splits if (s.get("date") or "") >= cutoff]
+    if not splits:
+        tk.Label(chart_f, text="Nessun dato splits disponibile.",
+                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=20)
+        return
+
+    bin_paces: dict[str, list] = {b[0]: [] for b in _GRADE_BINS}
+    for sp in splits:
+        g = sp.get("grade_pct", 0)
+        pace_ms = sp.get("pace_ms", 0)
+        if pace_ms <= 0:
+            continue
+        pace_mkm = (1000.0 / pace_ms) / 60.0   # min/km
+        for label, lo, hi, _ in _GRADE_BINS:
+            if lo <= g < hi:
+                bin_paces[label].append(pace_mkm)
+                break
+
+    valid = [(b[0], b[3], bin_paces[b[0]])
+             for b in _GRADE_BINS if bin_paces[b[0]]]
+    if not valid:
+        tk.Label(chart_f, text="Dati insufficienti.",
+                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=20)
+        return
+
+    labels_v  = [v[0] for v in valid]
+    colors_v  = [v[1] for v in valid]
+    medians_v = [sorted(v[2])[len(v[2]) // 2] for v in valid]
+    counts_v  = [len(v[2]) for v in valid]
+
+    fig = plt.Figure(figsize=(12, 3.5), facecolor=C["bg"])
+    ax  = fig.add_subplot(111)
+    ax.set_facecolor(C["surface"])
+
+    bars = ax.bar(range(len(labels_v)), medians_v,
+                  color=colors_v, alpha=0.85, width=0.6)
+    ax.set_xticks(range(len(labels_v)))
+    ax.set_xticklabels(labels_v, fontsize=8, fontfamily="monospace")
+    ax.tick_params(colors=C["text_dim"], labelsize=7)
+    ax.set_ylabel("Passo (min/km)", fontsize=7, color=C["text_dim"])
+    ax.yaxis.set_major_formatter(
+        plt.FuncFormatter(lambda v, _: f"{int(v)}:{int((v - int(v)) * 60):02d}"))
+    period_lbl = f"ultimi {days_back}gg" if days_back > 0 else "tutto lo storico"
+    ax.set_title(f"PASSO MEDIANO PER PENDENZA  [{period_lbl}]",
+                 color=C["text"], fontsize=9, fontweight="bold",
+                 fontfamily="monospace", pad=6)
+    for sp in ax.spines.values():
+        sp.set_edgecolor(C["border"])
+    ax.grid(axis="y", color=C["border"], linestyle="--", linewidth=0.4, alpha=0.6)
+    ax.set_ylim(0, max(medians_v) * 1.28)
+
+    for bar, v, c in zip(bars, medians_v, counts_v):
+        mn = int(v)
+        sc = int((v - mn) * 60)
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.03,
+                f"{mn}:{sc:02d}\n(n={c})", ha="center", fontsize=6,
+                color=C["text"], fontfamily="monospace")
+
+    fig.subplots_adjust(left=0.07, right=0.98, top=0.88, bottom=0.15)
+    cnv = FigureCanvasTkAgg(fig, master=chart_f)
+    cnv.draw()
+    cnv.get_tk_widget().pack(fill="x")
+
+
+_INFO_GRADE = """
+## ANALISI PENDENZA — PACE vs GRADIENTE
+
+Questo grafico mostra il tuo passo mediano (min/km) suddiviso per fasce di pendenza, calcolato automaticamente dai tuoi split di 1 km. È uno strumento potente per capire come reagisce il tuo corpo alle variazioni di quota, e viene anche usato internamente dal grafico "Previsione Prestazioni" per stimare la tua correzione personale di dislivello.
+
+---
+
+# FILTRI DISPONIBILI
+
+# Ultimi giorni
+Limita l'analisi ai split delle attività degli ultimi N giorni. Usa un valore basso (90–180) per vedere la tua risposta attuale alla pendenza, utile se hai cambiato tipo di allenamento o terreno di recente. Usa 0 per includere tutto lo storico e avere più dati nelle fasce estreme (salita ripida, discesa ripida), che tendono ad avere meno split.
+
+# Solo gare
+Mostra solo i split provenienti da attività classificate come gara. Utile per vedere come gestisci le pendenze sotto pressione agonistica, spesso diverso dall'allenamento.
+
+---
+
+# COME SI CALCOLA
+
+Per ogni split di 1 km, Strava registra la differenza di quota (elevation_difference) e la velocità media. La pendenza percentuale è: (Δquota / distanza) × 100. I valori sono raggruppati in 6 fasce e per ogni fascia viene mostrato il passo mediano (non la media, che è più sensibile agli outlier). Il conteggio (n=) indica quanti split cadono in quella fascia.
+
+---
+
+# COME LEGGERE LE BARRE
+
+# Discesa ripida (< −8%) — blu scuro
+Terreno tecnico o molto inclinato in discesa. Il passo accelera, ma le gambe assorbono impatti forti. Attenzione: spingere troppo qui aumenta il rischio di infortuni al quadricipite e alle ginocchia.
+
+# Discesa media (−8 a −3%) — blu chiaro
+Zona "confortevole" di discesa. Qui la maggior parte dei runner recupera energia. Se il tuo passo in questa fascia è sorprendentemente lento, potresti avere problemi di tecnica in discesa o scarsa forza eccentrica.
+
+# Leggera discesa / piano (−3 a 0%) — verde
+Il tuo terreno ideale. Il passo qui rappresenta il tuo "passo da gara su asfalto". Confronta questa barra con il tuo passo obiettivo nelle gare pianeggianti.
+
+# Piano / leggera salita (0 a 3%) — giallo
+La fascia più comune nelle corse su strada. Un degrado di passo eccessivo rispetto alla fascia precedente indica carenza di forza muscolare o capacità aerobica.
+
+# Salita media (3 a 8%) — arancione
+Richiede sforzo aerobico significativo. I runner da montagna tendono ad avere questa barra più "bassa" (passo migliore) rispetto ai runner da pianura. Un allenamento mirato di hill repeats migliora questa fascia.
+
+# Salita ripida (> 8%) — rosso
+Terreno di trail o cronoscalate. A queste pendenze molti runner camminano: è fisiologicamente più efficiente! Se corri sempre su questo terreno, considera workout di powerhiking e forza.
+
+---
+
+# COME USARLO IN PRATICA
+
+• Confronta la barra "piano" con la barra "salita 3–8%": il differenziale di passo ti dice quanto perdi per ogni % di pendenza. Questo valore viene usato automaticamente dalla Previsione Prestazioni quando inserisci un dislivello.
+
+• Se la barra "discesa media" è più lenta della barra "piano": stai frenando in discesa — lavora su tecnica e fiducia, c'è tempo da recuperare senza sforzo aggiuntivo.
+
+• Usa questo grafico prima di una gara con dislivello: se il tuo passo in salita è molto lento, considera allenamenti specifici di hill run nelle 8–12 settimane precedenti.
+
+NOTA DEL COACH: i dati di questo grafico alimentano direttamente la correzione dislivello della Previsione Prestazioni. Più split hai (specialmente su pendenze variabili), più accurata sarà la stima personalizzata.
+"""
+
+
+# ── Sezione curva di performance ───────────────────────────────────────────────
+
+def _render_performance_curve(body, storage_mgr):
+    section_label(body, "CURVA DI PERFORMANCE  (legge potenza su distanze standard)")
+
+    ctrl_f = tk.Frame(body, bg=C["bg"])
+    ctrl_f.pack(fill="x", padx=20, pady=(0, 4))
+    tk.Label(ctrl_f, text="● best effort effettivo  — curva fit potenza",
+             font=("Courier", 8), fg=C["text_dim"], bg=C["bg"]).pack(side="left")
+
+    def _refresh():
+        try:
+            db = int(days_var.get())
+        except ValueError:
+            db = 0
+        _redraw_perf_curve(chart_f, storage_mgr, races_var.get(), db)
+
+    races_var = tk.BooleanVar(value=False)
+    tk.Checkbutton(ctrl_f, text="Solo gare", font=("Courier", 8),
+                   variable=races_var, fg=C["text"], bg=C["bg"],
+                   selectcolor=C["surface2"], activebackground=C["bg"],
+                   command=_refresh).pack(side="right", padx=8)
+    info_btn(ctrl_f, "Curva di Performance — Come leggere il grafico",
+             _INFO_PERF_CURVE).pack(side="right", padx=4)
+
+    days_var = tk.StringVar(value="365")
+    tk.Entry(ctrl_f, textvariable=days_var, width=5,
+             font=("Courier", 8), bg=C["surface2"], fg=C["text"],
+             insertbackground=C["text"], relief="flat",
+             highlightthickness=1, highlightbackground=C["border"]
+             ).pack(side="right", padx=(0, 2))
+    tk.Label(ctrl_f, text="Ultimi giorni:", font=("Courier", 8),
+             fg=C["text_dim"], bg=C["bg"]).pack(side="right", padx=(8, 0))
+    tk.Button(ctrl_f, text="↻", font=("Courier", 9, "bold"),
+              bg=C["surface2"], fg=C["accent"], bd=0, padx=6, pady=2,
+              cursor="hand2", command=_refresh).pack(side="right", padx=4)
+
+    chart_f = tk.Frame(body, bg=C["bg"])
+    chart_f.pack(fill="x", padx=20, pady=(0, 20))
+    _redraw_perf_curve(chart_f, storage_mgr, False, 365)
+
+
+def _redraw_perf_curve(chart_f, storage_mgr, races_only: bool, days_back: int = 0):
+    for w in chart_f.winfo_children():
+        w.destroy()
+
+    try:
+        import numpy as np
+    except ImportError:
+        tk.Label(chart_f, text="numpy non installato (pip install numpy).",
+                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
+        return
+
+    from storage import _EFFORT_DISTANCES
+    from datetime import date, timedelta
+    efforts = storage_mgr.get_all_best_efforts(races_only=races_only)
+    if days_back > 0:
+        cutoff = (date.today() - timedelta(days=days_back)).isoformat()
+        efforts = [e for e in efforts if (e.get("date") or "") >= cutoff]
+    if not efforts:
+        tk.Label(chart_f, text="Nessun best effort trovato nel database.",
+                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
+        return
+
+    # Migliore tempo per ogni canonical distance
+    best: dict[str, float] = {}
+    for e in efforts:
+        c = e["canonical"]
+        t = e["elapsed_time"]
+        if c not in best or t < best[c]:
+            best[c] = t
+
+    pts = [(dist_m, best[key])
+           for key, dist_m in _EFFORT_DISTANCES.items()
+           if key in best]
+    if len(pts) < 2:
+        tk.Label(chart_f, text="Servono almeno 2 distanze per il fit. "
+                               "Scarica attività con best_efforts.",
+                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"],
+                 wraplength=700).pack(pady=10)
+        return
+
+    pts.sort(key=lambda x: x[0])
+    xs = np.array([p[0] for p in pts])
+    ys = np.array([p[1] for p in pts])
+
+    # Fit log-log: log(t) = a + b*log(d)
+    log_x = np.log(xs)
+    log_y = np.log(ys)
+    b, a  = np.polyfit(log_x, log_y, 1)   # slope, intercept
+    A     = np.exp(a)
+
+    # Curva continua
+    x_fit  = np.logspace(np.log10(xs.min() * 0.9), np.log10(xs.max() * 1.1), 200)
+    y_fit  = A * x_fit ** b
+
+    fig = plt.Figure(figsize=(12, 4), facecolor=C["bg"])
+    ax  = fig.add_subplot(111)
+    ax.set_facecolor(C["surface"])
+
+    ax.loglog(x_fit, y_fit, color=C["accent"], linewidth=1.5,
+              linestyle="--", label=f"fit: t = {A:.1f}·d^{b:.2f}")
+    ax.scatter(xs, ys, color=C["blue"], s=60, zorder=5, label="Best effort effettivo")
+
+    # Etichette punti
+    dist_labels = {v: k for k, v in _EFFORT_DISTANCES.items()}
+    nice = {"400m": "400m", "half_mile": "½ mile", "1k": "1K",
+            "1_mile": "1 mi", "2_mile": "2 mi", "5k": "5K",
+            "10k": "10K", "Half-Marathon": "½ Mar", "Marathon": "Mar"}
+    for x, y in zip(xs, ys):
+        key   = dist_labels.get(x, "")
+        lbl   = nice.get(key, key)
+        t_sec = int(y)
+        h, rem = divmod(t_sec, 3600)
+        m, s   = divmod(rem, 60)
+        t_str  = f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+        ax.annotate(f"{lbl}\n{t_str}", (x, y),
+                    textcoords="offset points", xytext=(6, 4),
+                    fontsize=6.5, color=C["text"], fontfamily="monospace")
+
+    ax.set_xlabel("Distanza (m)", fontsize=7, color=C["text_dim"])
+    ax.set_ylabel("Tempo (s)", fontsize=7, color=C["text_dim"])
+    period_lbl = f"ultimi {days_back}gg" if days_back > 0 else "tutto lo storico"
+    ax.set_title(f"CURVA DI PERFORMANCE — DISTANZA vs TEMPO  [{period_lbl}]",
+                 color=C["text"], fontsize=9, fontweight="bold",
+                 fontfamily="monospace", pad=6)
+    ax.tick_params(colors=C["text_dim"], labelsize=7)
+    for sp in ax.spines.values():
+        sp.set_edgecolor(C["border"])
+    ax.grid(which="both", color=C["border"], linestyle="--",
+            linewidth=0.4, alpha=0.5)
+    ax.legend(fontsize=7, facecolor=C["surface2"], edgecolor=C["border"],
+              labelcolor=C["text"])
+
+    # Mostra esponente b sotto il titolo
+    txt = (f"Esponente b = {b:.3f}  "
+           f"({'resistenza ↑' if b > 1.06 else 'velocità ↑' if b < 1.03 else 'bilanciato'})")
+    ax.text(0.5, 0.97, txt, ha="center", va="top",
+            transform=ax.transAxes, fontsize=7.5,
+            color=C["text_dim"], fontfamily="monospace")
+
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.88, bottom=0.14)
+    cnv = FigureCanvasTkAgg(fig, master=chart_f)
+    cnv.draw()
+    cnv.get_tk_widget().pack(fill="x")
+
+
+_INFO_PERF_CURVE = """
+## CURVA DI PERFORMANCE — LEGGE POTENZA
+
+Questo grafico mostra i tuoi migliori tempi su distanze standard (da 400m alla maratona) in un piano log-log, dove viene fittata una curva della forma t = A × d^b (legge di potenza). È ispirato al modello di Peter Riegel (1977) e alimenta direttamente il grafico "Previsione Prestazioni".
+
+---
+
+# FILTRI DISPONIBILI
+
+# Ultimi giorni
+Limita il fit ai best effort delle attività degli ultimi N giorni. Usa un valore basso (90–180) per rispecchiare la forma attuale; usa 0 per includere tutto lo storico e avere più punti nel fit. Se il filtro lascia meno di 2 distanze disponibili, il grafico non viene mostrato: allarga la finestra temporale.
+
+# Solo gare
+Considera solo i best effort registrati durante attività classificate come gara. Produce un fit più rappresentativo dello sforzo massimale, ma richiede che le gare siano state correttamente etichettate come tali su Strava.
+
+NOTA: i best effort vengono misurati in base al tempo di movimento (moving_time), escludendo le pause — questo li rende più comparabili tra attività diverse.
+
+---
+
+# IL MODELLO MATEMATICO
+
+Riegel scoprì che il tempo di performance su diverse distanze segue la legge: T = A × D^b
+
+• T = tempo in secondi
+• D = distanza in metri
+• A = costante individuale (dipende dalla tua velocità di base)
+• b = esponente di fatica (tipicamente tra 1.03 e 1.15)
+
+In scala logaritmica diventa una retta: log(T) = log(A) + b × log(D). Il fit viene calcolato su tutti i punti disponibili con regressione ai minimi quadrati in spazio log-log.
+
+---
+
+# L'ESPONENTE b — IL TUO PROFILO ATLETICO
+
+L'esponente b è la chiave interpretativa. Riegel trovò b ≈ 1.06 per i runner élite.
+
+# b < 1.03 — Profilo velocista
+Più forte sulle distanze brevi. Buona capacità anaerobica e lattacida. Eccelle nei 5K.
+
+# b ≈ 1.03–1.06 — Profilo bilanciato
+Profilo completo, simile ai corridori élite. Competitivo su un ampio spettro di distanze.
+
+# b > 1.06 — Profilo resistente (fondista)
+Più forte sulle lunghe distanze. Ottima efficienza aerobica. Eccelle sulla maratona.
+
+---
+
+# COME USARLO IN PRATICA
+
+# Scelta della gara obiettivo
+Se i tuoi punti reali stanno sopra la curva su una distanza, quella non è il tuo punto di forza. Se stanno sotto, sei relativamente più forte lì.
+
+# Predire tempi su distanze non ancora corse
+La curva fittata stima il tempo atteso su qualsiasi distanza. Usa il grafico "Previsione Prestazioni" per il calcolo interattivo con incertezza.
+
+# Monitorare i progressi
+Ricontrolla ogni 2–3 mesi. Se A diminuisce (curva si abbassa) stai migliorando. Se b si avvicina a 1.06 stai diventando più completo.
+
+---
+
+# LIMITAZIONI
+
+• Funziona meglio con best effort su almeno 3–4 distanze diverse.
+• Il modello assume condizioni simili tra le distanze (pianura, buona condizione fisica). Gare con molto dislivello o sforzi subottimali distorcono il fit.
+• Non considera lo stato di forma attuale: usa il grafico CTL/ATL per quello.
+
+NOTA DEL COACH: confronta il fit con quello di 6 mesi fa. Se b è sceso avvicinandosi a 1.06 hai migliorato la versatilità. Se A è sceso mantenendo b costante, sei più veloce su tutte le distanze — il miglior scenario possibile.
+"""
+
+
+# ── Sezione previsione prestazioni ────────────────────────────────────────────
+
+_PREDICT_DISTS = {
+    "1 km":           1000.0,
+    "5 km":           5000.0,
+    "10 km":         10000.0,
+    "Mezza Maratona": 21097.5,
+    "Maratona":       42195.0,
+    "Personalizzata": -1.0,
+}
+
+
+def _render_race_prediction(body, storage_mgr):
+    section_label(body, "PREVISIONE PRESTAZIONI  (simulazione Monte Carlo)")
+
+    ctrl_f = tk.Frame(body, bg=C["bg"])
+    ctrl_f.pack(fill="x", padx=20, pady=(0, 6))
+    info_btn(ctrl_f, "Previsione Prestazioni — Come funziona",
+             _INFO_RACE_PRED).pack(side="right", padx=4)
+
+    # Riga parametri
+    param_f = tk.Frame(body, bg=C["surface2"],
+                       highlightthickness=1, highlightbackground=C["border"])
+    param_f.pack(fill="x", padx=20, pady=(0, 6))
+    pf = tk.Frame(param_f, bg=C["surface2"])
+    pf.pack(fill="x", padx=16, pady=10)
+
+    # Distanza target
+    tk.Label(pf, text="Distanza:", font=("Courier", 9),
+             fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
+    dist_var = tk.StringVar(value="10 km")
+    dist_combo = tk.OptionMenu(pf, dist_var, *_PREDICT_DISTS.keys())
+    dist_combo.config(font=("Courier", 9), bg=C["surface"], fg=C["text"],
+                      bd=0, highlightthickness=0, activebackground=C["surface2"])
+    dist_combo["menu"].config(font=("Courier", 9), bg=C["surface"], fg=C["text"])
+    dist_combo.pack(side="left", padx=(4, 16))
+
+    # Distanza personalizzata
+    tk.Label(pf, text="km personalizzati:", font=("Courier", 9),
+             fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
+    custom_var = tk.StringVar(value="15")
+    tk.Entry(pf, textvariable=custom_var, font=("Courier", 9),
+             bg=C["surface"], fg=C["text"], width=5, bd=0,
+             insertbackground=C["text"],
+             highlightthickness=1, highlightbackground=C["border"]
+             ).pack(side="left", padx=(4, 16))
+
+    # Dislivello positivo del percorso
+    tk.Label(pf, text="Dislivello +  (m):", font=("Courier", 9),
+             fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
+    elev_var = tk.StringVar(value="0")
+    tk.Entry(pf, textvariable=elev_var, font=("Courier", 9),
+             bg=C["surface"], fg=C["text"], width=6, bd=0,
+             insertbackground=C["text"],
+             highlightthickness=1, highlightbackground=C["border"]
+             ).pack(side="left", padx=(4, 16))
+
+    # Finestra temporale
+    tk.Label(pf, text="Ultimi giorni:", font=("Courier", 9),
+             fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
+    days_var = tk.StringVar(value="365")
+    tk.Entry(pf, textvariable=days_var, font=("Courier", 9),
+             bg=C["surface"], fg=C["text"], width=5, bd=0,
+             insertbackground=C["text"],
+             highlightthickness=1, highlightbackground=C["border"]
+             ).pack(side="left", padx=(4, 4))
+    tk.Label(pf, text="(0 = tutto)", font=("Courier", 7),
+             fg=C["text_dim"], bg=C["surface2"]).pack(side="left", padx=(0, 12))
+
+    # Filtro lunghezza corse
+    tk.Label(pf, text="km corsa min:", font=("Courier", 9),
+             fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
+    km_min_var = tk.StringVar(value="0")
+    tk.Entry(pf, textvariable=km_min_var, font=("Courier", 9),
+             bg=C["surface"], fg=C["text"], width=5, bd=0,
+             insertbackground=C["text"],
+             highlightthickness=1, highlightbackground=C["border"]
+             ).pack(side="left", padx=(4, 8))
+    tk.Label(pf, text="max:", font=("Courier", 9),
+             fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
+    km_max_var = tk.StringVar(value="0")
+    tk.Entry(pf, textvariable=km_max_var, font=("Courier", 9),
+             bg=C["surface"], fg=C["text"], width=5, bd=0,
+             insertbackground=C["text"],
+             highlightthickness=1, highlightbackground=C["border"]
+             ).pack(side="left", padx=(4, 2))
+    tk.Label(pf, text="(0 = nessun limite)", font=("Courier", 7),
+             fg=C["text_dim"], bg=C["surface2"]).pack(side="left", padx=(0, 12))
+
+    # Solo gare
+    races_var = tk.BooleanVar(value=False)
+    tk.Checkbutton(pf, text="Solo gare", font=("Courier", 8),
+                   variable=races_var, fg=C["text"], bg=C["surface2"],
+                   selectcolor=C["surface"], activebackground=C["surface2"]
+                   ).pack(side="left", padx=8)
+
+    # Bottone calcola
+    chart_f = tk.Frame(body, bg=C["bg"])
+    chart_f.pack(fill="x", padx=20, pady=(0, 20))
+
+    def _calc():
+        d_key = dist_var.get()
+        dist_m = _PREDICT_DISTS[d_key]
+        if dist_m < 0:   # personalizzata
+            try:
+                dist_m = float(custom_var.get()) * 1000.0
+            except Exception:
+                dist_m = 10000.0
+        try:
+            elev_gain = float(elev_var.get())
+        except Exception:
+            elev_gain = 0.0
+        try:
+            days_back = int(days_var.get())
+        except Exception:
+            days_back = 365
+        try:
+            km_min = float(km_min_var.get())
+        except Exception:
+            km_min = 0.0
+        try:
+            km_max = float(km_max_var.get())
+        except Exception:
+            km_max = 0.0
+        _redraw_race_pred(chart_f, storage_mgr,
+                          dist_m, elev_gain, races_var.get(), days_back,
+                          km_min, km_max)
+
+    tk.Button(pf, text="▶  CALCOLA", font=("Courier", 9, "bold"),
+              bg=C["accent"], fg="white", bd=0, padx=12, pady=4,
+              cursor="hand2", command=_calc).pack(side="left", padx=4)
+
+
+def _personal_grade_correction(storage_mgr, races_only: bool,
+                               avg_grade: float) -> tuple[float, str]:
+    """
+    Stima la correzione personale del runner in sec/km per 1% di pendenza media,
+    usando regressione lineare sui grade splits reali.
+    Ritorna (sec_per_km_correction_totale, label_fonte).
+    """
+    if avg_grade <= 0:
+        return 0.0, ""
+
+    try:
+        import numpy as np
+        splits = storage_mgr.get_grade_splits(races_only=races_only)
+        # Filtra split con pendenza e velocità plausibili (esclude outlier e camminata)
+        pts = [
+            (s["grade_pct"], 1000.0 / s["pace_ms"])   # (grade%, sec/km)
+            for s in splits
+            if -20.0 <= s.get("grade_pct", 0) <= 20.0
+            and 1.5 < s.get("pace_ms", 0) < 7.0       # 2:23–11:07 min/km
+        ]
+        if len(pts) >= 30:
+            grades = np.array([p[0] for p in pts])
+            paces  = np.array([p[1] for p in pts])
+            slope, _ = np.polyfit(grades, paces, 1)
+            # slope = sec/km per 1% di grade; cap in range ragionevole
+            slope = float(np.clip(slope, 2.0, 15.0))
+            return slope * avg_grade, f"regressione personale {slope:.1f}s/km per 1%"
+    except Exception:
+        pass
+
+    # Fallback al modello empirico di Minetti
+    return avg_grade * 6.0, "modello empirico 6s/km per 1%"
+
+
+def _redraw_race_pred(chart_f, storage_mgr,
+                      dist_m: float, elev_gain: float,
+                      races_only: bool, days_back: int = 365,
+                      km_min: float = 0.0, km_max: float = 0.0):
+    for w in chart_f.winfo_children():
+        w.destroy()
+
+    try:
+        import numpy as np
+    except ImportError:
+        tk.Label(chart_f, text="numpy non installato.",
+                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
+        return
+
+    from storage import _EFFORT_DISTANCES
+    from datetime import date, timedelta
+    efforts = storage_mgr.get_all_best_efforts(races_only=races_only)
+
+    # Filtra per finestra temporale
+    if days_back > 0:
+        cutoff = (date.today() - timedelta(days=days_back)).isoformat()
+        efforts = [e for e in efforts if (e.get("date") or "") >= cutoff]
+
+    # Filtra per lunghezza dell'attività
+    if km_min > 0:
+        efforts = [e for e in efforts if e.get("activity_dist_km", 0) >= km_min]
+    if km_max > 0:
+        efforts = [e for e in efforts if e.get("activity_dist_km", 0) <= km_max]
+
+    if not efforts:
+        tk.Label(chart_f, text="Nessun best effort trovato.",
+                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
+        return
+
+    best: dict[str, float] = {}
+    for e in efforts:
+        c = e["canonical"]
+        t = e["elapsed_time"]
+        if c not in best or t < best[c]:
+            best[c] = t
+
+    pts = [(dm, best[key]) for key, dm in _EFFORT_DISTANCES.items() if key in best]
+    if len(pts) < 2:
+        tk.Label(chart_f, text="Servono almeno 2 distanze per la previsione.",
+                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"],
+                 wraplength=700).pack(pady=10)
+        return
+
+    pts.sort(key=lambda x: x[0])
+    xs = np.array([p[0] for p in pts])
+    ys = np.array([p[1] for p in pts])
+    log_x = np.log(xs)
+    log_y = np.log(ys)
+    b, a  = np.polyfit(log_x, log_y, 1)
+    A     = np.exp(a)
+
+    # Residui → deviazione standard per il Monte Carlo
+    y_pred_log = a + b * log_x
+    residuals  = log_y - y_pred_log
+    sigma_log  = float(np.std(residuals)) if len(residuals) > 2 else 0.04
+
+    # Tempo base alla distanza target
+    t_base = A * (dist_m ** b)
+    dist_km = dist_m / 1000.0
+
+    # Correzione gradiente personalizzata: regressione lineare sui grade splits del runner
+    # avg_grade in % = (dislivello_m / distanza_m) × 100
+    avg_grade = (elev_gain / dist_m * 100.0) if dist_m > 0 else 0.0
+    sec_per_km_correction, grade_correction_source = _personal_grade_correction(
+        storage_mgr, races_only, avg_grade
+    )
+    t_adjusted = t_base + sec_per_km_correction * dist_km
+
+    # Monte Carlo: 5000 campioni
+    np.random.seed(42)
+    noise     = np.random.normal(0, sigma_log, 5000)
+    samples   = t_adjusted * np.exp(noise)
+    p10, p25, p50, p75, p90 = np.percentile(samples, [10, 25, 50, 75, 90])
+
+    def _fmt(s):
+        s = int(s)
+        h, r = divmod(s, 3600)
+        m, sec = divmod(r, 60)
+        return f"{h}:{m:02d}:{sec:02d}" if h else f"{m}:{sec:02d}"
+
+    fig = plt.Figure(figsize=(12, 3.8), facecolor=C["bg"])
+    ax  = fig.add_subplot(111)
+    ax.set_facecolor(C["surface"])
+
+    ax.hist(samples / 60.0, bins=60, color=C["accent"], alpha=0.7, edgecolor="none")
+    for val, col, lbl in [
+        (p10 / 60, C["green"],  f"P10 {_fmt(p10)}  ← top"),
+        (p25 / 60, C["blue"],   f"P25 {_fmt(p25)}"),
+        (p50 / 60, C["yellow"], f"P50 {_fmt(p50)}"),
+        (p75 / 60, C["orange"], f"P75 {_fmt(p75)}"),
+        (p90 / 60, C["red"],    f"P90 {_fmt(p90)}  ← conservativo"),
+    ]:
+        ax.axvline(val, color=col, linewidth=1.4, linestyle="--", label=lbl)
+
+    ax.set_xlabel("Tempo previsto (min)", fontsize=7, color=C["text_dim"])
+    ax.set_ylabel("Frequenza (simulazioni)", fontsize=7, color=C["text_dim"])
+    period_lbl = f"ultimi {days_back}gg" if days_back > 0 else "tutto lo storico"
+    km_lbl = ""
+    if km_min > 0 or km_max > 0:
+        lo = f"{km_min:.0f}" if km_min > 0 else "0"
+        hi = f"{km_max:.0f}" if km_max > 0 else "∞"
+        km_lbl = f"  corse {lo}–{hi}km"
+    dist_lbl = (f"{dist_km:.1f} km"
+                + (f"  +{elev_gain:.0f}m ↑" if elev_gain > 0 else "")
+                + f"  [{period_lbl}]{km_lbl}")
+    ax.set_title(f"DISTRIBUZIONE TEMPI PREVISTI — {dist_lbl}",
+                 color=C["text"], fontsize=9, fontweight="bold",
+                 fontfamily="monospace", pad=6)
+    ax.tick_params(colors=C["text_dim"], labelsize=7)
+    for sp in ax.spines.values():
+        sp.set_edgecolor(C["border"])
+    ax.grid(axis="y", color=C["border"], linestyle="--", linewidth=0.4, alpha=0.5)
+    ax.legend(fontsize=7, facecolor=C["surface2"], edgecolor=C["border"],
+              labelcolor=C["text"], loc="upper right")
+
+    fig.subplots_adjust(left=0.06, right=0.98, top=0.88, bottom=0.16)
+    cnv = FigureCanvasTkAgg(fig, master=chart_f)
+    cnv.draw()
+    cnv.get_tk_widget().pack(fill="x")
+
+    # Riepilogo testuale
+    summary_f = tk.Frame(chart_f, bg=C["surface2"],
+                         highlightthickness=1, highlightbackground=C["border"])
+    summary_f.pack(fill="x", pady=(6, 0))
+    sf = tk.Frame(summary_f, bg=C["surface2"])
+    sf.pack(padx=16, pady=8)
+    for lbl, val, col in [
+        ("Top / ottimistica  (P10):", _fmt(p10), C["green"]),
+        ("Buona giornata     (P25):", _fmt(p25), C["blue"]),
+        ("Stima mediana      (P50):", _fmt(p50), C["yellow"]),
+        ("Giornata normale   (P75):", _fmt(p75), C["orange"]),
+        ("Conservativa       (P90):", _fmt(p90), C["red"]),
+    ]:
+        r = tk.Frame(sf, bg=C["surface2"])
+        r.pack(anchor="w")
+        tk.Label(r, text=lbl, font=("Courier", 8), fg=C["text_dim"],
+                 bg=C["surface2"], width=28, anchor="w").pack(side="left")
+        tk.Label(r, text=val, font=("Courier", 9, "bold"), fg=col,
+                 bg=C["surface2"]).pack(side="left")
+    if elev_gain > 0:
+        corr_str = f"+{sec_per_km_correction * dist_km:.0f}s totali  [{grade_correction_source}]"
+        tk.Label(sf, text=f"  (correzione dislivello: {corr_str})",
+                 font=("Courier", 7), fg=C["text_dim"],
+                 bg=C["surface2"]).pack(anchor="w")
+
+    # Pannello diagnostico: dati usati nel fit
+    tk.Frame(sf, bg=C["border"], height=1).pack(fill="x", pady=(8, 4))
+    tk.Label(sf, text=f"  Fit: t = {A:.2f} · d^{b:.3f}   (Riegel teorico: b=1.060)   "
+                      f"base {_fmt(t_base)} su {dist_km:.1f} km",
+             font=("Courier", 7), fg=C["text_dim"], bg=C["surface2"]).pack(anchor="w")
+    tk.Label(sf, text="  Dati usati nel fit:",
+             font=("Courier", 7, "bold"), fg=C["text_dim"], bg=C["surface2"]).pack(anchor="w")
+    nice = {"400m": "400m", "half_mile": "½ mi", "1k": "1K", "1_mile": "1 mi",
+            "2_mile": "2 mi", "5k": "5K", "10k": "10K",
+            "Half-Marathon": "½ Mar", "Marathon": "Mar"}
+    for key, dm in sorted(_EFFORT_DISTANCES.items(), key=lambda x: x[1]):
+        if key not in best:
+            continue
+        t_eff = best[key]
+        pace_sec = t_eff / (dm / 1000.0)
+        pace_str = f"{int(pace_sec // 60)}:{int(pace_sec % 60):02d}/km"
+        tk.Label(sf,
+                 text=f"    {nice.get(key, key):>6}  →  {_fmt(t_eff):>8}  ({pace_str})",
+                 font=("Courier", 7), fg=C["accent"], bg=C["surface2"]).pack(anchor="w")
+
+
+_INFO_RACE_PRED = """
+## PREVISIONE PRESTAZIONI — SIMULAZIONE MONTE CARLO
+
+Questo strumento stima il tuo tempo possibile su una distanza target, a partire dai tuoi best effort storici. Combina tre fasi: fit della curva di performance (Riegel), correzione personalizzata del dislivello, e simulazione Monte Carlo per quantificare l'incertezza.
+
+---
+
+# PARAMETRI DI INPUT
+
+# Distanza
+La distanza della gara da prevedere. Scegli tra le distanze standard (1 km, 5 km, 10 km, Mezza Maratona, Maratona) o seleziona "Personalizzata" per inserire qualsiasi valore.
+
+# km personalizzati
+Attivo solo con "Personalizzata". Inserisci la distanza in km (es. 8.5). Supporta decimali.
+
+# Dislivello + (m)
+Dislivello positivo totale del percorso obiettivo in metri. Lascia 0 per percorsi pianeggianti. La pendenza media viene calcolata come (dislivello_m / distanza_m) × 100 e usata per stimare il rallentamento. Trova questo valore nella scheda tecnica della gara.
+• Esempi: 10K cittadino piatto → 0m. Mezza montagna → 400–800m. Trail KV → 1000m+
+
+# Ultimi giorni
+Finestra temporale dei best effort da considerare nel fit. 0 = tutto lo storico.
+• 90 gg: forma attuale. Ideale se ti sei allenato in modo costante.
+• 180–365 gg: stima stabile. Consigliato se hai pochi dati recenti.
+• 0: massima copertura. Utile se hai poche gare o best effort registrati.
+NOTA: se il filtro lascia meno di 2 distanze con dati, la previsione non può essere calcolata.
+
+# km corsa min / max
+Filtra i best effort in base alla lunghezza dell'attività che li contiene. Utile per considerare solo le corse simili per lunghezza alla gara obiettivo: se vuoi prevedere un 10K, impostare min=8 max=15 esclude best effort registrati durante maratone (paceati lentamente) o uscite brevissime.
+• 0 = nessun limite (si considerano tutte le attività).
+
+# Solo gare
+Usa solo best effort da attività classificate come gara su Strava. Le gare rappresentano lo sforzo massimale e producono previsioni più accurate. Richiede che le attività siano state etichettate correttamente su Strava come "Gara".
+
+---
+
+# FASE 1 — FIT DELLA CURVA DI PERFORMANCE
+
+Viene fittata la legge t = A × d^b sui tuoi migliori tempi di movimento (moving_time) per distanza, dopo aver applicato tutti i filtri impostati. Il pannello diagnostico in fondo al grafico mostra esattamente quali distanze e tempi vengono usati: verificare che siano coerenti con le tue prestazioni reali è il primo passo per valutare l'affidabilità della previsione.
+
+---
+
+# FASE 2 — CORREZIONE DISLIVELLO PERSONALIZZATA
+
+Se il dislivello è > 0, il rallentamento viene stimato dai tuoi dati reali anziché da un modello fisso:
+• Il grafico "Analisi Pendenza" calcola, tramite regressione lineare sui tuoi split di 1 km, quanti secondi/km perdi per ogni 1% di pendenza media.
+• Questo coefficiente personale viene applicato alla pendenza media del percorso target.
+• Se hai meno di 30 split su terreno variabile, si usa il modello empirico di Minetti come fallback (6 s/km per 1%).
+• Il pannello diagnostico mostra quale fonte è stata usata e l'entità della correzione totale.
+
+---
+
+# FASE 3 — MONTE CARLO (5000 simulazioni)
+
+Il tempo previsto non è un valore fisso: dipende dalla forma del giorno, dal meteo, dalla motivazione. Vengono generate 5000 simulazioni con rumore calibrato sui residui del fit (quanto i tuoi best effort si discostano dalla curva ideale). Il risultato è una distribuzione di tempi possibili.
+
+---
+
+# COME LEGGERE L'ISTOGRAMMA E I PERCENTILI
+
+# P10 — Top / ottimistica
+Solo il 10% delle simulazioni è più veloce. Potenziale massimo in condizioni ideali.
+
+# P25 — Buona giornata
+Il 25% delle simulazioni prevede un tempo migliore. Obiettivo ambizioso ma realistico.
+
+# P50 — Stima mediana
+Il tempo più probabile. 50% di probabilità di batterlo. Riferimento principale.
+
+# P75 — Giornata normale
+Il 75% delle simulazioni è più veloce. Raggiungibile anche senza condizioni eccezionali.
+
+# P90 — Conservativa
+Solo il 10% delle simulazioni è più lenta. Limite superiore utile per calibrare il ritmo di partenza in sicurezza.
+
+---
+
+# PANNELLO DIAGNOSTICO
+
+In fondo al grafico trovi il riepilogo dei dati usati nel calcolo:
+• Equazione del fit e confronto con b=1.060 (Riegel teorico)
+• Tempo base grezzo prima delle correzioni
+• Lista di ogni distanza usata con il tempo e il passo corrispondente
+Verifica che questi tempi siano coerenti con le tue prestazioni: se un best effort è anomalo (es. una corsa lenta usata come 10K di riferimento), puoi escluderla usando i filtri "Ultimi giorni" o "km min/max".
+
+---
+
+# CONSIGLI PRATICI
+
+• Parti al ritmo P50–P75 nei primi km. È meglio accelerare nel finale che esplodere.
+• Se parti più veloce di P25, il rischio di crollo aumenta significativamente.
+• Più best effort hai su distanze diverse, più il fit è preciso e l'incertezza si riduce.
+• Per gare con molto dislivello, accumulare split su terreno simile nel grafico Analisi Pendenza migliora la correzione personalizzata.
+
+---
+
+NOTA DEL COACH: questo modello non conosce il tuo stato di forma attuale. Controlla il grafico CTL/TSB: se il TSB è positivo (+5 a +15) e il CTL è vicino al massimo storico, punta al P75. Se sei reduce da un blocco intenso o da riposo, punta al P25–P50.
 """

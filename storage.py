@@ -115,7 +115,7 @@ class JSONStorage:
                 canonical = target.get(raw_name)
                 if not canonical:
                     continue
-                t = effort.get("elapsed_time")
+                t = effort.get("moving_time") or effort.get("elapsed_time")
                 if not t:
                     continue
                 if canonical not in records or t < records[canonical]["elapsed_time"]:
@@ -125,6 +125,67 @@ class JSONStorage:
                         "date": act_date,
                     }
         return records
+
+    def get_grade_splits(self, races_only: bool = False) -> list[dict]:
+        """Ritorna lista di {grade_pct, pace_ms, date} da tutti i split delle attività."""
+        results = []
+        for fname in sorted(os.listdir(self.directory)):
+            if not fname.endswith(".json"):
+                continue
+            path = os.path.join(self.directory, fname)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception:
+                continue
+            if races_only and data.get("workout_type") != 1:
+                continue
+            act_date = (data.get("start_date_local") or "")[:10]
+            for sp in data.get("splits_metric") or []:
+                dist  = sp.get("distance", 0)
+                elev  = sp.get("elevation_difference")
+                speed = sp.get("average_speed", 0)
+                if dist and dist > 100 and elev is not None and speed > 0:
+                    results.append({
+                        "grade_pct": (elev / dist) * 100,
+                        "pace_ms":   speed,
+                        "date":      act_date,
+                    })
+        return results
+
+    def get_all_best_efforts(self, races_only: bool = False) -> list[dict]:
+        """Ritorna tutti i best effort (tutte le distanze canonical) per la curva di performance."""
+        target = _build_effort_target()
+        results = []
+        for fname in sorted(os.listdir(self.directory)):
+            if not fname.endswith(".json"):
+                continue
+            path = os.path.join(self.directory, fname)
+            try:
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception:
+                continue
+            if races_only and data.get("workout_type") != 1:
+                continue
+            act_name = data.get("name", "–")
+            act_date = (data.get("start_date_local") or "")[:10]
+            act_dist_km = (data.get("distance") or 0) / 1000.0
+            for effort in data.get("best_efforts") or []:
+                raw_name  = effort.get("name", "")
+                canonical = target.get(raw_name)
+                if not canonical:
+                    continue
+                t = effort.get("moving_time") or effort.get("elapsed_time")
+                if t and t > 0:
+                    results.append({
+                        "canonical":       canonical,
+                        "elapsed_time":    t,
+                        "activity_name":   act_name,
+                        "date":            act_date,
+                        "activity_dist_km": act_dist_km,
+                    })
+        return results
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -228,6 +289,77 @@ class MongoStorage:
         ]
         return {doc["_id"] for doc in self._coll.aggregate(pipeline) if doc.get("_id")}
 
+    def get_grade_splits(self, races_only: bool = False) -> list[dict]:
+        """Ritorna lista di {grade_pct, pace_ms, date} da tutti i split via MongoDB aggregation."""
+        match_q: dict = {}
+        if races_only:
+            match_q["workout_type"] = 1
+        pipeline = [
+            {"$match": match_q},
+            {"$project": {"splits_metric": 1, "start_date_local": 1, "_id": 0}},
+            {"$unwind": "$splits_metric"},
+            {"$match": {
+                "splits_metric.distance": {"$gt": 100},
+                "splits_metric.elevation_difference": {"$exists": True, "$ne": None},
+                "splits_metric.average_speed": {"$gt": 0},
+            }},
+            {"$project": {
+                "grade_pct": {"$multiply": [
+                    {"$divide": ["$splits_metric.elevation_difference",
+                                 "$splits_metric.distance"]},
+                    100,
+                ]},
+                "pace_ms": "$splits_metric.average_speed",
+                "date":    {"$substr": ["$start_date_local", 0, 10]},
+            }},
+            {"$limit": 100000},
+        ]
+        return [
+            {"grade_pct": d.get("grade_pct", 0),
+             "pace_ms":   d.get("pace_ms", 0),
+             "date":      d.get("date", "")}
+            for d in self._coll.aggregate(pipeline)
+        ]
+
+    def get_all_best_efforts(self, races_only: bool = False) -> list[dict]:
+        """Ritorna tutti i best effort per la curva di performance via MongoDB."""
+        target_map    = _build_effort_target()
+        all_raw_names = list(target_map.keys())
+        match_q: dict = {"best_efforts.name": {"$in": all_raw_names}}
+        if races_only:
+            match_q["workout_type"] = 1
+        pipeline = [
+            {"$match": match_q},
+            {"$unwind": "$best_efforts"},
+            {"$match": {
+                "best_efforts.name": {"$in": all_raw_names},
+                "$or": [
+                    {"best_efforts.moving_time": {"$gt": 0}},
+                    {"best_efforts.elapsed_time": {"$gt": 0}},
+                ],
+            }},
+            {"$project": {
+                "raw_name":        "$best_efforts.name",
+                "elapsed_time":    {"$ifNull": ["$best_efforts.moving_time",
+                                               "$best_efforts.elapsed_time"]},
+                "activity_name":   "$name",
+                "date":            {"$substr": ["$start_date_local", 0, 10]},
+                "activity_dist_km": {"$divide": [{"$ifNull": ["$distance", 0]}, 1000.0]},
+            }},
+        ]
+        results = []
+        for doc in self._coll.aggregate(pipeline):
+            canonical = target_map.get(doc.get("raw_name", ""))
+            if canonical:
+                results.append({
+                    "canonical":        canonical,
+                    "elapsed_time":     doc["elapsed_time"],
+                    "activity_name":    doc.get("activity_name", "–"),
+                    "date":             doc.get("date", ""),
+                    "activity_dist_km": doc.get("activity_dist_km", 0.0),
+                })
+        return results
+
     def get_best_efforts_records(self) -> dict:
         """Ritorna il miglior tempo per le distanze principali via aggregazione MongoDB."""
         target_map = _build_effort_target()
@@ -235,10 +367,14 @@ class MongoStorage:
         pipeline = [
             {"$unwind": "$best_efforts"},
             {"$match": {"best_efforts.name": {"$in": all_raw_names}}},
-            {"$sort": {"best_efforts.elapsed_time": 1}},
+            {"$addFields": {
+                "best_efforts._time": {"$ifNull": ["$best_efforts.moving_time",
+                                                   "$best_efforts.elapsed_time"]},
+            }},
+            {"$sort": {"best_efforts._time": 1}},
             {"$group": {
                 "_id": "$best_efforts.name",
-                "elapsed_time": {"$first": "$best_efforts.elapsed_time"},
+                "elapsed_time": {"$first": "$best_efforts._time"},
                 "activity_name": {"$first": "$name"},
                 "date": {"$first": "$start_date_local"},
             }},
@@ -331,12 +467,27 @@ def stop_mongo_container(compose_path: str) -> tuple[bool, str]:
 # Mappa raw_name → canonical_key per i best effort Strava.
 # Copre le varianti note dell'API (inglese, formati alternativi).
 _EFFORT_ALIASES: dict[str, str] = {
+    # 400m
+    "400m":          "400m",
+    "400 m":         "400m",
+    # 1/2 mile (~804m)
+    "1/2 mile":      "half_mile",
+    "Half Mile":     "half_mile",
+    "half mile":     "half_mile",
     # 1 km — Strava API usa "1K" (uppercase K)
-    "1K":           "1k",
-    "1k":           "1k",
-    "1 km":         "1k",
-    "1 kilometer":  "1k",
-    "1 Kilometer":  "1k",
+    "1K":            "1k",
+    "1k":            "1k",
+    "1 km":          "1k",
+    "1 kilometer":   "1k",
+    "1 Kilometer":   "1k",
+    # 1 mile (~1609m)
+    "1 mile":        "1_mile",
+    "1 Mile":        "1_mile",
+    "1mile":         "1_mile",
+    # 2 miles (~3219m)
+    "2 mile":        "2_mile",
+    "2 miles":       "2_mile",
+    "2 Mile":        "2_mile",
     # 5 km — Strava API usa "5K"
     "5K":            "5k",
     "5k":            "5k",
@@ -344,19 +495,33 @@ _EFFORT_ALIASES: dict[str, str] = {
     "5 kilometers":  "5k",
     "5 Kilometers":  "5k",
     # 10 km — Strava API usa "10K"
-    "10K":            "10k",
-    "10k":            "10k",
-    "10 km":          "10k",
-    "10 kilometers":  "10k",
-    "10 Kilometers":  "10k",
+    "10K":           "10k",
+    "10k":           "10k",
+    "10 km":         "10k",
+    "10 kilometers": "10k",
+    "10 Kilometers": "10k",
     # mezza maratona — Strava API usa "Half-Marathon"
-    "Half-Marathon":  "Half-Marathon",
-    "Half Marathon":  "Half-Marathon",
-    "half-marathon":  "Half-Marathon",
-    "half marathon":  "Half-Marathon",
+    "Half-Marathon": "Half-Marathon",
+    "Half Marathon": "Half-Marathon",
+    "half-marathon": "Half-Marathon",
+    "half marathon": "Half-Marathon",
+    "1/2 Marathon":  "Half-Marathon",
     # maratona — Strava API usa "Marathon"
-    "Marathon":  "Marathon",
-    "marathon":  "Marathon",
+    "Marathon":      "Marathon",
+    "marathon":      "Marathon",
+}
+
+# Distanza in metri per ogni canonical key (usata per fit curva performance).
+_EFFORT_DISTANCES: dict[str, float] = {
+    "400m":          400.0,
+    "half_mile":     804.67,
+    "1k":            1000.0,
+    "1_mile":        1609.34,
+    "2_mile":        3218.69,
+    "5k":            5000.0,
+    "10k":           10000.0,
+    "Half-Marathon": 21097.5,
+    "Marathon":      42195.0,
 }
 
 def _build_effort_target() -> dict[str, str]:

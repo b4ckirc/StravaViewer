@@ -149,6 +149,24 @@ class StorageManager:
                 pass
         return self.json_storage.get_best_efforts_records()
 
+    def get_grade_splits(self, races_only: bool = False) -> list[dict]:
+        """Dati pendenza/passo per grade analysis (da tutti gli split)."""
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                return self.mongo_storage.get_grade_splits(races_only)
+            except Exception:
+                pass
+        return self.json_storage.get_grade_splits(races_only)
+
+    def get_all_best_efforts(self, races_only: bool = False) -> list[dict]:
+        """Tutti i best effort per la curva di performance."""
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                return self.mongo_storage.get_all_best_efforts(races_only)
+            except Exception:
+                pass
+        return self.json_storage.get_all_best_efforts(races_only)
+
     def scan_effort_names(self) -> set:
         """Diagnostica: ritorna tutti i nomi di best effort presenti nel database."""
         if self.mongo_ok and self.mongo_storage:
