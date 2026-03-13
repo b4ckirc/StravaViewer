@@ -1,6 +1,9 @@
 # ── Credenziali e token ───────────────────────────────────────────────────────
 .strava_token.json
 
+# ── Preferenze utente locali ──────────────────────────────────────────────────
+settings.json
+
 # ── Attività scaricate ────────────────────────────────────────────────────────
 strava_activities/
 

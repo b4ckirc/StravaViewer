@@ -1,6 +1,6 @@
 # ⬡ Strava Viewer 3.0
 
-Applicazione desktop per analizzare, visualizzare e confrontare le attività di corsa scaricate da Strava. Interfaccia grafica nativa (tkinter), dark theme, supporto MongoDB e archiviazione locale JSON.
+Applicazione desktop per analizzare, visualizzare e confrontare le attività di corsa scaricate da Strava. Interfaccia grafica nativa (tkinter), tema chiaro/scuro, supporto MongoDB e archiviazione locale JSON.
 
 ---
 
@@ -69,26 +69,43 @@ Elenco di tutte le corse salvate nel database, con:
 - Apertura attività con 📂, aggiunta al confronto con ➕, eliminazione con 🗑
 - Indicatore della fonte dati attiva (MongoDB o File JSON)
 
+### Calendario
+Vista mensile di tutte le corse con navigazione mese per mese:
+- Ogni cella mostra distanza e passo della corsa del giorno (colorata di arancione se presente)
+- Giorni con più corse mostrano un contatore aggiuntivo
+- Bottoni ◀ ▶ per navigare tra i mesi, "Oggi" per tornare al mese corrente
+- Click su una cella apre l'attività nel tab Dashboard
+- Il totale km e numero di corse del mese è visualizzato nell'intestazione
+
 ### Statistiche
 Statistiche aggregate su **tutte** le corse nel database (ignora filtri e paginazione):
+- **Obiettivo annuale** — imposta un target km per l'anno corrente con barra di avanzamento; il valore viene salvato in `settings.json` e ricordato tra le sessioni
 - Totali: corse, km, ore, dislivello, passo medio, HR media, calorie, km/settimana
-- Tabella per anno con km, corse, tempo, passo medio, dislivello
-- Grafici: km per anno, corse per anno, distribuzione distanze (torta)
+- **Tabella per mese** — ultimi 12 mesi con km, corse, tempo, passo medio, dislivello; grafico a barre km per mese
+- Tabella per anno con km, corse, tempo, passo medio, dislivello; grafico km per anno e corse per anno
+- Distribuzione distanze (torta)
+- **Carico di allenamento** — grafico ATL/CTL/TSB (Banister TRIMP) degli ultimi 12 mesi:
+  - *CTL (Fitness)* — media ponderata esponenziale a 42 giorni
+  - *ATL (Fatica)* — media ponderata esponenziale a 7 giorni
+  - *TSB (Forma)* — CTL − ATL (positivo = riposato, negativo = affaticato)
 - **Record personali** — tabella con il miglior tempo personale per le distanze canoniche (1 km, 5 km, 10 km, Mezza Maratona, Maratona), con nome attività e data in cui è stato realizzato
 
 ### Database
 Dal menu **DATABASE** nella topbar:
 - **Esporta ZIP** — esporta tutte le attività del database in un archivio `.zip` (file JSON per ogni corsa); utile come backup o per spostare il database su un'altra macchina
 - **Importa ZIP** — importa un archivio `.zip` precedentemente esportato; le attività già presenti vengono saltate (deduplicazione per Strava ID); le nuove vengono salvate su JSON e, se disponibile, su MongoDB
+- **Heatmap corse** — genera una mappa interattiva nel browser con tutte le polyline GPS sovrapposte; sfondo scuro CartoDB, ogni tracciato in arancione semitrasparente; tooltip con nome e data al passaggio del mouse
 
 ### Tema
 La topbar include un pulsante **☀ CHIARO / 🌙 SCURO** per passare tra il tema scuro (default, ispirato a GitHub/Strava) e il tema chiaro. La preferenza non viene salvata tra le sessioni.
 
 ### Export
-Dal menu **ESPORTA** (richiede un'attività aperta):
-- **PNG** — tutti e cinque i grafici in alta risoluzione (180 dpi)
-- **PDF** — report 2 pagine: riepilogo testuale + splits + grafici
-- **CSV** — splits chilometro per chilometro
+Dal menu **ESPORTA**:
+- **PNG** — tutti e cinque i grafici in alta risoluzione (180 dpi) *(richiede attività aperta)*
+- **PDF** — report 2 pagine: riepilogo testuale + splits + grafici *(richiede attività aperta)*
+- **CSV Splits** — splits chilometro per chilometro *(richiede attività aperta)*
+- **GPX** — esporta il tracciato GPS in formato GPX standard, compatibile con Garmin, Komoot, ecc. *(richiede attività aperta con dati GPS)*
+- **CSV Statistiche** — esporta le statistiche mensili (km, corse, tempo, passo, dislivello) in CSV per analisi esterne (Excel, ecc.)
 
 ---
 
@@ -109,6 +126,7 @@ strava_viewer/
     ├── widgets.py           # Widget riutilizzabili: StatCard, make_scrollable, embed_mpl…
     ├── downloader_ui.py     # Finestra modale download da Strava
     ├── export_pdf.py        # Generazione PDF 2 pagine con matplotlib PdfPages
+    ├── tab_calendar.py      # Tab Calendario mensile
     ├── tab_dashboard.py     # Tab Dashboard
     ├── tab_charts.py        # Tab Grafici + _build_export_fig() per PNG/PDF
     ├── tab_hr.py            # Tab Zone HR
@@ -234,6 +252,15 @@ I dati MongoDB vengono salvati in un volume Docker persistente e sopravvivono ai
 - Il download è incrementale: le corse già presenti nel database vengono saltate automaticamente
 - La mappa GPS richiede una connessione internet per caricare i tile nel browser (CartoDB, OpenStreetMap, Esri Satellite)
 - L'export PDF richiede `matplotlib` installato
+- La heatmap richiede una connessione internet per caricare i tile CartoDB nel browser
+
+### File non tracciati da git
+
+| File | Contenuto |
+|---|---|
+| `.strava_token.json` | Token OAuth Strava (access + refresh token) |
+| `settings.json` | Preferenze utente locali (es. obiettivo km annuale) |
+| `strava_activities/` | File JSON delle attività scaricate |
 
 ## Utilizzo IA
 

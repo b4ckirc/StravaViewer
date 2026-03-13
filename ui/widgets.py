@@ -97,3 +97,77 @@ def topbar_btn(parent, text, command, primary=False):
                      font=("Courier", 9, "bold"), bd=0,
                      padx=14, pady=6, cursor="hand2", relief="flat",
                      command=command)
+
+
+def info_btn(parent, title: str, body: str):
+    """
+    Piccolo pulsante ℹ che apre una finestra modale con testo formattato.
+    Usato per spiegare i grafici con stile coach.
+    """
+    def _open():
+        win = tk.Toplevel()
+        win.title(title)
+        win.configure(bg=C["bg"])
+        win.geometry("680x560")
+        win.resizable(True, True)
+
+        # Header
+        tk.Label(win, text=title,
+                 font=("Courier", 11, "bold"), fg=C["accent"],
+                 bg=C["bg"], pady=14).pack(fill="x")
+        tk.Frame(win, bg=C["border"], height=1).pack(fill="x", padx=20)
+
+        # Testo scrollabile
+        frame = tk.Frame(win, bg=C["bg"])
+        frame.pack(fill="both", expand=True, padx=20, pady=12)
+
+        sb = ttk.Scrollbar(frame, orient="vertical")
+        sb.pack(side="right", fill="y")
+
+        txt = tk.Text(frame, wrap="word",
+                      font=("Courier", 9), fg=C["text"], bg=C["surface2"],
+                      bd=0, padx=16, pady=14, relief="flat",
+                      yscrollcommand=sb.set,
+                      highlightthickness=1,
+                      highlightbackground=C["border"],
+                      cursor="arrow", state="normal")
+        txt.pack(fill="both", expand=True)
+        sb.config(command=txt.yview)
+
+        # Tag di formattazione
+        txt.tag_configure("title",   font=("Courier", 10, "bold"),
+                          foreground=C["accent"])
+        txt.tag_configure("section", font=("Courier", 9, "bold"),
+                          foreground=C["blue"])
+        txt.tag_configure("note",    font=("Courier", 8, "italic"),
+                          foreground=C["text_dim"])
+        txt.tag_configure("bullet",  font=("Courier", 9),
+                          foreground=C["green"])
+
+        # Inserimento testo con tag automatici
+        for line in body.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("##"):
+                txt.insert("end", stripped[2:].strip() + "\n", "title")
+            elif stripped.startswith("#"):
+                txt.insert("end", "\n" + stripped[1:].strip() + "\n", "section")
+            elif stripped.startswith("•") or stripped.startswith("-"):
+                txt.insert("end", "  " + stripped + "\n", "bullet")
+            elif stripped.startswith("NOTE") or stripped.startswith("NOTA"):
+                txt.insert("end", stripped + "\n", "note")
+            else:
+                txt.insert("end", stripped + "\n" if stripped else "\n")
+
+        txt.config(state="disabled")
+
+        tk.Button(win, text="✕  Chiudi",
+                  font=("Courier", 9, "bold"), bg=C["surface2"], fg=C["text"],
+                  bd=0, padx=16, pady=8, cursor="hand2",
+                  command=win.destroy).pack(pady=(0, 16))
+
+    return tk.Button(parent, text="ℹ  Info",
+                     font=("Courier", 8, "bold"),
+                     bg=C["surface2"], fg=C["blue"],
+                     bd=0, padx=8, pady=3,
+                     cursor="hand2", relief="flat",
+                     command=_open)

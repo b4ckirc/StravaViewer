@@ -405,9 +405,10 @@ def _passes(summary: dict, filters: dict) -> bool:
     date_str = summary.get("start_date", "")
     try:
         dt = datetime.fromisoformat(date_str.replace("Z", ""))
-        if date_from and dt < date_from:
+        # Confronto per data (non ora): gli estremi sono inclusi
+        if date_from and dt.date() < date_from.date():
             return False
-        if date_to   and dt > date_to:
+        if date_to   and dt.date() > date_to.date():
             return False
     except Exception:
         pass
@@ -436,9 +437,11 @@ def _mongo_query(filters: dict) -> dict:
     if date_from or date_to:
         q["start_date_local"] = {}
         if date_from:
-            q["start_date_local"]["$gte"] = date_from.isoformat()
+            q["start_date_local"]["$gte"] = date_from.date().isoformat()
         if date_to:
-            q["start_date_local"]["$lte"] = date_to.isoformat()
+            # Estremo superiore inclusivo: include tutto il giorno selezionato
+            from datetime import timedelta
+            q["start_date_local"]["$lt"] = (date_to + timedelta(days=1)).date().isoformat()
     if filters.get("races_only"):
         q["workout_type"] = 1
     return q

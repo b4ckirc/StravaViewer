@@ -19,6 +19,7 @@ import ui.tab_best       as tab_best
 import ui.tab_compare    as tab_compare
 import ui.tab_library    as tab_library
 import ui.tab_stats      as tab_stats
+import ui.tab_calendar   as tab_calendar
 import ui.tab_raw        as tab_raw
 from ui.downloader_ui    import open_download_window
 from ui.widgets          import topbar_btn, clear
@@ -109,16 +110,17 @@ class StravaApp(tk.Tk):
         self.nb.pack(fill="both", expand=True)
 
         tab_defs = [
-            ("tab_dash",    "  DASHBOARD  "),
-            ("tab_chart",   "  GRAFICI  "),
-            ("tab_hrzone",  "  ZONE HR  "),
-            ("tab_map",     "  MAPPA  "),
-            ("tab_split",   "  SPLITS  "),
-            ("tab_best",    "  BEST EFFORTS  "),
-            ("tab_compare", "  CONFRONTO  "),
-            ("tab_library", "  📚 LIBRERIA  "),
-            ("tab_stats",   "  📊 STATISTICHE  "),
-            ("tab_raw",     "  JSON  "),
+            ("tab_dash",     "  DASHBOARD  "),
+            ("tab_chart",    "  GRAFICI  "),
+            ("tab_hrzone",   "  ZONE HR  "),
+            ("tab_map",      "  MAPPA  "),
+            ("tab_split",    "  SPLITS  "),
+            ("tab_best",     "  BEST EFFORTS  "),
+            ("tab_compare",  "  CONFRONTO  "),
+            ("tab_library",  "  📚 LIBRERIA  "),
+            ("tab_calendar", "  📅 CALENDARIO  "),
+            ("tab_stats",    "  📊 STATISTICHE  "),
+            ("tab_raw",      "  JSON  "),
         ]
         for attr, label in tab_defs:
             frame = tk.Frame(self.nb, bg=C["bg"])
@@ -133,6 +135,9 @@ class StravaApp(tk.Tk):
             self._render_library()
         elif "STATISTICHE" in tab:
             tab_stats.render(self.tab_stats, self.storage)
+        elif "CALENDARIO" in tab:
+            tab_calendar.render(self.tab_calendar, self.storage,
+                                on_open=self._open_from_library)
 
     # ── Welcome ───────────────────────────────────────────────────────────────
 
@@ -271,26 +276,42 @@ class StravaApp(tk.Tk):
     # ── Export attività corrente ───────────────────────────────────────────────
 
     def _export_menu(self):
-        if not self.activity:
-            messagebox.showinfo("Info", "Apri prima un'attività da analizzare.")
-            return
         win = tk.Toplevel(self)
-        win.title("Esporta attività")
+        win.title("Esporta")
         win.configure(bg=C["bg"])
-        win.geometry("340x250")
+        win.geometry("340x370")
         win.resizable(False, False)
         tk.Label(win, text="SCEGLI FORMATO",
                  font=("Courier", 10, "bold"), fg=C["accent"],
-                 bg=C["bg"]).pack(pady=(20, 12))
+                 bg=C["bg"]).pack(pady=(20, 4))
+        tk.Label(win, text="— attività corrente —",
+                 font=("Courier", 8), fg=C["text_dim"],
+                 bg=C["bg"]).pack(pady=(0, 8))
         b = dict(font=("Courier", 10, "bold"), bd=0, pady=10,
                  cursor="hand2", relief="flat", width=28)
-        tk.Button(win, text="📊  PNG — Grafici",  bg=C["surface2"], fg=C["text"],
-                  command=lambda: [win.destroy(), self._export_png()], **b).pack(pady=4)
-        tk.Button(win, text="📄  PDF — Report",   bg=C["surface2"], fg=C["text"],
-                  command=lambda: [win.destroy(), self._export_pdf()], **b).pack(pady=4)
-        tk.Button(win, text="📋  CSV — Splits",   bg=C["surface2"], fg=C["text"],
-                  command=lambda: [win.destroy(), self._export_csv()], **b).pack(pady=4)
-        tk.Button(win, text="✕  Annulla",         bg=C["bg"],       fg=C["text_dim"],
+        act_cmds = [
+            ("📊  PNG — Grafici",   self._export_png),
+            ("📄  PDF — Report",    self._export_pdf),
+            ("📋  CSV — Splits",    self._export_csv),
+            ("📍  GPX — Tracciato", self._export_gpx),
+        ]
+        for txt, cmd in act_cmds:
+            tk.Button(win, text=txt, bg=C["surface2"], fg=C["text"],
+                      command=lambda c=cmd: [win.destroy(),
+                                             c() if self.activity else
+                                             messagebox.showinfo(
+                                                 "Info",
+                                                 "Apri prima un'attività.")],
+                      **b).pack(pady=3)
+
+        tk.Label(win, text="— database completo —",
+                 font=("Courier", 8), fg=C["text_dim"],
+                 bg=C["bg"]).pack(pady=(10, 4))
+        tk.Button(win, text="📈  CSV — Statistiche",
+                  bg=C["surface2"], fg=C["text"],
+                  command=lambda: [win.destroy(), self._export_stats_csv()],
+                  **b).pack(pady=3)
+        tk.Button(win, text="✕  Annulla", bg=C["bg"], fg=C["text_dim"],
                   command=win.destroy, **b).pack(pady=(8, 0))
 
     # ── Database backup/restore ────────────────────────────────────────────────
@@ -299,7 +320,7 @@ class StravaApp(tk.Tk):
         win = tk.Toplevel(self)
         win.title("Database")
         win.configure(bg=C["bg"])
-        win.geometry("340x220")
+        win.geometry("340x280")
         win.resizable(False, False)
         tk.Label(win, text="GESTIONE DATABASE",
                  font=("Courier", 10, "bold"), fg=C["accent"],
@@ -310,6 +331,8 @@ class StravaApp(tk.Tk):
                   command=lambda: [win.destroy(), self._export_zip()], **b).pack(pady=4)
         tk.Button(win, text="📥  Importa da ZIP",       bg=C["surface2"], fg=C["text"],
                   command=lambda: [win.destroy(), self._import_zip()], **b).pack(pady=4)
+        tk.Button(win, text="🗺  Heatmap corse",        bg=C["surface2"], fg=C["text"],
+                  command=lambda: [win.destroy(), self._open_heatmap()], **b).pack(pady=4)
         tk.Button(win, text="✕  Annulla",               bg=C["bg"],       fg=C["text_dim"],
                   command=win.destroy, **b).pack(pady=(8, 0))
 
@@ -438,3 +461,147 @@ class StravaApp(tk.Tk):
             for row in a.splits:
                 w.writerow({k: row.get(k, "") for k in fields})
         messagebox.showinfo("Export", f"CSV salvato:\n{path}")
+
+    # ── Export GPX ────────────────────────────────────────────────────────────
+
+    def _export_gpx(self):
+        if not self.activity:
+            return
+        a = self.activity
+        if not a.gps_points:
+            messagebox.showinfo("GPX", "Nessun dato GPS disponibile per questa attività.")
+            return
+        path = filedialog.asksaveasfilename(
+            defaultextension=".gpx",
+            initialfile=f"{a.name[:40].replace(' ', '_')}.gpx",
+            filetypes=[("GPX", "*.gpx"), ("Tutti", "*.*")])
+        if not path:
+            return
+        try:
+            _write_gpx(a, path)
+            messagebox.showinfo("Export GPX", f"GPX salvato:\n{path}")
+        except Exception as e:
+            messagebox.showerror("Errore GPX", str(e))
+
+    # ── Export statistiche CSV ────────────────────────────────────────────────
+
+    def _export_stats_csv(self):
+        import csv
+        path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            initialfile="strava_statistiche.csv",
+            filetypes=[("CSV", "*.csv")])
+        if not path:
+            return
+        try:
+            monthly = self.storage.stats_per_month()
+            fields  = ["mese", "corse", "km_totali", "tempo_sec",
+                       "dislivello_m", "passo_medio"]
+            with open(path, "w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=fields)
+                w.writeheader()
+                for d in monthly:
+                    from models import fmt_pace
+                    w.writerow({
+                        "mese":         d["month"],
+                        "corse":        d["count"],
+                        "km_totali":    f"{d['dist_km']:.2f}",
+                        "tempo_sec":    d["time_sec"],
+                        "dislivello_m": f"{d['elev_gain']:.0f}",
+                        "passo_medio":  fmt_pace(d["avg_speed"]),
+                    })
+            messagebox.showinfo("Export CSV", f"Statistiche esportate:\n{path}")
+        except Exception as e:
+            messagebox.showerror("Errore CSV", str(e))
+
+    # ── Heatmap ───────────────────────────────────────────────────────────────
+
+    def _open_heatmap(self):
+        import threading
+        win = tk.Toplevel(self)
+        win.title("Heatmap — caricamento…")
+        win.configure(bg=C["bg"])
+        win.geometry("320x120")
+        lbl = tk.Label(win, text="Caricamento polyline in corso…",
+                       font=("Courier", 10), fg=C["text_dim"],
+                       bg=C["bg"])
+        lbl.pack(expand=True)
+
+        def _worker():
+            try:
+                polys = self.storage.list_polylines()
+                self.after(0, lambda: _build_and_open(polys, win))
+            except Exception as e:
+                self.after(0, lambda: [win.destroy(),
+                                       messagebox.showerror("Heatmap", str(e))])
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+
+# ── Helpers modulo ────────────────────────────────────────────────────────────
+
+def _write_gpx(act, path: str):
+    """Genera un file GPX dal tracciato GPS dell'attività."""
+    import xml.etree.ElementTree as ET
+    gpx = ET.Element("gpx", {
+        "version": "1.1",
+        "creator": "StravaViewer",
+        "xmlns":              "http://www.topografix.com/GPX/1/1",
+        "xmlns:xsi":          "http://www.w3.org/2001/XMLSchema-instance",
+        "xsi:schemaLocation": ("http://www.topografix.com/GPX/1/1 "
+                               "http://www.topografix.com/GPX/1/1/gpx.xsd"),
+    })
+    meta = ET.SubElement(gpx, "metadata")
+    ET.SubElement(meta, "name").text = act.name
+    ET.SubElement(meta, "time").text = act.start_date
+
+    trk  = ET.SubElement(gpx, "trk")
+    ET.SubElement(trk, "name").text = act.name
+    trkseg = ET.SubElement(trk, "trkseg")
+    for lat, lon in act.gps_points:
+        ET.SubElement(trkseg, "trkpt", {"lat": str(lat), "lon": str(lon)})
+
+    tree = ET.ElementTree(gpx)
+    ET.indent(tree, space="  ")
+    with open(path, "wb") as f:
+        tree.write(f, xml_declaration=True, encoding="utf-8")
+
+
+def _build_and_open(polys: list, progress_win):
+    """Costruisce la heatmap Folium con tutte le polyline e la apre nel browser."""
+    import tempfile, webbrowser
+    progress_win.destroy()
+
+    if not polys:
+        from tkinter import messagebox
+        messagebox.showinfo("Heatmap", "Nessun tracciato GPS trovato nel database.")
+        return
+
+    try:
+        import folium
+    except ImportError:
+        from tkinter import messagebox
+        messagebox.showerror("Heatmap", "Libreria 'folium' non installata.\nEsegui: pip install folium")
+        return
+
+    # Centro mappa = media di tutti i punti
+    all_pts  = [pt for _, _, pts in polys for pt in pts]
+    avg_lat  = sum(p[0] for p in all_pts) / len(all_pts)
+    avg_lon  = sum(p[1] for p in all_pts) / len(all_pts)
+
+    m = folium.Map(location=[avg_lat, avg_lon], zoom_start=10,
+                   tiles="CartoDB dark_matter")
+
+    for name, date_str, pts in polys:
+        folium.PolyLine(
+            pts,
+            color="#fc4c02",
+            weight=2,
+            opacity=0.45,
+            tooltip=f"{date_str}  {name}",
+        ).add_to(m)
+
+    # Salva in file temporaneo e apri nel browser
+    tmp = tempfile.NamedTemporaryFile(suffix=".html", delete=False)
+    m.save(tmp.name)
+    webbrowser.open(f"file:///{tmp.name.replace(chr(92), '/')}")
