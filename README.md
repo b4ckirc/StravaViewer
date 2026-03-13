@@ -4,6 +4,10 @@ Applicazione desktop per analizzare, visualizzare e confrontare le attività di 
 
 ---
 
+> Se questo progetto ti è utile e ti va di offrire un caffè virtuale allo sviluppatore, puoi farlo qui → [☕ PayPal](https://paypal.me/TeoVr81). Nessuna pressione — ogni km conta, donazione o no.
+
+---
+
 ## Funzionalità
 
 ### Apertura attività
