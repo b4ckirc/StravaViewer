@@ -212,10 +212,14 @@ def render(tab, storage_mgr, on_open):
         n   = len(runs)
 
         counter_var = tk.StringVar(value=f"1/{n}" if n > 1 else "")
+        race_var    = tk.StringVar()
         if n > 1:
             tk.Label(top_f, textvariable=counter_var,
                      font=("Courier", 7), fg=C["text_dim"],
                      bg=bg_cell).pack(side="right")
+        tk.Label(top_f, textvariable=race_var,
+                 font=("Courier", 9), fg=C["yellow"],
+                 bg=bg_cell).pack(side="right", padx=(0, 2))
 
         # Etichette contenuto (aggiornate dalla navigazione)
         dist_var = tk.StringVar()
@@ -242,6 +246,9 @@ def render(tab, storage_mgr, on_open):
             hr = run.get("avg_hr")
             hr_var.set(f"♥ {hr:.0f} bpm" if hr else "")
             counter_var.set(f"{idx[0] + 1}/{n}")
+            is_race = run.get("workout_type") == 1
+            race_var.set("🏆" if is_race else "")
+            cell.config(highlightbackground=C["yellow"] if is_race else C["accent"])
             _rebind(run)
 
         def _rebind(run):

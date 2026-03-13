@@ -64,14 +64,27 @@ class Tooltip:
 
 
 class StatCard(tk.Frame):
-    def __init__(self, parent, label, value, unit="", color=None, **kw):
+    def __init__(self, parent, label, value, unit="", color=None, stripe=None, **kw):
+        """
+        stripe: colore hex opzionale per il bordo sinistro colorato (4px).
+                Se None, nessun bordo laterale colorato.
+        """
         super().__init__(parent, bg=C["surface2"], bd=0,
                          highlightthickness=1, highlightbackground=C["border"], **kw)
-        self.config(padx=18, pady=14)
         color = color or C["text"]
-        tk.Label(self, text=label.upper(), font=FONT["label"],
+
+        # Stripe sinistra colorata (4px)
+        if stripe:
+            tk.Frame(self, bg=stripe, width=4).pack(side="left", fill="y")
+
+        # Contenuto
+        inner = tk.Frame(self, bg=C["surface2"])
+        inner.pack(side="left", fill="both", expand=True,
+                   padx=(10 if stripe else 18, 14), pady=14)
+
+        tk.Label(inner, text=label.upper(), font=FONT["label"],
                  fg=C["text_dim"], bg=C["surface2"]).pack(anchor="w")
-        vf = tk.Frame(self, bg=C["surface2"])
+        vf = tk.Frame(inner, bg=C["surface2"])
         vf.pack(anchor="w", pady=(4, 0))
         tk.Label(vf, text=str(value), font=FONT["metric"],
                  fg=color, bg=C["surface2"]).pack(side="left")
