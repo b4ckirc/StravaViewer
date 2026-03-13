@@ -13,21 +13,71 @@ except ImportError:
     HAS_MPL = False
 
 
+# ── Scala tipografica ──────────────────────────────────────────────────────────
+FONT = {
+    "title":    ("Courier", 18, "bold"),    # titoli sezione/tab
+    "section":  ("Courier", 10, "bold"),    # intestazioni gruppo
+    "body":     ("Courier", 10),            # testo corrente
+    "caption":  ("Courier", 8),             # note, date, label secondarie
+    "metric":   ("Courier", 26, "bold"),    # valori grandi nelle StatCard
+    "label":    ("Courier", 9, "bold"),     # etichette uppercase
+    "mono_sm":  ("Courier", 8, "bold"),     # testo monospace piccolo
+}
+
+
+class Tooltip:
+    """Tooltip semplice che appare dopo 500 ms di hover."""
+    _delay_ms = 500
+
+    def __init__(self, widget, text: str):
+        self._widget = widget
+        self._text   = text
+        self._job    = None
+        self._win    = None
+        widget.bind("<Enter>",    self._schedule, add="+")
+        widget.bind("<Leave>",    self._cancel,   add="+")
+        widget.bind("<Button>",   self._cancel,   add="+")
+
+    def _schedule(self, event=None):
+        self._cancel()
+        self._job = self._widget.after(self._delay_ms, self._show)
+
+    def _cancel(self, event=None):
+        if self._job:
+            self._widget.after_cancel(self._job)
+            self._job = None
+        if self._win:
+            self._win.destroy()
+            self._win = None
+
+    def _show(self):
+        x = self._widget.winfo_rootx() + 10
+        y = self._widget.winfo_rooty() + self._widget.winfo_height() + 4
+        self._win = tw = tk.Toplevel(self._widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        tk.Label(tw, text=self._text,
+                 font=FONT["caption"], fg=C["text"], bg=C["surface2"],
+                 relief="flat", bd=0, padx=10, pady=5,
+                 highlightthickness=1, highlightbackground=C["border"]
+                 ).pack()
+
+
 class StatCard(tk.Frame):
     def __init__(self, parent, label, value, unit="", color=None, **kw):
         super().__init__(parent, bg=C["surface2"], bd=0,
                          highlightthickness=1, highlightbackground=C["border"], **kw)
-        self.config(padx=16, pady=12)
+        self.config(padx=18, pady=14)
         color = color or C["text"]
-        tk.Label(self, text=label.upper(), font=("Courier", 8, "bold"),
+        tk.Label(self, text=label.upper(), font=FONT["label"],
                  fg=C["text_dim"], bg=C["surface2"]).pack(anchor="w")
         vf = tk.Frame(self, bg=C["surface2"])
-        vf.pack(anchor="w", pady=(2, 0))
-        tk.Label(vf, text=str(value), font=("Courier", 20, "bold"),
+        vf.pack(anchor="w", pady=(4, 0))
+        tk.Label(vf, text=str(value), font=FONT["metric"],
                  fg=color, bg=C["surface2"]).pack(side="left")
         if unit:
-            tk.Label(vf, text=f" {unit}", font=("Courier", 9),
-                     fg=C["text_dim"], bg=C["surface2"]).pack(side="left", pady=(7, 0))
+            tk.Label(vf, text=f" {unit}", font=FONT["body"],
+                     fg=C["text_dim"], bg=C["surface2"]).pack(side="left", pady=(10, 0))
 
 
 def make_scrollable(parent):
@@ -73,15 +123,15 @@ def style_ax(ax, title):
 
 def section_label(parent, text):
     f = tk.Frame(parent, bg=C["bg"])
-    f.pack(fill="x", padx=20, pady=(18, 6))
-    tk.Label(f, text=f"▸ {text}", font=("Courier", 9, "bold"),
+    f.pack(fill="x", padx=20, pady=(20, 6))
+    tk.Label(f, text=f"▸ {text}", font=FONT["section"],
              fg=C["accent"], bg=C["bg"]).pack(side="left")
     tk.Frame(f, bg=C["border"], height=1).pack(
-        side="left", fill="x", expand=True, padx=(10, 0), pady=8)
+        side="left", fill="x", expand=True, padx=(12, 0), pady=8)
 
 
 def no_data(parent, msg="Nessun dato disponibile."):
-    tk.Label(parent, text=msg, font=("Courier", 12),
+    tk.Label(parent, text=msg, font=FONT["body"],
              fg=C["text_dim"], bg=C["bg"], justify="center").pack(expand=True)
 
 
@@ -90,13 +140,24 @@ def clear(widget):
         w.destroy()
 
 
-def topbar_btn(parent, text, command, primary=False):
-    bg = C["accent"] if primary else C["surface2"]
-    fg = "white"     if primary else C["text"]
-    return tk.Button(parent, text=text, bg=bg, fg=fg,
-                     font=("Courier", 9, "bold"), bd=0,
-                     padx=14, pady=6, cursor="hand2", relief="flat",
-                     command=command)
+def topbar_btn(parent, text, command, primary=False, tooltip: str = ""):
+    bg       = C["accent"]  if primary else C["surface2"]
+    fg       = "white"      if primary else C["text"]
+    bg_hover = C["accent2"] if primary else C["border"]
+
+    btn = tk.Button(parent, text=text, bg=bg, fg=fg,
+                    font=FONT["label"], bd=0,
+                    padx=14, pady=6, cursor="hand2", relief="flat",
+                    activebackground=bg_hover, activeforeground=fg,
+                    command=command)
+
+    btn.bind("<Enter>", lambda e: btn.config(bg=bg_hover))
+    btn.bind("<Leave>", lambda e: btn.config(bg=bg))
+
+    if tooltip:
+        Tooltip(btn, tooltip)
+
+    return btn
 
 
 def info_btn(parent, title: str, body: str):

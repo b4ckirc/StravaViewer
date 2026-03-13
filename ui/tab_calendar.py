@@ -21,6 +21,17 @@ CELL_W = 130
 CELL_H = 90
 
 
+def _blend_color(c1: str, c2: str, t: float) -> str:
+    """Interpola tra due colori hex. t=0 → c1, t=1 → c2."""
+    def h2rgb(h): return int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
+    r1, g1, b1 = h2rgb(c1)
+    r2, g2, b2 = h2rgb(c2)
+    r = int(r1 + (r2 - r1) * t)
+    g = int(g1 + (g2 - g1) * t)
+    b = int(b1 + (b2 - b1) * t)
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
 def render(tab, storage_mgr, on_open):
     clear(tab)
 
@@ -121,14 +132,20 @@ def render(tab, storage_mgr, on_open):
 
         weeks = calendar.monthcalendar(y, m)
 
-        # Statistiche totali del mese
+        # Statistiche totali del mese + massimo km per heatmap
         month_km   = 0.0
         month_runs = 0
+        day_km     = {}   # d_str → km totali quel giorno
         for day_num in range(1, calendar.monthrange(y, m)[1] + 1):
             d_str = f"{y:04d}-{m:02d}-{day_num:02d}"
-            for s in by_date.get(d_str, []):
-                month_km   += s.get("distance", 0) / 1000
-                month_runs += 1
+            km_day = sum(s.get("distance", 0) / 1000 for s in by_date.get(d_str, []))
+            n_day  = len(by_date.get(d_str, []))
+            day_km[d_str]  = km_day
+            month_km      += km_day
+            month_runs    += n_day
+
+        max_km = max(day_km.values(), default=0.0)
+
         if month_runs:
             month_total_var.set(
                 f"  {month_runs} cors{'a' if month_runs == 1 else 'e'}  •  {month_km:.1f} km")
@@ -137,14 +154,14 @@ def render(tab, storage_mgr, on_open):
 
         for week_i, week in enumerate(weeks):
             for day_i, day_num in enumerate(week):
-                _build_cell(week_i, day_i, day_num, y, m)
+                _build_cell(week_i, day_i, day_num, y, m, day_km, max_km)
 
         for i in range(7):
             cal_frame.columnconfigure(i, weight=1)
         for i in range(len(weeks)):
             cal_frame.rowconfigure(i, uniform="calrow", minsize=CELL_H + 2)
 
-    def _build_cell(row, col, day_num, y, m):
+    def _build_cell(row, col, day_num, y, m, day_km, max_km):
         if day_num == 0:
             tk.Frame(cal_frame, bg=C["bg"],
                      width=CELL_W, height=CELL_H
@@ -157,7 +174,12 @@ def render(tab, storage_mgr, on_open):
         is_weekend = col >= 5
 
         if runs:
-            bg_cell    = C["surface"]
+            # Heatmap: intensità proporzionale ai km del giorno vs massimo mese
+            km     = day_km.get(d_str, 0.0)
+            t      = min(km / max_km, 1.0) if max_km > 0 else 0.0
+            # Blend da surface verso accent con intensità [15%–55%]
+            t_scaled   = 0.15 + t * 0.40
+            bg_cell    = _blend_color(C["surface"], C["accent"], t_scaled)
             border_col = C["accent"]
         elif is_today:
             bg_cell    = C["surface2"]
@@ -198,26 +220,32 @@ def render(tab, storage_mgr, on_open):
         # Etichette contenuto (aggiornate dalla navigazione)
         dist_var = tk.StringVar()
         pace_var = tk.StringVar()
+        hr_var   = tk.StringVar()
 
         dist_lbl = tk.Label(cell, textvariable=dist_var,
-                            font=("Courier", 9, "bold"),
-                            fg=C["accent"], bg=bg_cell, anchor="w")
-        dist_lbl.pack(anchor="w", padx=5)
+                            font=("Courier", 10, "bold"),
+                            fg=C["text"], bg=bg_cell, anchor="w")
+        dist_lbl.pack(anchor="w", padx=6, pady=(1, 0))
         pace_lbl = tk.Label(cell, textvariable=pace_var,
                             font=("Courier", 8),
-                            fg=C["green"], bg=bg_cell, anchor="w")
-        pace_lbl.pack(anchor="w", padx=5)
+                            fg=C["text_dim"], bg=bg_cell, anchor="w")
+        pace_lbl.pack(anchor="w", padx=6)
+        hr_lbl = tk.Label(cell, textvariable=hr_var,
+                          font=("Courier", 8),
+                          fg=C["text_dim"], bg=bg_cell, anchor="w")
+        hr_lbl.pack(anchor="w", padx=6)
 
         def _refresh():
             run = runs[idx[0]]
             dist_var.set(f"{run.get('distance', 0) / 1000:.1f} km")
-            pace_var.set(f"{fmt_pace(run.get('avg_speed', 0))} /km")
+            pace_var.set(f"⚡ {fmt_pace(run.get('avg_speed', 0))} /km")
+            hr = run.get("avg_hr")
+            hr_var.set(f"♥ {hr:.0f} bpm" if hr else "")
             counter_var.set(f"{idx[0] + 1}/{n}")
-            # Aggiorna binding click su tutta la cella
             _rebind(run)
 
         def _rebind(run):
-            for w in [cell, top_f, dist_lbl, pace_lbl]:
+            for w in [cell, top_f, dist_lbl, pace_lbl, hr_lbl]:
                 w.bind("<Button-1>", lambda e, s=run: on_open(s))
                 w.config(cursor="hand2")
 

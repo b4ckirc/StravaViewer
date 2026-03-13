@@ -11,8 +11,8 @@ Applicazione desktop per analizzare, visualizzare e confrontare le attività di 
 ## Funzionalità
 
 ### Apertura attività
-- Apri un singolo file JSON esportato da Strava tramite il pulsante **APRI FILE**
-- Oppure scarica direttamente tutte le tue corse da Strava con **SCARICA DA STRAVA**
+- Apri un singolo file JSON esportato da Strava tramite il pulsante **Apri File**
+- Oppure scarica direttamente tutte le tue corse da Strava con **Scarica da Strava**
 
 ### Dashboard
 Panoramica completa dell'attività aperta:
@@ -70,13 +70,15 @@ Confronto side-by-side di fino a 5 attività:
 Elenco di tutte le corse salvate nel database, con:
 - **Paginazione** — 100 righe per pagina con navigazione ◀ ▶
 - **Filtri** per nome/descrizione, distanza (min–max km), intervallo di date, e **Solo gare** (filtra le attività con `workout_type = race`)
+- Colore del passo **semantico**: verde &lt; 5:00/km, giallo &lt; 6:30/km, rosso oltre
+- Hover sulla riga con evidenziazione visiva
 - Apertura attività con 📂, aggiunta al confronto con ➕, eliminazione con 🗑
 - Indicatore della fonte dati attiva (MongoDB o File JSON)
 
 ### Calendario
 Vista mensile di tutte le corse con navigazione mese per mese:
-- Ogni cella mostra distanza e passo della corsa del giorno (colorata di arancione se presente)
-- Giorni con più corse mostrano un contatore aggiuntivo
+- Ogni cella con una corsa mostra distanza, passo e frequenza cardiaca; l'intensità del colore arancione è **proporzionale ai km percorsi** rispetto al giorno più lungo del mese (heatmap)
+- Giorni con più corse mostrano un contatore aggiuntivo con bottoni ◀ ▶ per scorrere tra le corse dello stesso giorno
 - Bottoni ◀ ▶ per navigare tra i mesi, "Oggi" per tornare al mese corrente
 - Click su una cella apre l'attività nel tab Dashboard
 - Il totale km e numero di corse del mese è visualizzato nell'intestazione
@@ -98,16 +100,16 @@ Statistiche aggregate su **tutte** le corse nel database (ignora filtri e pagina
 - **Previsione prestazioni (Monte Carlo)** — stima del tempo su qualsiasi distanza con simulazione di 5000 scenari; parametri configurabili: distanza target (standard o personalizzata in km), dislivello positivo del percorso, finestra temporale dello storico (ultimi N giorni), lunghezza minima e massima delle corse da cui reperire i best effort (km min/max), filtro solo gare; la correzione dislivello è personalizzata: viene calcolata tramite regressione lineare sui tuoi split reali (sec/km per 1% di pendenza), con fallback al modello Minetti se i dati sono insufficienti; il risultato è un istogramma con i percentili P10/P25/P50/P75/P90 e un pannello diagnostico con i dati usati nel fit, il coefficiente b e il tempo base grezzo; pulsante ℹ con guida completa su parametri, calcolo e interpretazione dei risultati
 
 ### Database
-Dal menu **DATABASE** nella topbar:
+Dal menu **Database** nella topbar:
 - **Esporta ZIP** — esporta tutte le attività del database in un archivio `.zip` (file JSON per ogni corsa); utile come backup o per spostare il database su un'altra macchina
 - **Importa ZIP** — importa un archivio `.zip` precedentemente esportato; le attività già presenti vengono saltate (deduplicazione per Strava ID); le nuove vengono salvate su JSON e, se disponibile, su MongoDB
 - **Heatmap corse** — genera una mappa interattiva nel browser con tutte le polyline GPS sovrapposte; sfondo scuro CartoDB, ogni tracciato in arancione semitrasparente; tooltip con nome e data al passaggio del mouse
 
 ### Tema
-La topbar include un pulsante **☀ CHIARO / 🌙 SCURO** per passare tra il tema scuro (default, ispirato a GitHub/Strava) e il tema chiaro. La preferenza non viene salvata tra le sessioni.
+La topbar include un pulsante **☀ Chiaro / 🌙 Scuro** per passare tra il tema scuro (default, ispirato a GitHub/Strava) e il tema chiaro. La preferenza non viene salvata tra le sessioni.
 
 ### Export
-Dal menu **ESPORTA**:
+Dal menu **Esporta**:
 - **PNG** — tutti e cinque i grafici in alta risoluzione (180 dpi) *(richiede attività aperta)*
 - **PDF** — report 2 pagine: riepilogo testuale + splits + grafici *(richiede attività aperta)*
 - **CSV Splits** — splits chilometro per chilometro *(richiede attività aperta)*
@@ -129,7 +131,7 @@ strava_viewer/
 ├── docker-compose.yml       # MongoDB 7 su porta 27017 (avvio automatico)
 └── ui/
     ├── __init__.py
-    ├── app.py               # StravaApp (tk.Tk) — finestra principale, menu, notebook
+    ├── app.py               # StravaApp (tk.Tk) — finestra principale, sidebar, menu
     ├── widgets.py           # Widget riutilizzabili: StatCard, make_scrollable, embed_mpl…
     ├── downloader_ui.py     # Finestra modale download da Strava
     ├── export_pdf.py        # Generazione PDF 2 pagine con matplotlib PdfPages
@@ -229,7 +231,7 @@ MAX_COMPARE = 5
 2. Crea una nuova applicazione
 3. Imposta **Authorization Callback Domain** su `localhost`
 4. Copia **Client ID** e **Client Secret**
-5. Nell'app clicca **SCARICA DA STRAVA**, inserisci le credenziali e clicca **▶ AVVIA DOWNLOAD**
+5. Nell'app clicca **Scarica da Strava**, inserisci le credenziali e clicca **▶ AVVIA DOWNLOAD**
 6. Il browser si aprirà per l'autorizzazione — accedi e autorizza
 7. Il download partirà automaticamente
 8. Potrebbe essere necessario far ripartire la procedura nei giorni successivi a causa dei rate limit imposti da Strava

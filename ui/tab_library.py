@@ -8,6 +8,18 @@ from models import fmt_time, fmt_pace
 PAGE_SIZE = 100
 
 
+def _pace_chip_color(speed_ms: float) -> str:
+    """Colore semantico per il passo: verde < 5:00, giallo < 6:30, rosso oltre."""
+    if speed_ms <= 0:
+        return C["text_dim"]
+    pace_sec = 1000 / speed_ms          # secondi per km
+    if pace_sec < 300:                  # < 5:00/km
+        return C["green"]
+    if pace_sec < 390:                  # < 6:30/km
+        return C["yellow"]
+    return C["red"]
+
+
 def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref):
     for w in tab.winfo_children():
         w.destroy()
@@ -222,49 +234,73 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
             return
 
         for i, s in enumerate(page_items):
-            bg  = C["surface2"] if i % 2 == 0 else C["bg"]
+            bg_even = C["surface2"]
+            bg_odd  = C["bg"]
+            bg      = bg_even if i % 2 == 0 else bg_odd
+            bg_hover = C["surface"] if i % 2 == 0 else C["surface2"]
+
             row = tk.Frame(list_frame, bg=bg)
             row.pack(fill="x")
 
-            date_s = s.get("start_date", "")[:10]
-            name_s = s.get("name", "–")
-            dist_s = f"{s.get('distance', 0) / 1000:.2f}"
-            time_s = fmt_time(s.get("moving_time", 0))
-            pace_s = fmt_pace(s.get("avg_speed", 0))
-            hr_s   = f"{s['avg_hr']:.0f}" if s.get("avg_hr") else "–"
-            elev_s = f"{s.get('elev_gain', 0):.0f}m"
+            date_s  = s.get("start_date", "")[:10]
+            name_s  = s.get("name", "–")
+            dist_s  = f"{s.get('distance', 0) / 1000:.2f}"
+            time_s  = fmt_time(s.get("moving_time", 0))
+            pace_s  = fmt_pace(s.get("avg_speed", 0))
+            pace_col = _pace_chip_color(s.get("avg_speed", 0))
+            hr_s    = f"{s['avg_hr']:.0f}" if s.get("avg_hr") else "–"
+            elev_s  = f"{s.get('elev_gain', 0):.0f}m"
 
+            cells = []
             for v, col, w, anc in [
                 (date_s, C["text_dim"], 12, "center"),
                 (name_s, C["text"],     32, "w"),
                 (dist_s, C["accent"],    9, "center"),
                 (time_s, C["blue"],      8, "center"),
-                (pace_s, C["green"],     8, "center"),
+                (pace_s, pace_col,       8, "center"),
                 (hr_s,   C["red"],       6, "center"),
                 (elev_s, C["yellow"],    8, "center"),
             ]:
-                tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
-                         width=w, anchor=anc, pady=7, padx=4).pack(side="left")
+                lbl = tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
+                               width=w, anchor=anc, pady=7, padx=4)
+                lbl.pack(side="left")
+                cells.append(lbl)
 
             act_f = tk.Frame(row, bg=bg)
             act_f.pack(side="left", padx=4)
+            cells.append(act_f)
             summary = s
 
-            tk.Button(act_f, text="📂 Apri", font=("Courier", 7, "bold"),
+            btn_open = tk.Button(act_f, text="📂 Apri", font=("Courier", 7, "bold"),
                       bg=C["surface"], fg=C["text"], bd=0, padx=6, pady=2,
                       cursor="hand2",
-                      command=lambda s=summary: on_open(s)
-                      ).pack(side="left", padx=2)
-            tk.Button(act_f, text="➕ Confronto", font=("Courier", 7, "bold"),
+                      command=lambda s=summary: on_open(s))
+            btn_open.pack(side="left", padx=2)
+            btn_cmp = tk.Button(act_f, text="➕ Confronto", font=("Courier", 7, "bold"),
                       bg=C["surface"], fg=C["accent"], bd=0, padx=6, pady=2,
                       cursor="hand2",
-                      command=lambda s=summary: _add_to_compare(s)
-                      ).pack(side="left", padx=2)
-            tk.Button(act_f, text="🗑", font=("Courier", 7, "bold"),
+                      command=lambda s=summary: _add_to_compare(s))
+            btn_cmp.pack(side="left", padx=2)
+            btn_del = tk.Button(act_f, text="🗑", font=("Courier", 7, "bold"),
                       bg=C["surface"], fg=C["red"], bd=0, padx=6, pady=2,
                       cursor="hand2",
-                      command=lambda s=summary: _delete(s)
-                      ).pack(side="left", padx=2)
+                      command=lambda s=summary: _delete(s))
+            btn_del.pack(side="left", padx=2)
+
+            # Hover effect sulla riga
+            all_row_widgets = [row, act_f] + cells
+
+            def _on_enter(e, widgets=all_row_widgets, hbg=bg_hover, lbgs=cells, rbg=bg):
+                for w in widgets:
+                    w.config(bg=hbg)
+
+            def _on_leave(e, widgets=all_row_widgets, rbg=bg):
+                for w in widgets:
+                    w.config(bg=rbg)
+
+            for w in [row] + cells:
+                w.bind("<Enter>", _on_enter)
+                w.bind("<Leave>", _on_leave)
 
         refresh_cmp_label()
 

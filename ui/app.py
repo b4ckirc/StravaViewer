@@ -24,6 +24,21 @@ import ui.tab_raw        as tab_raw
 from ui.downloader_ui    import open_download_window
 from ui.widgets          import topbar_btn, clear
 
+# Definizione tab: (attributo, icona, etichetta, gruppo)
+_TAB_DEFS = [
+    ("tab_dash",     "⬡",  "Dashboard",    "activity"),
+    ("tab_chart",    "▤",  "Grafici",       "activity"),
+    ("tab_hrzone",   "♥",  "Zone HR",       "activity"),
+    ("tab_map",      "◈",  "Mappa",         "activity"),
+    ("tab_split",    "≡",  "Splits",        "activity"),
+    ("tab_best",     "★",  "Best Efforts",  "activity"),
+    ("tab_compare",  "⇄",  "Confronto",     "activity"),
+    ("tab_raw",      "{ }", "Raw JSON",     "activity"),
+    ("tab_library",  "▣",  "Libreria",      "global"),
+    ("tab_calendar", "▦",  "Calendario",    "global"),
+    ("tab_stats",    "≈",  "Statistiche",   "global"),
+]
+
 
 class StravaApp(tk.Tk):
     def __init__(self):
@@ -62,13 +77,17 @@ class StravaApp(tk.Tk):
     # ── Layout ────────────────────────────────────────────────────────────────
 
     def _build_ui(self):
-        # Topbar
-        topbar = tk.Frame(self, bg=C["surface"], height=56)
+        self._tab_frames   = {}   # attr → tk.Frame (contenuto)
+        self._tab_buttons  = {}   # attr → (container, strip, icon_lbl, text_lbl)
+        self._active_tab   = None
+
+        # ── Topbar ────────────────────────────────────────────────────────────
+        topbar = tk.Frame(self, bg=C["surface"], height=52)
         topbar.pack(fill="x")
         topbar.pack_propagate(False)
 
-        tk.Label(topbar, text=f"⬡ STRAVA VIEWER {APP_VERSION}",
-                 font=("Courier", 13, "bold"), fg=C["accent"],
+        tk.Label(topbar, text=f"⬡  STRAVA VIEWER",
+                 font=("Courier", 12, "bold"), fg=C["accent"],
                  bg=C["surface"]).pack(side="left", padx=20, pady=14)
 
         # Status MongoDB (destra)
@@ -77,65 +96,169 @@ class StravaApp(tk.Tk):
             topbar, textvariable=self._mongo_status_var,
             font=("Courier", 8), fg=C["text_dim"], bg=C["surface"],
             cursor="hand2")
-        self._mongo_status_lbl.pack(side="right", padx=20)
+        self._mongo_status_lbl.pack(side="right", padx=16)
         self._mongo_status_lbl.bind("<Button-1>", lambda e: self._toggle_mongo())
 
+        # Separatore verticale
+        tk.Frame(topbar, bg=C["border"], width=1).pack(
+            side="right", fill="y", pady=12)
+
         # Bottoni destra → sinistra
-        topbar_btn(topbar, "📂  APRI FILE",
-                   self._open_file).pack(side="right", padx=4, pady=10)
-        topbar_btn(topbar, "⬇  SCARICA DA STRAVA",
-                   self._open_downloader, primary=True).pack(side="right", padx=4, pady=10)
-        topbar_btn(topbar, "💾  ESPORTA",
-                   self._export_menu).pack(side="right", padx=4, pady=10)
-        topbar_btn(topbar, "📦  DATABASE",
-                   self._database_menu).pack(side="right", padx=4, pady=10)
+        topbar_btn(topbar, "📂  Apri File",
+                   self._open_file,
+                   tooltip="Apri un file JSON di attività Strava"
+                   ).pack(side="right", padx=4, pady=10)
+        topbar_btn(topbar, "⬇  Scarica da Strava",
+                   self._open_downloader, primary=True,
+                   tooltip="Autentica con Strava e scarica le tue attività"
+                   ).pack(side="right", padx=4, pady=10)
+        topbar_btn(topbar, "💾  Esporta",
+                   self._export_menu,
+                   tooltip="Esporta attività corrente in PNG, PDF, CSV o GPX"
+                   ).pack(side="right", padx=4, pady=10)
+        topbar_btn(topbar, "📦  Database",
+                   self._database_menu,
+                   tooltip="Backup ZIP, import e heatmap del database"
+                   ).pack(side="right", padx=4, pady=10)
 
         # Toggle tema
-        theme_lbl = "🌙  SCURO" if _cfg._current_theme[0] == "light" else "☀  CHIARO"
+        theme_lbl = "🌙  Scuro" if _cfg._current_theme[0] == "light" else "☀  Chiaro"
         topbar_btn(topbar, theme_lbl,
-                   self._toggle_theme).pack(side="right", padx=4, pady=10)
+                   self._toggle_theme,
+                   tooltip="Passa al tema scuro / chiaro"
+                   ).pack(side="right", padx=4, pady=10)
 
-        # Notebook
-        style = ttk.Style()
-        style.theme_use("default")
-        style.configure("Dark.TNotebook", background=C["bg"], borderwidth=0)
-        style.configure("Dark.TNotebook.Tab", background=C["surface2"],
-                        foreground=C["text_dim"],
-                        font=("Courier", 9, "bold"), padding=[12, 7])
-        style.map("Dark.TNotebook.Tab",
-                  background=[("selected", C["bg"])],
-                  foreground=[("selected", C["accent"])])
+        # ── Separatore topbar / body ──────────────────────────────────────────
+        tk.Frame(self, bg=C["border"], height=1).pack(fill="x")
 
-        self.nb = ttk.Notebook(self, style="Dark.TNotebook")
-        self.nb.pack(fill="both", expand=True)
+        # ── Body: sidebar + content ───────────────────────────────────────────
+        body = tk.Frame(self, bg=C["bg"])
+        body.pack(fill="both", expand=True)
 
-        tab_defs = [
-            ("tab_dash",     "  DASHBOARD  "),
-            ("tab_chart",    "  GRAFICI  "),
-            ("tab_hrzone",   "  ZONE HR  "),
-            ("tab_map",      "  MAPPA  "),
-            ("tab_split",    "  SPLITS  "),
-            ("tab_best",     "  BEST EFFORTS  "),
-            ("tab_compare",  "  CONFRONTO  "),
-            ("tab_library",  "  📚 LIBRERIA  "),
-            ("tab_calendar", "  📅 CALENDARIO  "),
-            ("tab_stats",    "  📊 STATISTICHE  "),
-            ("tab_raw",      "  JSON  "),
-        ]
-        for attr, label in tab_defs:
-            frame = tk.Frame(self.nb, bg=C["bg"])
+        # ── Sidebar ───────────────────────────────────────────────────────────
+        sidebar = tk.Frame(body, bg=C["surface"], width=180)
+        sidebar.pack(side="left", fill="y")
+        sidebar.pack_propagate(False)
+
+        # Logo sidebar
+        tk.Label(sidebar, text="⬡", font=("Courier", 20, "bold"),
+                 fg=C["accent"], bg=C["surface"]).pack(pady=(18, 2))
+        tk.Label(sidebar, text=f"v{APP_VERSION}",
+                 font=("Courier", 7), fg=C["text_dim"],
+                 bg=C["surface"]).pack()
+        tk.Frame(sidebar, bg=C["border"], height=1).pack(
+            fill="x", padx=16, pady=(10, 6))
+
+        # Gruppi tab
+        def _section(text):
+            tk.Label(sidebar, text=text.upper(),
+                     font=("Courier", 7, "bold"), fg=C["text_dim"],
+                     bg=C["surface"]).pack(anchor="w", padx=16, pady=(8, 2))
+
+        _section("Analisi")
+        activity_tabs = [t for t in _TAB_DEFS if t[3] == "activity"]
+        global_tabs   = [t for t in _TAB_DEFS if t[3] == "global"]
+
+        for attr, icon, label, _ in activity_tabs:
+            self._make_nav_item(sidebar, attr, icon, label)
+
+        tk.Frame(sidebar, bg=C["border"], height=1).pack(
+            fill="x", padx=16, pady=(8, 4))
+        _section("Database")
+        for attr, icon, label, _ in global_tabs:
+            self._make_nav_item(sidebar, attr, icon, label)
+
+        # Separatore sidebar / content
+        tk.Frame(body, bg=C["border"], width=1).pack(side="left", fill="y")
+
+        # ── Area contenuto ────────────────────────────────────────────────────
+        content = tk.Frame(body, bg=C["bg"])
+        content.pack(side="left", fill="both", expand=True)
+        self._content = content
+
+        # Crea tutti i frame dei tab nell'area contenuto
+        for attr, icon, label, _ in _TAB_DEFS:
+            frame = tk.Frame(content, bg=C["bg"])
             setattr(self, attr, frame)
-            self.nb.add(frame, text=label)
+            self._tab_frames[attr] = frame
 
-        self.nb.bind("<<NotebookTabChanged>>", self._on_tab_changed)
+        # Mostra il primo tab
+        self._show_tab("tab_dash")
 
-    def _on_tab_changed(self, event):
-        tab = self.nb.tab(self.nb.select(), "text").strip()
-        if "LIBRERIA" in tab:
+    def _make_nav_item(self, parent, attr, icon, label):
+        """Crea un elemento di navigazione nella sidebar e salva i riferimenti."""
+        container = tk.Frame(parent, bg=C["surface"], cursor="hand2")
+        container.pack(fill="x", pady=1)
+
+        # Strip colorata sinistra (indicatore attivo)
+        strip = tk.Frame(container, bg=C["surface"], width=3)
+        strip.pack(side="left", fill="y")
+
+        icon_lbl = tk.Label(container, text=icon, font=("Courier", 11),
+                            bg=C["surface"], fg=C["text_dim"], width=3)
+        icon_lbl.pack(side="left", padx=(8, 4), pady=8)
+
+        text_lbl = tk.Label(container, text=label, font=("Courier", 9, "bold"),
+                            bg=C["surface"], fg=C["text_dim"], anchor="w")
+        text_lbl.pack(side="left", pady=8)
+
+        # Click e hover
+        def _click(e=None, a=attr):
+            self._show_tab(a)
+
+        def _enter(e=None, a=attr):
+            if self._active_tab != a:
+                for w in (container, strip, icon_lbl, text_lbl):
+                    w.config(bg=C["surface2"])
+
+        def _leave(e=None, a=attr):
+            if self._active_tab != a:
+                for w in (container, strip, icon_lbl, text_lbl):
+                    w.config(bg=C["surface"])
+
+        for w in (container, strip, icon_lbl, text_lbl):
+            w.bind("<Button-1>", _click)
+            w.bind("<Enter>",    _enter)
+            w.bind("<Leave>",    _leave)
+
+        self._tab_buttons[attr] = (container, strip, icon_lbl, text_lbl)
+
+    def _show_tab(self, attr):
+        """Mostra il frame del tab selezionato e aggiorna la sidebar."""
+        # Deseleziona tab precedente
+        if self._active_tab and self._active_tab in self._tab_buttons:
+            prev = self._active_tab
+            container, strip, icon_lbl, text_lbl = self._tab_buttons[prev]
+            strip.config(bg=C["surface"])
+            icon_lbl.config(fg=C["text_dim"], bg=C["surface"])
+            text_lbl.config(fg=C["text_dim"], bg=C["surface"])
+            container.config(bg=C["surface"])
+            if prev in self._tab_frames:
+                self._tab_frames[prev].pack_forget()
+
+        self._active_tab = attr
+
+        # Attiva nuovo tab nella sidebar
+        if attr in self._tab_buttons:
+            container, strip, icon_lbl, text_lbl = self._tab_buttons[attr]
+            container.config(bg=C["surface"])
+            strip.config(bg=C["accent"])
+            icon_lbl.config(fg=C["accent"], bg=C["surface"])
+            text_lbl.config(fg=C["accent"], bg=C["surface"])
+
+        # Mostra il frame
+        if attr in self._tab_frames:
+            self._tab_frames[attr].pack(fill="both", expand=True)
+
+        # Render lazy per tab che ne hanno bisogno
+        self._on_tab_show(attr)
+
+    def _on_tab_show(self, attr):
+        if attr == "tab_library":
             self._render_library()
-        elif "STATISTICHE" in tab:
+        elif attr == "tab_stats":
             tab_stats.render(self.tab_stats, self.storage)
-        elif "CALENDARIO" in tab:
+        elif attr == "tab_calendar":
             tab_calendar.render(self.tab_calendar, self.storage,
                                 on_open=self._open_from_library)
 
@@ -146,12 +269,13 @@ class StravaApp(tk.Tk):
                      "tab_split","tab_best","tab_compare","tab_raw"):
             clear(getattr(self, attr))
         tk.Label(self.tab_dash,
-                 text="⬡\n\nBenvenuto in Strava Viewer 3.0\n\n"
-                      "• Apri un file JSON con «APRI FILE»\n"
-                      "• Scarica le corse direttamente da Strava con «SCARICA DA STRAVA»\n"
-                      "• Sfoglia la libreria nel tab «LIBRERIA»",
+                 text="⬡\n\nBenvenuto in Strava Viewer\n\n"
+                      "• Apri un file JSON con «Apri File»\n"
+                      "• Scarica le corse da Strava con «Scarica da Strava»\n"
+                      "• Sfoglia la libreria nel tab «Libreria»",
                  font=("Courier", 12), fg=C["text_dim"], bg=C["bg"],
                  justify="center").pack(expand=True)
+        self._show_tab("tab_dash")
         self._render_library()
 
     # ── Tema chiaro/scuro ─────────────────────────────────────────────────────
@@ -167,8 +291,9 @@ class StravaApp(tk.Tk):
 
     def _rebuild(self):
         """Distrugge e ricostruisce tutta la UI con la palette C aggiornata."""
-        act = self.activity
-        cmp = list(self.cmp_list)
+        act      = self.activity
+        cmp      = list(self.cmp_list)
+        prev_tab = getattr(self, "_active_tab", "tab_dash")
         for w in self.winfo_children():
             w.destroy()
         self.configure(bg=C["bg"])
@@ -176,6 +301,8 @@ class StravaApp(tk.Tk):
         self.cmp_list = cmp
         if act:
             self._load_activity(act)
+            if prev_tab and prev_tab in self._tab_frames:
+                self._show_tab(prev_tab)
         else:
             self._show_welcome()
 
@@ -205,7 +332,7 @@ class StravaApp(tk.Tk):
         tab_splits.render(self.tab_split,     act)
         tab_best.render(self.tab_best,        act)
         tab_raw.render(self.tab_raw,          act)
-        self.nb.select(self.tab_dash)
+        self._show_tab("tab_dash")
 
     # ── Downloader Strava ─────────────────────────────────────────────────────
 
@@ -258,7 +385,7 @@ class StravaApp(tk.Tk):
                                 "altre dal tab Libreria col pulsante ➕.")
             return
         tab_compare.render(self.tab_compare, all_acts)
-        self.nb.select(self.tab_compare)
+        self._show_tab("tab_compare")
 
     # ── MongoDB toggle ─────────────────────────────────────────────────────────
 
