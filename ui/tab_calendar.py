@@ -141,6 +141,8 @@ def render(tab, storage_mgr, on_open):
 
         for i in range(7):
             cal_frame.columnconfigure(i, weight=1)
+        for i in range(len(weeks)):
+            cal_frame.rowconfigure(i, uniform="calrow", minsize=CELL_H + 2)
 
     def _build_cell(row, col, day_num, y, m):
         if day_num == 0:
@@ -157,60 +159,86 @@ def render(tab, storage_mgr, on_open):
         if runs:
             bg_cell    = C["surface"]
             border_col = C["accent"]
-            border_w   = 2
         elif is_today:
             bg_cell    = C["surface2"]
             border_col = C["blue"]
-            border_w   = 2
         else:
             bg_cell    = C["surface2"] if is_weekend else C["bg"]
             border_col = C["border"]
-            border_w   = 1
 
         cell = tk.Frame(cal_frame, bg=bg_cell,
                         width=CELL_W, height=CELL_H,
-                        highlightthickness=border_w,
+                        highlightthickness=1,
                         highlightbackground=border_col)
         cell.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
         cell.grid_propagate(False)
 
-        # Numero giorno
+        # Riga superiore: numero giorno + contatore (se più corse)
         day_col = (C["blue"]   if is_today   else
                    C["red"]    if is_weekend  else
                    C["text_dim"])
-        tk.Label(cell, text=str(day_num),
+        top_f = tk.Frame(cell, bg=bg_cell)
+        top_f.pack(fill="x", padx=5, pady=(3, 0))
+        tk.Label(top_f, text=str(day_num),
                  font=("Courier", 8, "bold"),
-                 fg=day_col, bg=bg_cell,
-                 anchor="nw").pack(anchor="nw", padx=5, pady=3)
+                 fg=day_col, bg=bg_cell).pack(side="left")
 
         if not runs:
             return
 
-        run  = runs[0]
-        dist = run.get("distance", 0) / 1000
-        pace = fmt_pace(run.get("avg_speed", 0))
+        idx = [0]  # indice corrente (mutabile in closure)
+        n   = len(runs)
 
-        tk.Label(cell, text=f"{dist:.1f} km",
-                 font=("Courier", 9, "bold"),
-                 fg=C["accent"], bg=bg_cell,
-                 anchor="w").pack(anchor="w", padx=5)
-        tk.Label(cell, text=f"{pace} /km",
-                 font=("Courier", 8),
-                 fg=C["green"], bg=bg_cell,
-                 anchor="w").pack(anchor="w", padx=5)
+        counter_var = tk.StringVar(value=f"1/{n}" if n > 1 else "")
+        if n > 1:
+            tk.Label(top_f, textvariable=counter_var,
+                     font=("Courier", 7), fg=C["text_dim"],
+                     bg=bg_cell).pack(side="right")
 
-        if len(runs) > 1:
-            tk.Label(cell, text=f"+{len(runs) - 1} altre",
-                     font=("Courier", 7),
-                     fg=C["text_dim"], bg=bg_cell,
-                     anchor="w").pack(anchor="w", padx=5)
+        # Etichette contenuto (aggiornate dalla navigazione)
+        dist_var = tk.StringVar()
+        pace_var = tk.StringVar()
 
-        # Click apre la prima corsa del giorno
-        summary = run
-        for widget in cell.winfo_children():
-            widget.bind("<Button-1>", lambda e, s=summary: on_open(s))
-            widget.config(cursor="hand2")
-        cell.bind("<Button-1>", lambda e, s=summary: on_open(s))
-        cell.config(cursor="hand2")
+        dist_lbl = tk.Label(cell, textvariable=dist_var,
+                            font=("Courier", 9, "bold"),
+                            fg=C["accent"], bg=bg_cell, anchor="w")
+        dist_lbl.pack(anchor="w", padx=5)
+        pace_lbl = tk.Label(cell, textvariable=pace_var,
+                            font=("Courier", 8),
+                            fg=C["green"], bg=bg_cell, anchor="w")
+        pace_lbl.pack(anchor="w", padx=5)
+
+        def _refresh():
+            run = runs[idx[0]]
+            dist_var.set(f"{run.get('distance', 0) / 1000:.1f} km")
+            pace_var.set(f"{fmt_pace(run.get('avg_speed', 0))} /km")
+            counter_var.set(f"{idx[0] + 1}/{n}")
+            # Aggiorna binding click su tutta la cella
+            _rebind(run)
+
+        def _rebind(run):
+            for w in [cell, top_f, dist_lbl, pace_lbl]:
+                w.bind("<Button-1>", lambda e, s=run: on_open(s))
+                w.config(cursor="hand2")
+
+        _refresh()
+
+        # Frecce di navigazione (solo se più corse)
+        if n > 1:
+            nav_f = tk.Frame(cell, bg=bg_cell)
+            nav_f.pack(side="bottom", fill="x", padx=4, pady=(0, 3))
+
+            def _prev():
+                idx[0] = (idx[0] - 1) % n
+                _refresh()
+
+            def _next():
+                idx[0] = (idx[0] + 1) % n
+                _refresh()
+
+            btn_cfg = dict(font=("Courier", 8, "bold"), bg=C["surface2"],
+                           fg=C["text"], bd=0, padx=6, pady=1, cursor="hand2")
+            tk.Button(nav_f, text="◀", command=_prev, **btn_cfg).pack(side="left")
+            tk.Button(nav_f, text="▶", command=_next, **btn_cfg).pack(side="right")
 
     _render_month()
