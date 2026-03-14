@@ -139,7 +139,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     hdr_f = tk.Frame(tab, bg=C["surface"])
     hdr_f.pack(fill="x")
     for col, w in zip(cols, widths):
-        tk.Label(hdr_f, text=col, font=("Courier", 8, "bold"),
+        tk.Label(hdr_f, text=col, font=("Courier", 10, "bold"),
                  fg=C["text_dim"], bg=C["surface"],
                  width=w, anchor="w" if col == "NOME" else "center",
                  pady=8, padx=4).pack(side="left")
@@ -262,7 +262,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
                 (hr_s,   C["red"],       6, "center"),
                 (elev_s, C["yellow"],    8, "center"),
             ]:
-                lbl = tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
+                lbl = tk.Label(row, text=v, font=("Courier", 10), fg=col, bg=bg,
                                width=w, anchor=anc, pady=7, padx=4)
                 lbl.pack(side="left")
                 cells.append(lbl)
@@ -272,24 +272,24 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
             cells.append(act_f)
             summary = s
 
-            btn_open = tk.Button(act_f, text="📂 Apri", font=("Courier", 7, "bold"),
+            btn_open = tk.Button(act_f, text="📂 Apri", font=("Courier", 8, "bold"),
                       bg=C["surface"], fg=C["text"], bd=0, padx=6, pady=2,
                       cursor="hand2",
                       command=lambda s=summary: on_open(s))
             btn_open.pack(side="left", padx=2)
-            btn_cmp = tk.Button(act_f, text="➕ Confronto", font=("Courier", 7, "bold"),
+            btn_cmp = tk.Button(act_f, text="➕ Confronto", font=("Courier", 8, "bold"),
                       bg=C["surface"], fg=C["accent"], bd=0, padx=6, pady=2,
                       cursor="hand2",
                       command=lambda s=summary: _add_to_compare(s))
             btn_cmp.pack(side="left", padx=2)
             if summary.get("strava_id"):
-                tk.Button(act_f, text="🟠 Strava", font=("Courier", 7, "bold"),
+                tk.Button(act_f, text="🟠 Strava", font=("Courier", 8, "bold"),
                           bg=C["surface"], fg="#FC4C02", bd=0, padx=6, pady=2,
                           cursor="hand2",
                           command=lambda sid=summary["strava_id"]:
                               webbrowser.open(f"https://www.strava.com/activities/{sid}")
                           ).pack(side="left", padx=2)
-            btn_del = tk.Button(act_f, text="🗑", font=("Courier", 7, "bold"),
+            btn_del = tk.Button(act_f, text="🗑", font=("Courier", 8, "bold"),
                       bg=C["surface"], fg=C["red"], bd=0, padx=6, pady=2,
                       cursor="hand2",
                       command=lambda s=summary: _delete(s))
