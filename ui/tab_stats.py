@@ -1132,78 +1132,91 @@ def _render_race_prediction(body, storage_mgr):
     info_btn(ctrl_f, "Previsione Prestazioni — Come funziona",
              _INFO_RACE_PRED).pack(side="right", padx=4)
 
-    # Riga parametri
+    # Pannello parametri (2 righe)
     param_f = tk.Frame(body, bg=C["surface2"],
                        highlightthickness=1, highlightbackground=C["border"])
     param_f.pack(fill="x", padx=20, pady=(0, 6))
     pf = tk.Frame(param_f, bg=C["surface2"])
     pf.pack(fill="x", padx=16, pady=10)
 
-    # Distanza target
-    tk.Label(pf, text="Distanza:", font=("Courier", 9),
+    # ── Riga 1: Distanza + km personalizzati (condizionale) + Dislivello ──────
+    r1 = tk.Frame(pf, bg=C["surface2"])
+    r1.pack(fill="x", pady=(0, 6))
+
+    tk.Label(r1, text="Distanza:", font=("Courier", 9),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
     dist_var = tk.StringVar(value="10 km")
-    dist_combo = tk.OptionMenu(pf, dist_var, *_PREDICT_DISTS.keys())
+    dist_combo = tk.OptionMenu(r1, dist_var, *_PREDICT_DISTS.keys())
     dist_combo.config(font=("Courier", 9), bg=C["surface"], fg=C["text"],
                       bd=0, highlightthickness=0, activebackground=C["surface2"])
     dist_combo["menu"].config(font=("Courier", 9), bg=C["surface"], fg=C["text"])
     dist_combo.pack(side="left", padx=(4, 16))
 
-    # Distanza personalizzata
-    tk.Label(pf, text="km personalizzati:", font=("Courier", 9),
-             fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
+    # Distanza personalizzata — visibile solo con "Personalizzata"
+    custom_lbl = tk.Label(r1, text="km personalizzati:", font=("Courier", 9),
+                          fg=C["text_dim"], bg=C["surface2"])
     custom_var = tk.StringVar(value="15")
-    tk.Entry(pf, textvariable=custom_var, font=("Courier", 9),
-             bg=C["surface"], fg=C["text"], width=5, bd=0,
-             insertbackground=C["text"],
-             highlightthickness=1, highlightbackground=C["border"]
-             ).pack(side="left", padx=(4, 16))
+    custom_entry = tk.Entry(r1, textvariable=custom_var, font=("Courier", 9),
+                            bg=C["surface"], fg=C["text"], width=5, bd=0,
+                            insertbackground=C["text"],
+                            highlightthickness=1, highlightbackground=C["border"])
 
-    # Dislivello positivo del percorso
-    tk.Label(pf, text="Dislivello +  (m):", font=("Courier", 9),
+    def _on_dist_change(*_):
+        if dist_var.get() == "Personalizzata":
+            custom_lbl.pack(side="left")
+            custom_entry.pack(side="left", padx=(4, 16))
+        else:
+            custom_lbl.pack_forget()
+            custom_entry.pack_forget()
+
+    dist_var.trace_add("write", _on_dist_change)
+    _on_dist_change()  # stato iniziale
+
+    tk.Label(r1, text="Dislivello +  (m):", font=("Courier", 9),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
     elev_var = tk.StringVar(value="0")
-    tk.Entry(pf, textvariable=elev_var, font=("Courier", 9),
+    tk.Entry(r1, textvariable=elev_var, font=("Courier", 9),
              bg=C["surface"], fg=C["text"], width=6, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 16))
 
-    # Finestra temporale
-    tk.Label(pf, text="Ultimi giorni:", font=("Courier", 9),
+    # ── Riga 2: Filtri temporali / lunghezza + Solo gare + CALCOLA ───────────
+    r2 = tk.Frame(pf, bg=C["surface2"])
+    r2.pack(fill="x")
+
+    tk.Label(r2, text="Ultimi giorni:", font=("Courier", 9),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
     days_var = tk.StringVar(value="365")
-    tk.Entry(pf, textvariable=days_var, font=("Courier", 9),
+    tk.Entry(r2, textvariable=days_var, font=("Courier", 9),
              bg=C["surface"], fg=C["text"], width=5, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 4))
-    tk.Label(pf, text="(0 = tutto)", font=("Courier", 7),
+    tk.Label(r2, text="(0 = tutto)", font=("Courier", 7),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left", padx=(0, 12))
 
-    # Filtro lunghezza corse
-    tk.Label(pf, text="km corsa min:", font=("Courier", 9),
+    tk.Label(r2, text="km corsa min:", font=("Courier", 9),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
     km_min_var = tk.StringVar(value="0")
-    tk.Entry(pf, textvariable=km_min_var, font=("Courier", 9),
+    tk.Entry(r2, textvariable=km_min_var, font=("Courier", 9),
              bg=C["surface"], fg=C["text"], width=5, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 8))
-    tk.Label(pf, text="max:", font=("Courier", 9),
+    tk.Label(r2, text="max:", font=("Courier", 9),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
     km_max_var = tk.StringVar(value="0")
-    tk.Entry(pf, textvariable=km_max_var, font=("Courier", 9),
+    tk.Entry(r2, textvariable=km_max_var, font=("Courier", 9),
              bg=C["surface"], fg=C["text"], width=5, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 2))
-    tk.Label(pf, text="(0 = nessun limite)", font=("Courier", 7),
+    tk.Label(r2, text="(0 = nessun limite)", font=("Courier", 7),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left", padx=(0, 12))
 
-    # Solo gare
     races_var = tk.BooleanVar(value=False)
-    tk.Checkbutton(pf, text="Solo gare", font=("Courier", 8),
+    tk.Checkbutton(r2, text="Solo gare", font=("Courier", 8),
                    variable=races_var, fg=C["text"], bg=C["surface2"],
                    selectcolor=C["surface"], activebackground=C["surface2"]
                    ).pack(side="left", padx=8)
@@ -1217,7 +1230,7 @@ def _render_race_prediction(body, storage_mgr):
         dist_m = _PREDICT_DISTS[d_key]
         if dist_m < 0:   # personalizzata
             try:
-                dist_m = float(custom_var.get()) * 1000.0
+                dist_m = float(custom_var.get().replace(",", ".")) * 1000.0
             except Exception:
                 dist_m = 10000.0
         try:
@@ -1240,7 +1253,7 @@ def _render_race_prediction(body, storage_mgr):
                           dist_m, elev_gain, races_var.get(), days_back,
                           km_min, km_max)
 
-    tk.Button(pf, text="▶  CALCOLA", font=("Courier", 9, "bold"),
+    tk.Button(r2, text="▶  CALCOLA", font=("Courier", 9, "bold"),
               bg=C["accent"], fg="white", bd=0, padx=12, pady=4,
               cursor="hand2", command=_calc).pack(side="left", padx=4)
 
