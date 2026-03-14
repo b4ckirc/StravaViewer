@@ -253,6 +253,54 @@ class StorageManager:
         result.sort(key=len, reverse=True)
         return result
 
+    def get_group_polylines(self, group: list) -> list:
+        """
+        Ritorna [(name, date_str, [(lat,lon),...])] per le attività del gruppo.
+        Su MongoDB usa una singola query $in; su JSON carica i file uno per uno.
+        """
+        from models import decode_polyline
+        result = []
+
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                ids = [s["strava_id"] for s in group if s.get("strava_id")]
+                cursor = self.mongo_storage._coll.find(
+                    {"id": {"$in": ids}},
+                    {"name": 1, "start_date_local": 1,
+                     "map.polyline": 1, "map.summary_polyline": 1}
+                )
+                for doc in cursor:
+                    m = doc.get("map") or {}
+                    poly_str = m.get("polyline") or m.get("summary_polyline", "")
+                    if poly_str:
+                        pts = decode_polyline(poly_str)
+                        if pts:
+                            result.append((
+                                doc.get("name", ""),
+                                (doc.get("start_date_local") or "")[:10],
+                                pts,
+                            ))
+                return result
+            except Exception:
+                pass
+
+        for s in group:
+            try:
+                data = self.json_storage.load(s["ref"])
+                m = (data.get("map") or {})
+                poly_str = m.get("polyline") or m.get("summary_polyline", "")
+                if poly_str:
+                    pts = decode_polyline(poly_str)
+                    if pts:
+                        result.append((
+                            data.get("name", ""),
+                            (data.get("start_date_local") or "")[:10],
+                            pts,
+                        ))
+            except Exception:
+                pass
+        return result
+
     def list_polylines(self) -> list:
         """
         Ritorna [(name, date_str, [(lat, lon), ...])] per tutte le attività con GPS.

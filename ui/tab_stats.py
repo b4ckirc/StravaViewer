@@ -604,6 +604,15 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
         tk.Label(hdr, text=txt, font=("Courier", 9), fg=col,
                  bg=C["surface"], pady=6).pack(side=side, padx=12)
 
+    if storage_mgr:
+        map_btn = tk.Button(
+            hdr, text="📍 Mappa", font=("Courier", 10),
+            fg=C["accent"], bg=C["surface"], relief="flat",
+            cursor="hand2", bd=0,
+            command=lambda g=group, sm=storage_mgr: _open_group_map(g, sm),
+        )
+        map_btn.pack(side="right", padx=6)
+
     # ── Grafico matplotlib ────────────────────────────────────────────────────
     fig, ax = plt.subplots(figsize=(7, 3.2), facecolor=C["surface2"])
     ax.set_facecolor(C["surface2"])
@@ -694,6 +703,178 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
 
 def _open_run(on_open, summary):
     on_open(summary)
+
+
+def _open_group_map(group: list, storage_mgr):
+    """Apre una mappa Folium nel browser con tutte le tracce del gruppo sovrapposte."""
+    try:
+        import folium
+        from folium.plugins import Fullscreen
+        import tempfile, webbrowser, os
+    except ImportError:
+        import tkinter.messagebox as mb
+        mb.showerror("Folium non disponibile",
+                     "Installa folium con: pip install folium")
+        return
+
+    tracks = storage_mgr.get_group_polylines(group)
+    if not tracks:
+        import tkinter.messagebox as mb
+        mb.showinfo("Nessuna traccia", "Nessuna traccia GPS disponibile per questo gruppo.")
+        return
+
+    # Centro della mappa = media di tutti i punti
+    all_pts = [pt for _, _, pts in tracks for pt in pts]
+    center_lat = sum(p[0] for p in all_pts) / len(all_pts)
+    center_lon = sum(p[1] for p in all_pts) / len(all_pts)
+
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=13, tiles=None)
+
+    # ── Layer tiles ───────────────────────────────────────────────────────────
+    folium.TileLayer("CartoDB positron", name="Mappa chiara", show=True).add_to(m)
+    folium.TileLayer("OpenStreetMap",    name="OpenStreetMap", show=False).add_to(m)
+    folium.TileLayer(
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        attr="Esri World Imagery", name="Satellite", show=False,
+    ).add_to(m)
+    folium.TileLayer(
+        tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
+        attr="Esri World Topo", name="Topografica", show=False,
+    ).add_to(m)
+
+    # ── Plugin fullscreen ─────────────────────────────────────────────────────
+    Fullscreen(position="topleft", title="Schermo intero", title_cancel="Esci").add_to(m)
+
+    # ── Lookup statistiche dal gruppo (match per data) ───────────────────────
+    stats_by_date = {}
+    for s in group:
+        d = (s.get("start_date") or s.get("start_date_local") or "")[:10]
+        if d:
+            stats_by_date[d] = s
+
+    def _fmt_time(sec):
+        sec = int(sec or 0)
+        h, m = divmod(sec, 3600)
+        m, s = divmod(m, 60)
+        return f"{h}h {m:02d}m" if h else f"{m}m {s:02d}s"
+
+    def _fmt_pace(spd):
+        if not spd or spd <= 0:
+            return "—"
+        p = (1000 / spd) / 60
+        return f"{int(p)}:{int((p % 1) * 60):02d}/km"
+
+    def _build_tooltip(name, date_s, stats):
+        dist  = stats.get("distance", 0) / 1000
+        time  = _fmt_time(stats.get("moving_time", 0))
+        elev  = stats.get("elev_gain", 0)
+        pace  = _fmt_pace(stats.get("avg_speed", 0))
+        title = f"<b>{date_s}</b>" + (f" · {name[:40]}" if name else "")
+        rows  = (f"📏 {dist:.2f} km&nbsp;&nbsp;&nbsp;"
+                 f"⏱ {time}&nbsp;&nbsp;&nbsp;"
+                 f"📈 +{elev:.0f} m&nbsp;&nbsp;&nbsp;"
+                 f"🏃 {pace}")
+        return f'{title}<br><span style="font-size:12px">{rows}</span>'
+
+    # ── Tracce ordinate per data: un FeatureGroup per corsa ───────────────────
+    colors = ["#e63946", "#457b9d", "#2a9d8f", "#e9c46a", "#f4a261",
+              "#264653", "#8ecae6", "#c77dff", "#ffb703", "#fb8500"]
+
+    sorted_tracks = sorted(tracks, key=lambda t: t[1])   # ordine cronologico
+    for i, (name, date_s, pts) in enumerate(sorted_tracks):
+        col   = colors[i % len(colors)]
+        label = f"{date_s} · {name[:35]}" if name else date_s
+        stats    = stats_by_date.get(date_s, {})
+        tip_html = _build_tooltip(name, date_s, stats)
+        fg = folium.FeatureGroup(
+            name=f'<span style="color:{col};font-size:16px;line-height:1">■</span>'
+                 f'&nbsp;<span style="font-size:12px">{label}</span>',
+            show=True,
+        )
+        folium.PolyLine(pts, color=col, weight=3, opacity=0.85,
+                        tooltip=folium.Tooltip(tip_html, sticky=True)).add_to(fg)
+        if pts:
+            folium.CircleMarker(pts[0], radius=5, color=col,
+                                fill=True, fill_opacity=1,
+                                tooltip=folium.Tooltip(tip_html, sticky=True)).add_to(fg)
+        fg.add_to(m)
+
+    # LayerControl con supporto HTML (per i colori inline)
+    folium.LayerControl(collapsed=False, position="topright").add_to(m)
+
+    # ── Checkbox "Seleziona tutti / Deseleziona tutti" ────────────────────────
+    master_toggle_js = """
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () {
+        var overlaysDiv = document.querySelector('.leaflet-control-layers-overlays');
+        if (!overlaysDiv) return;
+
+        // Contenitore master
+        var masterDiv = document.createElement('div');
+        masterDiv.style.cssText = [
+            'padding:5px 8px 7px 8px',
+            'margin-bottom:5px',
+            'border-bottom:2px solid #bbb',
+            'display:flex',
+            'align-items:center',
+            'gap:6px',
+        ].join(';');
+
+        var masterChk = document.createElement('input');
+        masterChk.type    = 'checkbox';
+        masterChk.checked = true;
+        masterChk.id      = 'sv-master-toggle';
+        masterChk.style.cssText = 'width:14px;height:14px;cursor:pointer;accent-color:#457b9d';
+
+        var masterLbl = document.createElement('label');
+        masterLbl.htmlFor = 'sv-master-toggle';
+        masterLbl.style.cssText = 'font-weight:bold;font-size:12px;cursor:pointer;user-select:none';
+        masterLbl.textContent = 'Deseleziona tutti';
+
+        function refreshLabel() {
+            masterLbl.textContent = masterChk.checked ? 'Deseleziona tutti' : 'Seleziona tutti';
+        }
+
+        var isBulkToggling = false;
+
+        masterChk.addEventListener('change', function () {
+            isBulkToggling = true;
+            var target = masterChk.checked;
+            var boxes = overlaysDiv.querySelectorAll('input[type=checkbox]');
+            boxes.forEach(function (inp) {
+                if (inp !== masterChk && inp.checked !== target) inp.click();
+            });
+            isBulkToggling = false;
+            refreshLabel();
+        });
+
+        // Aggiorna master se l'utente clicca le singole checkbox
+        overlaysDiv.addEventListener('change', function (e) {
+            if (e.target === masterChk || isBulkToggling) return;
+            var boxes   = overlaysDiv.querySelectorAll('input[type=checkbox]');
+            var checked = Array.from(boxes).filter(function(b){ return b !== masterChk && b.checked; }).length;
+            var total   = boxes.length - 1; // escludi master
+            masterChk.indeterminate = (checked > 0 && checked < total);
+            masterChk.checked = (checked === total);
+            refreshLabel();
+        });
+
+        masterDiv.appendChild(masterChk);
+        masterDiv.appendChild(masterLbl);
+        overlaysDiv.insertBefore(masterDiv, overlaysDiv.firstChild);
+    }, 400);
+});
+</script>
+"""
+    m.get_root().html.add_child(folium.Element(master_toggle_js))
+
+    with tempfile.NamedTemporaryFile(suffix=".html", delete=False,
+                                     mode="w", encoding="utf-8") as f:
+        m.save(f.name)
+        tmp_path = f.name
+
+    webbrowser.open(f"file:///{tmp_path.replace(os.sep, '/')}")
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────
