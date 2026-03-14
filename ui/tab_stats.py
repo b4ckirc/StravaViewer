@@ -327,8 +327,226 @@ def render(tab, storage_mgr, on_open=None):
                  font=("Courier", 8), fg=C["text_dim"], bg=C["surface2"],
                  pady=10, wraplength=760, justify="left").pack(anchor="w", padx=16)
 
+    # ── Analisi gare e VDOT ───────────────────────────────────────────────────
+    if HAS_MPL:
+        _render_vdot_analysis(body, all_summaries, on_open)
+
     # ── Percorsi ricorrenti ────────────────────────────────────────────────────
     _render_route_analysis(body, storage_mgr, on_open)
+
+
+# ── VDOT helpers ──────────────────────────────────────────────────────────────
+
+def _calc_vdot(distance_m: float, time_s: float) -> float:
+    """Calcola VDOT (formula Jack Daniels) da distanza (m) e tempo (s)."""
+    t = time_s / 60          # minuti
+    v = distance_m / t       # m/min
+    vo2  = -4.60 + 0.182258 * v + 0.000104 * v * v
+    pct  = (0.8 + 0.1894393 * math.exp(-0.012778 * t)
+                + 0.2989558 * math.exp(-0.1932605 * t))
+    return vo2 / pct if pct > 0 else 0.0
+
+
+def _predict_time(vdot: float, distance_m: float) -> float:
+    """Predice il tempo (secondi) per una data distanza dato il VDOT."""
+    lo, hi = distance_m / 10.0, distance_m * 3.0
+    for _ in range(64):
+        mid = (lo + hi) / 2
+        if _calc_vdot(distance_m, mid) > vdot:
+            lo = mid   # troppo veloce → allunghiamo
+        else:
+            hi = mid   # troppo lento  → accorciamo
+    return (lo + hi) / 2
+
+
+def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
+    """Sezione 'Analisi Gare e VDOT' con grafico evoluzione e tabella previsioni."""
+    import datetime as dt
+
+    races = [s for s in all_summaries
+             if s.get("workout_type") == 1
+             and s.get("distance", 0) >= 1000
+             and s.get("moving_time", 0) > 60]
+    if not races:
+        return
+
+    races.sort(key=lambda s: s.get("start_date", ""))
+
+    race_data = []
+    for s in races:
+        v = _calc_vdot(s["distance"], s["moving_time"])
+        if v > 20:   # scarta valori non plausibili
+            race_data.append({**s, "vdot": round(v, 1)})
+    if not race_data:
+        return
+
+    section_label(body, "ANALISI GARE E VDOT")
+
+    hdr_f = tk.Frame(body, bg=C["bg"])
+    hdr_f.pack(fill="x", padx=20, pady=(0, 4))
+    info_btn(hdr_f, "Analisi Gare e VDOT — Come funziona",
+             _INFO_VDOT).pack(side="right", padx=4)
+
+    best   = max(race_data, key=lambda r: r["vdot"])
+    latest = race_data[-1]
+
+    # ── Stat card ─────────────────────────────────────────────────────────────
+    g = tk.Frame(body, bg=C["bg"])
+    g.pack(fill="x", padx=20, pady=(0, 4))
+    cards = [
+        ("Gare totali",   str(len(race_data)),     "",   C["accent"]),
+        ("VDOT migliore", f"{best['vdot']:.1f}",   "",   C["green"]),
+        ("VDOT recente",  f"{latest['vdot']:.1f}", "",   C["blue"]),
+    ]
+    for i, (l, v, u, col) in enumerate(cards):
+        StatCard(g, l, v, u, col).grid(row=0, column=i, padx=5, pady=5, sticky="nsew")
+        g.columnconfigure(i, weight=1)
+
+    # ── Grafico VDOT nel tempo ─────────────────────────────────────────────
+    if len(race_data) >= 2:
+        cf = tk.Frame(body, bg=C["bg"])
+        cf.pack(fill="x", padx=20, pady=(0, 8))
+
+        dates = [dt.datetime.fromisoformat(r["start_date"][:10]) for r in race_data]
+        vdots = [r["vdot"] for r in race_data]
+
+        fig = plt.Figure(figsize=(12, 3), facecolor=C["bg"])
+        ax  = fig.add_subplot(111)
+        ax.set_facecolor(C["surface"])
+        ax.plot(dates, vdots, color=C["blue"], linewidth=1.4,
+                marker="o", markersize=5, zorder=3)
+        ax.axhline(best["vdot"], color=C["green"], linewidth=0.8,
+                   linestyle="--", alpha=0.55, label=f"Best {best['vdot']:.1f}")
+        ax.set_title("EVOLUZIONE VDOT", color=C["text"], fontsize=9,
+                     fontweight="bold", fontfamily="monospace", pad=6)
+        ax.tick_params(colors=C["text_dim"], labelsize=7)
+        ax.set_ylabel("VDOT", fontsize=7, color=C["text_dim"])
+        for sp in ax.spines.values():
+            sp.set_edgecolor(C["border"])
+        ax.grid(axis="y", color=C["border"], linestyle="--", linewidth=0.4, alpha=0.6)
+        fig.autofmt_xdate(rotation=30, ha="right")
+
+        cnv = FigureCanvasTkAgg(fig, master=cf)
+        cnv.draw()
+        cnv.get_tk_widget().pack(fill="x")
+
+    # ── Layout a due colonne: tabella gare | previsioni ────────────────────
+    two = tk.Frame(body, bg=C["bg"])
+    two.pack(fill="x", padx=20, pady=(0, 20))
+    two.columnconfigure(0, weight=3)
+    two.columnconfigure(1, weight=2)
+
+    # Tabella gare (sinistra) con paginazione
+    PAGE_SIZE = 10
+    races_rev = list(reversed(race_data))
+    n_pages   = max(1, math.ceil(len(races_rev) / PAGE_SIZE))
+    page_var  = [0]   # indice pagina corrente (mutabile via lista)
+
+    tbl_outer = tk.Frame(two, bg=C["surface2"],
+                         highlightthickness=1, highlightbackground=C["border"])
+    tbl_outer.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+
+    # Header colonne fisso
+    hrow = tk.Frame(tbl_outer, bg=C["surface"])
+    hrow.pack(fill="x")
+    for col_text, w in [("DATA", 12), ("KM", 9), ("TEMPO", 10), ("VDOT", 7), ("GARA", 22)]:
+        tk.Label(hrow, text=col_text, font=("Courier", 8, "bold"),
+                 fg=C["text_dim"], bg=C["surface"],
+                 width=w, anchor="center", pady=6).pack(side="left", padx=2)
+
+    # Area righe (ricreata ad ogni cambio pagina)
+    rows_frame = tk.Frame(tbl_outer, bg=C["surface2"])
+    rows_frame.pack(fill="x")
+
+    # Barra paginazione in fondo
+    nav = tk.Frame(tbl_outer, bg=C["surface"])
+    nav.pack(fill="x")
+    lbl_page = tk.Label(nav, text="", font=("Courier", 8), fg=C["text_dim"],
+                        bg=C["surface"])
+    lbl_page.pack(side="left", padx=8)
+    btn_next = tk.Button(nav, text="▶", font=("Courier", 8),
+                         fg=C["text"], bg=C["surface2"], relief="flat",
+                         bd=0, padx=6, pady=3)
+    btn_next.pack(side="right", padx=4)
+    btn_prev = tk.Button(nav, text="◀", font=("Courier", 8),
+                         fg=C["text"], bg=C["surface2"], relief="flat",
+                         bd=0, padx=6, pady=3)
+    btn_prev.pack(side="right", padx=2)
+
+    def _draw_page():
+        for w in rows_frame.winfo_children():
+            w.destroy()
+        p   = page_var[0]
+        sub = races_rev[p * PAGE_SIZE : (p + 1) * PAGE_SIZE]
+        for i, r in enumerate(sub):
+            bg = C["surface2"] if i % 2 == 0 else C["surface"]
+            row = tk.Frame(rows_frame, bg=bg)
+            row.pack(fill="x")
+            dist_km = r["distance"] / 1000
+            for v, col, w, anc in [
+                (r["start_date"][:10],       C["text_dim"], 12, "center"),
+                (f"{dist_km:.1f}",           C["blue"],      9, "center"),
+                (fmt_time(r["moving_time"]), C["text"],     10, "center"),
+                (str(r["vdot"]),             C["green"],     7, "center"),
+                ((r["name"] or "–")[:22],    C["text"],     22, "w"),
+            ]:
+                tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
+                         width=w, anchor=anc, pady=5, padx=2).pack(side="left")
+            if on_open:
+                def _open(e, s=r):
+                    on_open(s)
+                row.bind("<Button-1>", _open)
+                for child in row.winfo_children():
+                    child.config(cursor="hand2")
+                    child.bind("<Button-1>", _open)
+        lbl_page.config(text=f"Pag. {p + 1} / {n_pages}")
+        btn_prev.config(state="normal" if p > 0 else "disabled")
+        btn_next.config(state="normal" if p < n_pages - 1 else "disabled")
+
+    def _prev():
+        page_var[0] -= 1
+        _draw_page()
+
+    def _next():
+        page_var[0] += 1
+        _draw_page()
+
+    btn_prev.config(command=_prev)
+    btn_next.config(command=_next)
+    _draw_page()
+
+    # Tabella previsioni (destra) basata su VDOT più recente
+    pred_vdot = latest["vdot"]
+    prd = tk.Frame(two, bg=C["surface2"],
+                   highlightthickness=1, highlightbackground=C["border"])
+    prd.grid(row=0, column=1, sticky="nsew")
+
+    tk.Label(prd, text=f"PREVISIONI  (VDOT {pred_vdot:.1f})",
+             font=("Courier", 8, "bold"), fg=C["text_dim"], bg=C["surface"],
+             pady=6).pack(fill="x")
+    tk.Label(prd, text=f"  da: {latest['name'][:30]}",
+             font=("Courier", 7), fg=C["text_dim"], bg=C["surface"],
+             pady=2).pack(fill="x")
+
+    PRED_DIST = [
+        ("1 km",          1000),
+        ("5 km",          5000),
+        ("10 km",        10000),
+        ("Mezza",        21097),
+        ("Maratona",     42195),
+    ]
+    for i, (label, dist) in enumerate(PRED_DIST):
+        bg = C["surface2"] if i % 2 == 0 else C["surface"]
+        t  = int(_predict_time(pred_vdot, dist))
+        ms = dist / t if t > 0 else 0
+        row = tk.Frame(prd, bg=bg)
+        row.pack(fill="x", padx=4)
+        tk.Label(row, text=label, font=("Courier", 9), fg=C["accent"],
+                 bg=bg, width=10, anchor="w", pady=5, padx=4).pack(side="left")
+        tk.Label(row, text=fmt_time(t), font=("Courier", 9, "bold"),
+                 fg=C["green"], bg=bg, width=9, anchor="center").pack(side="left")
+        tk.Label(row, text=f"{fmt_pace(ms)}/km", font=("Courier", 8),
+                 fg=C["text_dim"], bg=bg, anchor="w").pack(side="left")
 
 
 # ── Geocoding helpers ─────────────────────────────────────────────────────────
@@ -1258,6 +1476,59 @@ def _render_training_load(body, all_summaries):
     cnv = FigureCanvasTkAgg(fig, master=cf)
     cnv.draw()
     cnv.get_tk_widget().pack(fill="x")
+
+
+# ── Testo informativo — VDOT ──────────────────────────────────────────────────
+
+_INFO_VDOT = """
+## VDOT — Indice di Forma di Jack Daniels
+
+Il VDOT è un numero che riassume la tua capacità aerobica ricavato
+direttamente dai tuoi risultati di gara reali, senza test in laboratorio.
+
+─────────────────────────────────────────────
+COME VIENE CALCOLATO
+─────────────────────────────────────────────
+La formula di Daniels stima la percentuale del VO₂max che un corridore
+riesce a sostenere in gara in funzione della durata della prestazione:
+
+  • Velocità di gara → consumo di O₂ stimato (VO₂)
+  • Durata della gara → % del VO₂max sostenibile (%VO₂max)
+  • VDOT = VO₂ / %VO₂max
+
+Un VDOT più alto indica una forma fisica migliore.
+Valori di riferimento orientativi:
+  < 35  →  principiante
+  35–45 →  runner amatoriale
+  45–55 →  runner evoluto
+  55–65 →  agonista avanzato
+  > 65  →  élite
+
+─────────────────────────────────────────────
+GRAFICO EVOLUZIONE VDOT
+─────────────────────────────────────────────
+Mostra come il tuo VDOT è cambiato nel tempo gara dopo gara.
+La linea tratteggiata verde segna il tuo VDOT migliore storico.
+Un trend crescente indica miglioramento della forma fisica.
+
+─────────────────────────────────────────────
+TABELLA PREVISIONI
+─────────────────────────────────────────────
+Partendo dal tuo VDOT più recente (ultima gara registrata), la formula
+inversa calcola il tempo che potresti correre su distanze standard
+(1K, 5K, 10K, mezza, maratona) in condizioni ottimali.
+
+Attenzione: le previsioni assumono allenamento specifico per quella
+distanza. Una maratona richiede un lavoro di fondo che un test sui 5K
+non garantisce automaticamente.
+
+─────────────────────────────────────────────
+FONTE
+─────────────────────────────────────────────
+Jack Daniels, "Daniels' Running Formula" (Human Kinetics).
+Solo le attività classificate come "Gara" su Strava
+(workout_type = 1) vengono incluse nell'analisi.
+"""
 
 
 # ── Testo informativo — Carico di allenamento ─────────────────────────────────
