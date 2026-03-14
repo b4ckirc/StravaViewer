@@ -1,5 +1,6 @@
 # ── ui/tab_library.py ─────────────────────────────────────────────────────────
 import tkinter as tk
+import webbrowser
 from tkinter import ttk, messagebox
 from datetime import datetime
 from config import C, COMPARE_EMOJIS, MAX_COMPARE
@@ -281,6 +282,13 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
                       cursor="hand2",
                       command=lambda s=summary: _add_to_compare(s))
             btn_cmp.pack(side="left", padx=2)
+            if summary.get("strava_id"):
+                tk.Button(act_f, text="🟠 Strava", font=("Courier", 7, "bold"),
+                          bg=C["surface"], fg="#FC4C02", bd=0, padx=6, pady=2,
+                          cursor="hand2",
+                          command=lambda sid=summary["strava_id"]:
+                              webbrowser.open(f"https://www.strava.com/activities/{sid}")
+                          ).pack(side="left", padx=2)
             btn_del = tk.Button(act_f, text="🗑", font=("Courier", 7, "bold"),
                       bg=C["surface"], fg=C["red"], bd=0, padx=6, pady=2,
                       cursor="hand2",

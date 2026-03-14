@@ -1,5 +1,6 @@
 # ── ui/tab_dashboard.py ───────────────────────────────────────────────────────
 import tkinter as tk
+import webbrowser
 from config import C
 from models import fmt_dist, fmt_time
 from ui.widgets import StatCard, make_scrollable, section_label, clear
@@ -15,8 +16,17 @@ def render(tab, activity):
     tk.Label(hdr, text=a.name, font=("Courier", 17, "bold"),
              fg=C["text"], bg=C["surface"]).pack(anchor="w", padx=24)
     loc = f"   📍 {a.city} {a.country}".strip() if (a.city or a.country) else ""
-    tk.Label(hdr, text=f"🏃  {a.sport_type.upper()}    📅  {a.date_str}{loc}",
-             font=("Courier", 9), fg=C["text_dim"], bg=C["surface"]).pack(anchor="w", padx=24)
+    sub_row = tk.Frame(hdr, bg=C["surface"])
+    sub_row.pack(anchor="w", padx=24)
+    tk.Label(sub_row, text=f"🏃  {a.sport_type.upper()}    📅  {a.date_str}{loc}",
+             font=("Courier", 9), fg=C["text_dim"], bg=C["surface"]).pack(side="left")
+    if a.strava_id:
+        tk.Button(sub_row, text="🟠 Apri su Strava", font=("Courier", 8, "bold"),
+                  bg=C["surface"], fg="#FC4C02", bd=0, padx=10, pady=0,
+                  cursor="hand2", activebackground=C["surface2"],
+                  command=lambda: webbrowser.open(
+                      f"https://www.strava.com/activities/{a.strava_id}")
+                  ).pack(side="left", padx=(16, 0))
     if a.description:
         tk.Label(hdr, text=f'💬  "{a.description}"',
                  font=("Courier", 9, "italic"), fg=C["text_dim"], bg=C["surface"],
