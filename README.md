@@ -87,6 +87,8 @@ Vista mensile di tutte le corse con navigazione mese per mese:
 Statistiche aggregate su **tutte** le corse nel database (ignora filtri e paginazione):
 - **Obiettivo annuale** — imposta un target km per l'anno corrente con barra di avanzamento; il valore viene salvato in `settings.json` e ricordato tra le sessioni
 - Totali: corse, km, ore, dislivello, passo medio, HR media, calorie, km/settimana
+- **Heatmap attività** — griglia calendario stile GitHub delle ultime 52 settimane (righe = giorni della settimana Lun→Dom, colonne = settimane): ogni cella è colorata in arancio con intensità proporzionale ai km corsi quel giorno, grigio scuro se a riposo; scala colorbar in basso; tooltip al passaggio del mouse con data e km
+- **Profilo atletico** — radar chart esagonale con 6 dimensioni normalizzate 0–100: *Velocità* (passo medio, scala 8:20→3:20/km), *Fondo* (mediana distanze, scala 3→42 km), *Dislivello* (media m↑/km, scala 0→40 m/km), *Costanza* (% settimane con almeno una corsa nelle ultime 52), *Volume* (media km/settimana nelle ultime 52, scala 0→70), *Progressione* (confronto passo medio ultimi 3 mesi vs 3 mesi precedenti); affiancato da pannello con punteggi numerici, barre proporzionali e descrizione di ciascuna dimensione
 - **Tabella per mese** — ultimi 12 mesi con km, corse, tempo, passo medio, dislivello; grafico a barre km per mese
 - Tabella per anno con km, corse, tempo, passo medio, dislivello; grafico km per anno e corse per anno
 - Distribuzione distanze (torta)

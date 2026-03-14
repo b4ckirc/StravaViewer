@@ -103,6 +103,14 @@ def render(tab, storage_mgr, on_open=None):
         StatCard(g2, l, v, u, col).grid(row=0, column=i, padx=5, pady=5, sticky="nsew")
         g2.columnconfigure(i, weight=1)
 
+    # ── Heatmap attività ──────────────────────────────────────────────────────
+    if HAS_MPL:
+        _render_activity_heatmap(body, all_summaries)
+
+    # ── Profilo atletico ──────────────────────────────────────────────────────
+    if HAS_MPL:
+        _render_athlete_radar(body, all_summaries)
+
     # ── Obiettivo annuale ──────────────────────────────────────────────────────
     _render_annual_goal(body, all_summaries)
 
@@ -333,6 +341,273 @@ def render(tab, storage_mgr, on_open=None):
 
     # ── Percorsi ricorrenti ────────────────────────────────────────────────────
     _render_route_analysis(body, storage_mgr, on_open)
+
+
+# ── Heatmap attività ──────────────────────────────────────────────────────────
+
+def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
+    """Heatmap calendario stile GitHub: ultime 52 settimane, intensità = km."""
+    if not HAS_MPL:
+        return
+    import numpy as np
+    from datetime import date as _date, timedelta
+    from matplotlib.colors import LinearSegmentedColormap
+    from matplotlib.patches import Rectangle
+
+    # Costruisce dizionario giorno → km totali
+    day_km: dict = {}
+    for s in all_summaries:
+        d_str = s.get("start_date", "")[:10]
+        try:
+            d = _date.fromisoformat(d_str)
+            day_km[d] = day_km.get(d, 0) + s.get("distance", 0) / 1000
+        except Exception:
+            pass
+
+    today   = _date.today()
+    # Inizia dal lunedì di 52 settimane fa
+    start   = today - timedelta(weeks=52)
+    start  -= timedelta(days=start.weekday())   # allinea al lunedì
+    N_WEEKS = 53
+
+    max_km  = max((v for v in day_km.values()), default=1)
+    cmap    = LinearSegmentedColormap.from_list(
+        "hm", [C["surface"], C["accent"]], N=256)
+
+    CELL = 1.0
+    GAP  = 0.18
+
+    section_label(body, "HEATMAP ATTIVITÀ — ultime 52 settimane")
+    cf = tk.Frame(body, bg=C["bg"])
+    cf.pack(fill="x", padx=20, pady=(0, 20))
+
+    fig = plt.Figure(figsize=(13, 2.4), facecolor=C["bg"])
+    ax  = fig.add_subplot(111)
+    ax.set_facecolor(C["bg"])
+    ax.set_aspect("equal")
+
+    month_ticks, month_labels = [], []
+    prev_month = None
+
+    for w in range(N_WEEKS):
+        for d in range(7):                         # 0=Lun … 6=Dom
+            day = start + timedelta(weeks=w, days=d)
+            if day > today:
+                continue
+            km    = day_km.get(day, 0)
+            intensity = min(km / max_km, 1.0) if km > 0 else 0
+            color = cmap(intensity) if km > 0 else C["surface"]
+            x = w * (CELL + GAP)
+            y = (6 - d) * (CELL + GAP)
+            ax.add_patch(Rectangle((x, y), CELL, CELL,
+                                   color=color, linewidth=0, zorder=2))
+        # etichetta mese sul primo giorno della settimana (lunedì)
+        first_day = start + timedelta(weeks=w)
+        if first_day.month != prev_month and first_day <= today:
+            month_ticks.append(w * (CELL + GAP) + CELL / 2)
+            month_labels.append(MONTHS_IT[first_day.month])
+            prev_month = first_day.month
+
+    # Assi
+    ax.set_xlim(-0.5, N_WEEKS * (CELL + GAP) + 0.5)
+    ax.set_ylim(-0.5, 7 * (CELL + GAP) + 0.5)
+    ax.set_xticks(month_ticks)
+    ax.set_xticklabels(month_labels, fontsize=7, color=C["text_dim"],
+                       fontfamily="monospace")
+    days_it = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+    ax.set_yticks([(6 - d) * (CELL + GAP) + CELL / 2 for d in range(7)])
+    ax.set_yticklabels(days_it, fontsize=6, color=C["text_dim"],
+                       fontfamily="monospace")
+    ax.tick_params(length=0)
+    for sp in ax.spines.values():
+        sp.set_visible(False)
+
+    # Legenda scala colore
+    sm = plt.cm.ScalarMappable(cmap=cmap,
+                               norm=plt.Normalize(vmin=0, vmax=max_km))
+    sm.set_array([])
+    cb = fig.colorbar(sm, ax=ax, orientation="horizontal",
+                      fraction=0.02, pad=0.18, aspect=40)
+    cb.ax.tick_params(labelsize=6, colors=C["text_dim"])
+    cb.set_label("km", fontsize=6, color=C["text_dim"])
+    cb.outline.set_edgecolor(C["border"])
+
+    # Tooltip hover
+    annot = ax.annotate("", xy=(0, 0), xytext=(6, 6),
+                        textcoords="offset points",
+                        bbox=dict(boxstyle="round,pad=0.3", fc=C["surface"],
+                                  ec=C["border"], alpha=0.92),
+                        fontsize=7, color=C["text"],
+                        fontfamily="monospace")
+    annot.set_visible(False)
+
+    def _on_hover(event):
+        if event.inaxes != ax:
+            annot.set_visible(False)
+            canvas_hm.draw_idle()
+            return
+        col = int(event.xdata / (CELL + GAP) + 0.5) if event.xdata is not None else -1
+        row = int(event.ydata / (CELL + GAP) + 0.5) if event.ydata is not None else -1
+        d_idx = 6 - row
+        if 0 <= col < N_WEEKS and 0 <= d_idx <= 6:
+            day = start + timedelta(weeks=col, days=d_idx)
+            if day <= today:
+                km = day_km.get(day, 0)
+                annot.xy = (col * (CELL + GAP) + CELL / 2,
+                            (6 - d_idx) * (CELL + GAP) + CELL)
+                km_str = f"{km:.1f} km" if km > 0 else "riposo"
+                annot.set_text(f"{day.strftime('%d %b %Y')}  {km_str}")
+                annot.set_visible(True)
+                canvas_hm.draw_idle()
+                return
+        annot.set_visible(False)
+        canvas_hm.draw_idle()
+
+    fig.subplots_adjust(left=0.05, right=0.97, top=0.88, bottom=0.18)
+    canvas_hm = FigureCanvasTkAgg(fig, master=cf)
+    canvas_hm.draw()
+    canvas_hm.get_tk_widget().pack(fill="x")
+    canvas_hm.mpl_connect("motion_notify_event", _on_hover)
+
+
+# ── Radar profilo atletico ─────────────────────────────────────────────────────
+
+def _render_athlete_radar(body: tk.Frame, all_summaries: list):
+    """Radar chart esagonale del profilo atletico con 6 dimensioni."""
+    if not HAS_MPL or not all_summaries:
+        return
+    from datetime import date as _date, timedelta
+    import statistics
+
+    today    = _date.today()
+    cut_52w  = today - timedelta(weeks=52)
+    cut_3m   = today - timedelta(days=90)
+    cut_6m   = today - timedelta(days=180)
+
+    runs = [s for s in all_summaries if s.get("distance", 0) > 0]
+
+    # ── 1. Velocità: avg pace, scala 2.0–5.0 m/s ──────────────────────────
+    speeds = [s["avg_speed"] for s in runs if s.get("avg_speed", 0) > 0]
+    score_speed = min(100, max(0, (sum(speeds)/len(speeds) - 2.0) / 3.0 * 100)) \
+                  if speeds else 0
+
+    # ── 2. Fondo: mediana distanza, scala 3–42 km ─────────────────────────
+    dists = [s["distance"] / 1000 for s in runs]
+    score_endurance = min(100, max(0,
+        (statistics.median(dists) - 3) / 39 * 100)) if dists else 0
+
+    # ── 3. Dislivello: media m↑ per km, scala 0–40 m/km ──────────────────
+    ep_km = [s["elev_gain"] / max(s["distance"] / 1000, 0.1)
+             for s in runs if s.get("elev_gain", 0) > 0]
+    score_elev = min(100, (sum(ep_km)/len(ep_km)) / 40 * 100) if ep_km else 0
+
+    # ── 4. Costanza: % settimane con corsa nelle ultime 52 ────────────────
+    weeks_run = {((_date.fromisoformat(s["start_date"][:10]) - cut_52w).days // 7)
+                 for s in runs
+                 if s.get("start_date", "")[:10] >= cut_52w.isoformat()
+                 and _date.fromisoformat(s["start_date"][:10]) <= today}
+    score_consistency = min(100, len(weeks_run) / 52 * 100)
+
+    # ── 5. Volume: media km/settimana nelle ultime 52 sett., scala 0–70 ──
+    recent_runs = [s for s in runs
+                   if s.get("start_date", "")[:10] >= cut_52w.isoformat()]
+    avg_km_w = sum(s["distance"]/1000 for s in recent_runs) / 52 if recent_runs else 0
+    score_volume = min(100, avg_km_w / 70 * 100)
+
+    # ── 6. Progressione: passo medio ultimi 3m vs 3m precedenti ──────────
+    sp_rec  = [s["avg_speed"] for s in runs
+               if s.get("start_date", "")[:10] >= cut_3m.isoformat()
+               and s.get("avg_speed", 0) > 0]
+    sp_prev = [s["avg_speed"] for s in runs
+               if cut_6m.isoformat() <= s.get("start_date","")[:10] < cut_3m.isoformat()
+               and s.get("avg_speed", 0) > 0]
+    if sp_rec and sp_prev:
+        ratio = (sum(sp_rec)/len(sp_rec)) / (sum(sp_prev)/len(sp_prev))
+        score_progress = min(100, max(0, (ratio - 0.9) / 0.2 * 100))
+    else:
+        score_progress = 50   # dati insufficienti → neutro
+
+    labels  = ["Velocita'", "Fondo", "Dislivello",
+               "Costanza", "Volume", "Progressione"]
+    scores  = [score_speed, score_endurance, score_elev,
+               score_consistency, score_volume, score_progress]
+    N = len(labels)
+    angles  = [n / N * 2 * math.pi for n in range(N)]
+    angles += [angles[0]]
+    vals    = scores + [scores[0]]
+
+    section_label(body, "PROFILO ATLETICO")
+    outer = tk.Frame(body, bg=C["bg"])
+    outer.pack(fill="x", padx=20, pady=(0, 20))
+    outer.columnconfigure(0, weight=2)
+    outer.columnconfigure(1, weight=3)
+
+    # ── Grafico polare ────────────────────────────────────────────────────
+    cf = tk.Frame(outer, bg=C["bg"])
+    cf.grid(row=0, column=0, sticky="nsew")
+
+    fig = plt.Figure(figsize=(5, 4.2), facecolor=C["bg"])
+    ax  = fig.add_subplot(111, polar=True)
+    ax.set_facecolor(C["surface"])
+
+    ax.plot(angles, vals, color=C["accent"], linewidth=2, zorder=3)
+    ax.fill(angles, vals, color=C["accent"], alpha=0.20)
+
+    ax.set_ylim(0, 100)
+    ax.set_yticks([25, 50, 75, 100])
+    ax.set_yticklabels(["25", "50", "75", "100"],
+                       fontsize=5.5, color=C["text_dim"])
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(labels, fontsize=8, color=C["text"],
+                       fontfamily="monospace")
+    ax.grid(color=C["border"], linestyle="--", linewidth=0.5, alpha=0.6)
+    ax.spines["polar"].set_color(C["border"])
+    ax.tick_params(pad=6)
+    fig.subplots_adjust(left=0.08, right=0.92, top=0.92, bottom=0.08)
+
+    cnv = FigureCanvasTkAgg(fig, master=cf)
+    cnv.draw()
+    cnv.get_tk_widget().pack(fill="both", expand=True)
+
+    # ── Legenda dimensioni ────────────────────────────────────────────────
+    leg = tk.Frame(outer, bg=C["surface2"],
+                   highlightthickness=1, highlightbackground=C["border"])
+    leg.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
+
+    tk.Label(leg, text="COME SI CALCOLANO LE DIMENSIONI",
+             font=("Courier", 8, "bold"), fg=C["text_dim"],
+             bg=C["surface"], pady=8).pack(fill="x")
+
+    DESCRIPTIONS = [
+        ("Velocita'",    C["accent"],  "Passo medio di tutte le corse\n(scala 2–5 m/s, 8:20/km → 3:20/km)"),
+        ("Fondo",        C["blue"],    "Mediana delle distanze percorse\n(scala 3–42 km)"),
+        ("Dislivello",   C["yellow"],  "Media del dislivello positivo per km\n(scala 0–40 m/km)"),
+        ("Costanza",     C["green"],   "% settimane con almeno 1 corsa\nnelle ultime 52 settimane"),
+        ("Volume",       C["purple"],  "Media km/settimana nelle ultime 52 sett.\n(scala 0–70 km/sett.)"),
+        ("Progressione", C["blue"],    "Confronto passo medio: ultimi 3 mesi\nvs 3 mesi precedenti"),
+    ]
+    for i, (name, col, desc) in enumerate(DESCRIPTIONS):
+        bg = C["surface2"] if i % 2 == 0 else C["surface"]
+        row = tk.Frame(leg, bg=bg)
+        row.pack(fill="x")
+        score_val = scores[i]
+        bar_w = max(2, int(score_val / 100 * 18))
+        bar_str = "█" * bar_w + "░" * (18 - bar_w)
+        tk.Label(row, text=f"  {name:<13}", font=("Courier", 8, "bold"),
+                 fg=col, bg=bg, anchor="w", pady=6).pack(side="left")
+        tk.Label(row, text=f"{score_val:5.0f}  ", font=("Courier", 8),
+                 fg=C["text"], bg=bg).pack(side="left")
+        tk.Label(row, text=bar_str, font=("Courier", 7),
+                 fg=col, bg=bg).pack(side="left")
+
+    # Descrizioni estese
+    detail = tk.Frame(leg, bg=C["surface2"])
+    detail.pack(fill="x", padx=8, pady=(4, 8))
+    for name, col, desc in DESCRIPTIONS:
+        tk.Label(detail, text=f"▸ {name}: {desc}",
+                 font=("Courier", 7), fg=C["text_dim"], bg=C["surface2"],
+                 anchor="w", justify="left", wraplength=380).pack(
+                     fill="x", pady=1)
 
 
 # ── VDOT helpers ──────────────────────────────────────────────────────────────
