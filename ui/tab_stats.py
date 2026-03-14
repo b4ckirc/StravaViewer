@@ -39,7 +39,7 @@ def _save_settings(s: dict):
         pass
 
 
-def render(tab, storage_mgr):
+def render(tab, storage_mgr, on_open=None):
     clear(tab)
 
     tk.Label(tab, text="STATISTICHE GLOBALI",
@@ -279,19 +279,35 @@ def render(tab, storage_mgr):
             time_str  = fmt_time(r["elapsed_time"])
             act_name  = (r["activity_name"] or "–")[:33]
             date_str  = r["date"]
+            act_id    = r.get("activity_id")
         else:
             label_txt = label.replace("🏃", "  ")
             time_str  = "–"
             act_name  = "nessun dato"
             date_str  = "–"
+            act_id    = None
+
+        widgets = []
         for v, col, w, anc in [
             (label_txt, C["accent"],   18, "w"),
             (time_str,  C["green"],    10, "center"),
             (act_name,  C["text"],     34, "w"),
             (date_str,  C["text_dim"], 14, "center"),
         ]:
-            tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
-                     width=w, anchor=anc, pady=7, padx=4).pack(side="left")
+            lbl = tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
+                           width=w, anchor=anc, pady=7, padx=4)
+            lbl.pack(side="left")
+            widgets.append(lbl)
+
+        if act_id and on_open:
+            def _open(e, _id=act_id):
+                for s in storage_mgr.list_all():
+                    if s.get("strava_id") == _id:
+                        on_open(s)
+                        return
+            for w in [row] + widgets:
+                w.config(cursor="hand2")
+                w.bind("<Button-1>", _open)
 
     if not found_any:
         try:

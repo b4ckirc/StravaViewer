@@ -110,6 +110,7 @@ class JSONStorage:
                 continue
             act_name = data.get("name", "–")
             act_date = (data.get("start_date_local") or "")[:10]
+            act_id   = data.get("id")
             for effort in data.get("best_efforts") or []:
                 raw_name = effort.get("name", "")
                 canonical = target.get(raw_name)
@@ -123,6 +124,7 @@ class JSONStorage:
                         "elapsed_time": t,
                         "activity_name": act_name,
                         "date": act_date,
+                        "activity_id": act_id,
                     }
         return records
 
@@ -377,6 +379,7 @@ class MongoStorage:
                 "elapsed_time": {"$first": "$best_efforts._time"},
                 "activity_name": {"$first": "$name"},
                 "date": {"$first": "$start_date_local"},
+                "activity_id": {"$first": "$id"},
             }},
         ]
         result = {}
@@ -390,6 +393,7 @@ class MongoStorage:
                     "elapsed_time": doc["elapsed_time"],
                     "activity_name": doc.get("activity_name", "–"),
                     "date": (doc.get("date") or "")[:10],
+                    "activity_id": doc.get("activity_id"),
                 }
         return result
 

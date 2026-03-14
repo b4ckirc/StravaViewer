@@ -257,7 +257,7 @@ class StravaApp(tk.Tk):
         if attr == "tab_library":
             self._render_library()
         elif attr == "tab_stats":
-            tab_stats.render(self.tab_stats, self.storage)
+            tab_stats.render(self.tab_stats, self.storage, on_open=self._open_from_library)
         elif attr == "tab_calendar":
             tab_calendar.render(self.tab_calendar, self.storage,
                                 on_open=self._open_from_library)
