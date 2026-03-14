@@ -223,7 +223,8 @@ class MongoStorage:
             "start_date_local": 1, "distance": 1, "moving_time": 1,
             "elapsed_time": 1, "total_elevation_gain": 1,
             "average_speed": 1, "average_heartrate": 1,
-            "calories": 1, "description": 1, "workout_type": 1, "_id": 1,
+            "calories": 1, "description": 1, "workout_type": 1,
+            "start_latlng": 1, "location_city": 1, "location_country": 1, "_id": 1,
         }).sort("start_date_local", -1)
         results = []
         for doc in cursor:
@@ -544,6 +545,7 @@ def _sanitize_filename(name: str, maxlen: int = 40) -> str:
 
 
 def _make_summary(data: dict, source: str, ref: str) -> dict:
+    latlng = data.get("start_latlng") or []
     return {
         "source":       source,        # "json" | "mongo"
         "ref":          ref,            # path file o ObjectId
@@ -560,6 +562,10 @@ def _make_summary(data: dict, source: str, ref: str) -> dict:
         "calories":     data.get("calories"),
         "description":  data.get("description") or "",
         "workout_type": data.get("workout_type"),
+        "start_lat":    latlng[0] if len(latlng) > 0 else None,
+        "start_lon":    latlng[1] if len(latlng) > 1 else None,
+        "city":         data.get("location_city") or "",
+        "country":      data.get("location_country") or "",
     }
 
 def _passes(summary: dict, filters: dict) -> bool:

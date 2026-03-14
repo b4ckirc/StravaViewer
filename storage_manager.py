@@ -8,7 +8,7 @@ da quale/quali backend sono attivi.
 import os
 from models import ActivityData
 from storage import JSONStorage, MongoStorage, start_mongo_container
-from config import MONGO_HOST, MONGO_PORT, DOCKER_COMPOSE
+from config import MONGO_HOST, MONGO_PORT, DOCKER_COMPOSE, MONGO_DB
 
 DEFAULT_JSON_DIR = "strava_activities"
 
@@ -175,6 +175,83 @@ class StorageManager:
             except Exception:
                 pass
         return self.json_storage.scan_effort_names()
+
+    _GEOCODE_COLL = "geocode_cache"
+
+    def get_geocode(self, lat: float, lon: float) -> str | None:
+        """Ritorna la città geocodificata per le coordinate, o None se non in cache."""
+        key = f"{lat:.3f},{lon:.3f}"
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                coll = self.mongo_storage._client[MONGO_DB][self._GEOCODE_COLL]
+                doc = coll.find_one({"_id": key}, {"city": 1})
+                if doc is not None:
+                    return doc.get("city", "")
+            except Exception:
+                pass
+        try:
+            import json as _json
+            with open("geocode_cache.json", encoding="utf-8") as f:
+                cache = _json.load(f)
+            if key in cache:
+                return cache[key]
+        except Exception:
+            pass
+        return None
+
+    def set_geocode(self, lat: float, lon: float, city: str):
+        """Salva il risultato del geocoding nella cache persistente."""
+        key = f"{lat:.3f},{lon:.3f}"
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                coll = self.mongo_storage._client[MONGO_DB][self._GEOCODE_COLL]
+                coll.update_one({"_id": key}, {"$set": {"city": city}}, upsert=True)
+                return
+            except Exception:
+                pass
+        try:
+            import json as _json, os as _os
+            path = "geocode_cache.json"
+            cache = {}
+            if _os.path.exists(path):
+                with open(path, encoding="utf-8") as f:
+                    cache = _json.load(f)
+            cache[key] = city
+            with open(path, "w", encoding="utf-8") as f:
+                _json.dump(cache, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+    def get_route_groups(self, min_runs: int = 3) -> list[list[dict]]:
+        """
+        Raggruppa le attività per percorso ricorrente.
+        Criterio: stessa zona di partenza (~300 m) + distanza simile (±1 km).
+        Ritorna lista di gruppi ordinata per numero di corse (decrescente).
+        """
+        from collections import defaultdict
+        _RUN_TYPES = {"Run", "Trail Run", "VirtualRun", "Hike", "Walk"}
+        GRID = 0.003          # ~300 m per grado
+        summaries = self.list_all()
+        groups: dict = defaultdict(list)
+        for s in summaries:
+            lat = s.get("start_lat")
+            lon = s.get("start_lon")
+            dist = s.get("distance", 0)
+            if not lat or not lon or dist < 500:
+                continue
+            if s.get("sport_type", "Run") not in _RUN_TYPES:
+                continue
+            grid_lat = round(round(lat / GRID) * GRID, 6)
+            grid_lon = round(round(lon / GRID) * GRID, 6)
+            dist_bucket = round(dist / 1000)        # km, nearest 1 km
+            groups[(grid_lat, grid_lon, dist_bucket)].append(s)
+        result = [
+            sorted(v, key=lambda x: x.get("start_date", ""))
+            for v in groups.values()
+            if len(v) >= min_runs
+        ]
+        result.sort(key=len, reverse=True)
+        return result
 
     def list_polylines(self) -> list:
         """

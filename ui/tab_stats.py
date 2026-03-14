@@ -327,6 +327,374 @@ def render(tab, storage_mgr, on_open=None):
                  font=("Courier", 8), fg=C["text_dim"], bg=C["surface2"],
                  pady=10, wraplength=760, justify="left").pack(anchor="w", padx=16)
 
+    # ── Percorsi ricorrenti ────────────────────────────────────────────────────
+    _render_route_analysis(body, storage_mgr, on_open)
+
+
+# ── Geocoding helpers ─────────────────────────────────────────────────────────
+
+def _reverse_geocode(lat: float, lon: float, storage_mgr) -> str:
+    """Reverse geocoding con Nominatim. Cache su MongoDB o file JSON."""
+    cached = storage_mgr.get_geocode(lat, lon)
+    if cached is not None:
+        return cached
+    try:
+        import urllib.request, json as _json
+        url = (f"https://nominatim.openstreetmap.org/reverse"
+               f"?lat={lat}&lon={lon}&format=json&zoom=10")
+        req = urllib.request.Request(url, headers={"User-Agent": "StravaViewer/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            resp = r.read()
+            print(f"[geocode] {lat:.3f},{lon:.3f} → HTTP {r.status}")
+            addr = _json.loads(resp).get("address", {})
+        city = (addr.get("city") or addr.get("town") or
+                addr.get("village") or addr.get("municipality") or "")
+        print(f"[geocode] città trovata: '{city}'")
+    except Exception as e:
+        print(f"[geocode] ERRORE {lat:.3f},{lon:.3f}: {type(e).__name__}: {e}")
+        city = ""
+    if city:  # salva solo se trovata, così i fallimenti vengono ritentati
+        storage_mgr.set_geocode(lat, lon, city)
+    return city
+
+
+def _get_group_location(group: list, storage_mgr) -> str:
+    """Restituisce la città del gruppo: prima dai metadati Strava, poi via Nominatim."""
+    from collections import Counter
+    cities = Counter(s.get("city", "") for s in group if s.get("city"))
+    if cities:
+        return cities.most_common(1)[0][0]
+    for s in group:
+        lat, lon = s.get("start_lat"), s.get("start_lon")
+        if lat and lon:
+            return _reverse_geocode(lat, lon, storage_mgr)
+    return ""
+
+
+def _group_immediate_location(group: list, storage_mgr) -> tuple[str, bool]:
+    """
+    Ritorna (testo_localizzazione, è_definitiva).
+    Definitiva=True → nessun thread necessario.
+    Definitiva=False → mostra placeholder e avvia geocoding in background.
+    """
+    from collections import Counter
+
+    # 1. Città dai metadati Strava
+    cities = Counter(s.get("city", "") for s in group if s.get("city"))
+    if cities:
+        return cities.most_common(1)[0][0], True
+
+    # 2. Trova prime coordinate valide
+    lat, lon = None, None
+    for s in group:
+        slat, slon = s.get("start_lat"), s.get("start_lon")
+        if slat and slon:
+            lat, lon = slat, slon
+            break
+
+    if lat is None:
+        return "", True
+
+    ew = "E" if lon >= 0 else "O"
+    coord_str = f"{lat:.2f}°N  {abs(lon):.2f}°{ew}"
+
+    # 3. Controlla cache persistente
+    cached = storage_mgr.get_geocode(lat, lon)
+    if cached:          # stringa non vuota → città trovata
+        return cached, True
+
+    # 4. Non in cache (o vecchio fallimento vuoto) → coordinate come placeholder, avvia thread
+    return coord_str, False
+
+
+# ── Percorsi ricorrenti ───────────────────────────────────────────────────────
+
+def _render_route_analysis(body, storage_mgr, on_open):
+    section_label(body, "PERCORSI RICORRENTI")
+
+    try:
+        groups = storage_mgr.get_route_groups(min_runs=3)
+    except Exception:
+        groups = []
+
+    if not groups:
+        tk.Label(body, text="  Nessun percorso ricorrente trovato (minimo 3 corse sullo stesso tracciato).",
+                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"],
+                 pady=12).pack(anchor="w", padx=20)
+        return
+
+    outer = tk.Frame(body, bg=C["bg"])
+    outer.pack(fill="x", padx=20, pady=(0, 24))
+
+    # ── Lista sinistra ────────────────────────────────────────────────────────
+    list_panel = tk.Frame(outer, bg=C["surface2"],
+                          highlightthickness=1, highlightbackground=C["border"],
+                          width=230)
+    list_panel.pack(side="left", fill="y", padx=(0, 10))
+    list_panel.pack_propagate(False)
+
+    tk.Label(list_panel, text=f"  {len(groups)} percorsi  (min. 3 corse)",
+             font=("Courier", 8), fg=C["text_dim"], bg=C["surface2"],
+             pady=6, anchor="w").pack(fill="x")
+    tk.Frame(list_panel, bg=C["border"], height=1).pack(fill="x")
+
+    list_canvas = tk.Canvas(list_panel, bg=C["surface2"], bd=0,
+                            highlightthickness=0)
+    list_sb = tk.Scrollbar(list_panel, orient="vertical",
+                            command=list_canvas.yview)
+    list_canvas.configure(yscrollcommand=list_sb.set)
+    list_sb.pack(side="right", fill="y")
+    list_canvas.pack(fill="both", expand=True)
+    list_inner = tk.Frame(list_canvas, bg=C["surface2"])
+    _lwid = list_canvas.create_window((0, 0), window=list_inner, anchor="nw")
+    list_inner.bind("<Configure>",
+                    lambda e: list_canvas.configure(
+                        scrollregion=list_canvas.bbox("all")))
+    list_canvas.bind("<Configure>",
+                     lambda e: list_canvas.itemconfig(_lwid, width=e.width))
+
+    # ── Pannello destro: grafico ───────────────────────────────────────────────
+    chart_panel = tk.Frame(outer, bg=C["surface2"],
+                           highlightthickness=1, highlightbackground=C["border"])
+    chart_panel.pack(side="left", fill="both", expand=True)
+
+    tk.Label(chart_panel,
+             text="← Seleziona un percorso per vedere l'andamento del passo",
+             font=("Courier", 10), fg=C["text_dim"], bg=C["surface2"],
+             pady=60).pack(expand=True)
+
+    # ── Coda tkinter-safe per aggiornamenti da thread ─────────────────────────
+    import queue, threading
+    loc_queue: queue.Queue = queue.Queue()
+
+    def _poll_queue():
+        try:
+            while True:
+                btn_ref, new_text = loc_queue.get_nowait()
+                try:
+                    btn_ref.config(text=new_text)
+                except Exception:
+                    pass
+        except queue.Empty:
+            pass
+        try:
+            list_inner.after(300, _poll_queue)
+        except Exception:
+            pass
+
+    list_inner.after(300, _poll_queue)
+
+    # ── Bottoni lista ─────────────────────────────────────────────────────────
+    selected = {"btn": None}
+
+    def _select(group, btn):
+        if selected["btn"]:
+            selected["btn"].config(bg=C["surface2"], fg=C["text"])
+        btn.config(bg=C["accent"], fg="white")
+        selected["btn"] = btn
+        for w in chart_panel.winfo_children():
+            w.destroy()
+        _draw_route_chart(chart_panel, group, on_open, storage_mgr)
+
+    pending = []   # gruppi che necessitano geocoding
+    for i, group in enumerate(groups):
+        from collections import Counter
+        dist_km  = group[0].get("distance", 0) / 1000
+        n        = len(group)
+        names    = Counter(s.get("name", "") for s in group)
+        top_name = names.most_common(1)[0][0] or f"{dist_km:.1f} km"
+        dates    = [s.get("start_date", "")[:10] for s in group if s.get("start_date")]
+        span     = f"{min(dates)[:7]} → {max(dates)[:7]}" if dates else ""
+
+        location, is_final = _group_immediate_location(group, storage_mgr)
+        loc_line = f"\n   📍 {location}" if location else ""
+        label    = f"🔁 {top_name[:24]}\n   {dist_km:.1f} km · {n} corse\n   {span}{loc_line}"
+
+        bg = C["surface"] if i % 2 == 0 else C["surface2"]
+        btn = tk.Button(list_inner, text=label, font=("Courier", 8),
+                        bg=bg, fg=C["text"], bd=0, padx=8, pady=6,
+                        anchor="w", justify="left", cursor="hand2",
+                        wraplength=200)
+        btn.pack(fill="x", pady=1)
+        btn.config(command=lambda g=group, b=btn: _select(g, b))
+
+        # Accoda i gruppi che necessitano geocoding
+        if not is_final:
+            pending.append((btn, group, top_name, dist_km, n, span))
+
+    # Un unico thread sequenziale — rispetta il rate limit di Nominatim (1 req/sec)
+    if pending:
+        def _geocode_all(items, q, sm):
+            import time
+            for b, g, top, dkm, n, sp in items:
+                loc = _get_group_location(g, sm)
+                if loc:  # aggiorna solo se trovata, altrimenti le coordinate restano
+                    ll = f"\n   📍 {loc}"
+                    q.put((b, f"🔁 {top[:24]}\n   {dkm:.1f} km · {n} corse\n   {sp}{ll}"))
+                time.sleep(1.1)  # rispetta rate limit Nominatim
+        threading.Thread(target=_geocode_all,
+                         args=(pending, loc_queue, storage_mgr),
+                         daemon=True).start()
+
+    # Auto-seleziona il primo gruppo
+    if list_inner.winfo_children():
+        first_btn = list_inner.winfo_children()[0]
+        first_btn.after(100, lambda: _select(groups[0], first_btn))
+
+
+def _draw_route_chart(frame, group, on_open, storage_mgr=None):
+    from collections import Counter
+    import datetime as dt
+
+    dist_km  = group[0].get("distance", 0) / 1000
+    names    = Counter(s.get("name", "") for s in group)
+    top_name = names.most_common(1)[0][0] or f"{dist_km:.1f} km"
+    location = _get_group_location(group, storage_mgr) if storage_mgr else ""
+
+    # Dati per il grafico
+    dates, paces, hrs, runs = [], [], [], []
+    for s in group:
+        spd = s.get("avg_speed", 0)
+        if spd <= 0:
+            continue
+        pace_min = (1000 / spd) / 60           # min/km
+        date_str = s.get("start_date", "")[:10]
+        try:
+            d = dt.date.fromisoformat(date_str)
+        except Exception:
+            continue
+        dates.append(d)
+        paces.append(pace_min)
+        hrs.append(s.get("avg_hr") or 0)
+        runs.append(s)
+
+    if not dates or not HAS_MPL:
+        tk.Label(frame, text="Dati insufficienti per il grafico.",
+                 font=("Courier", 9), fg=C["text_dim"], bg=C["surface2"]).pack(pady=20)
+        return
+
+    # ── Stats header ──────────────────────────────────────────────────────────
+    hdr = tk.Frame(frame, bg=C["surface"])
+    hdr.pack(fill="x", padx=0)
+
+    best_pace  = min(paces)
+    avg_pace   = sum(paces) / len(paces)
+    first_pace = paces[0]
+    last_pace  = paces[-1]
+    trend_sec  = (first_pace - last_pace) * 60   # positivo = migliorato
+
+    def _fmt_p(p):
+        m = int(p); s = int((p - m) * 60)
+        return f"{m}:{s:02d}"
+
+    trend_txt = (f"↑ migliorato di {abs(trend_sec):.0f}s/km"
+                 if trend_sec > 5 else
+                 f"↓ peggiorato di {abs(trend_sec):.0f}s/km"
+                 if trend_sec < -5 else "→ stabile")
+    trend_col = C["green"] if trend_sec > 5 else C["red"] if trend_sec < -5 else C["text_dim"]
+
+    loc_txt = f"  📍 {location}" if location else ""
+    for txt, col, side in [
+        (f"  {top_name[:40]}  —  {dist_km:.1f} km  ·  {len(dates)} corse{loc_txt}",
+         C["text"], "left"),
+        (f"miglior passo {_fmt_p(best_pace)}/km    "
+         f"media {_fmt_p(avg_pace)}/km    {trend_txt}  ",
+         trend_col, "right"),
+    ]:
+        tk.Label(hdr, text=txt, font=("Courier", 9), fg=col,
+                 bg=C["surface"], pady=6).pack(side=side, padx=12)
+
+    # ── Grafico matplotlib ────────────────────────────────────────────────────
+    fig, ax = plt.subplots(figsize=(7, 3.2), facecolor=C["surface2"])
+    ax.set_facecolor(C["surface2"])
+
+    # Scatter colorato: verde=veloce, rosso=lento
+    norm_paces = [(p - best_pace) / (max(paces) - best_pace + 0.001) for p in paces]
+    colors = [plt.cm.RdYlGn(1 - v) for v in norm_paces]  # type: ignore
+
+    sc = ax.scatter(dates, paces, c=colors, s=60, zorder=3, edgecolors="none")
+
+    # Trend line (regressione lineare semplice)
+    if len(dates) >= 3:
+        x_num = [(d - dates[0]).days for d in dates]
+        n = len(x_num)
+        sx, sy = sum(x_num), sum(paces)
+        sxy = sum(xi * yi for xi, yi in zip(x_num, paces))
+        sxx = sum(xi ** 2 for xi in x_num)
+        denom = n * sxx - sx ** 2
+        if denom:
+            m_coef = (n * sxy - sx * sy) / denom
+            b_coef = (sy - m_coef * sx) / n
+            x0, x1 = x_num[0], x_num[-1]
+            ax.plot([dates[0], dates[-1]],
+                    [m_coef * x0 + b_coef, m_coef * x1 + b_coef],
+                    color=C["accent"], linewidth=1.5, linestyle="--",
+                    alpha=0.7, zorder=2)
+
+    # Evidenzia best e last
+    best_idx = paces.index(best_pace)
+    ax.scatter([dates[best_idx]], [best_pace], s=120, color=C["green"],
+               zorder=4, edgecolors="white", linewidths=1.2, label="Miglior corsa")
+    ax.scatter([dates[-1]], [paces[-1]], s=100, color=C["accent"],
+               zorder=4, edgecolors="white", linewidths=1.2, label="Ultima corsa")
+
+    # Asse Y invertito: passo più basso = più veloce = in cima
+    ax.invert_yaxis()
+
+    def _ytick(p, _):
+        m = int(p); s = int((p - m) * 60)
+        return f"{m}:{s:02d}"
+
+    import matplotlib.ticker as mticker
+    ax.yaxis.set_major_formatter(mticker.FuncFormatter(_ytick))
+    ax.set_ylabel("Passo (min/km)", color=C["text_dim"], fontsize=8)
+    ax.tick_params(colors=C["text_dim"], labelsize=8)
+    for spine in ax.spines.values():
+        spine.set_edgecolor(C["border"])
+    ax.grid(axis="y", color=C["border"], linewidth=0.5, alpha=0.6)
+    ax.legend(fontsize=7, facecolor=C["surface"], edgecolor=C["border"],
+              labelcolor=C["text_dim"])
+    fig.autofmt_xdate(rotation=30, ha="right")
+    fig.tight_layout(pad=1.2)
+
+    canvas = FigureCanvasTkAgg(fig, master=frame)
+    canvas.draw()
+    canvas.get_tk_widget().pack(fill="both", expand=True, padx=0, pady=0)
+    plt.close(fig)
+
+    # ── Lista corse del gruppo (cliccabile se on_open) ────────────────────────
+    runs_frame = tk.Frame(frame, bg=C["surface2"], height=130)
+    runs_frame.pack(fill="x", padx=0)
+    runs_frame.pack_propagate(False)
+    tk.Frame(runs_frame, bg=C["border"], height=1).pack(fill="x")
+
+    sc = tk.Canvas(runs_frame, bg=C["surface2"], bd=0, highlightthickness=0)
+    sb = tk.Scrollbar(runs_frame, orient="vertical", command=sc.yview)
+    sc.configure(yscrollcommand=sb.set)
+    sb.pack(side="right", fill="y")
+    sc.pack(fill="both", expand=True)
+    sub = tk.Frame(sc, bg=C["surface2"])
+    wid = sc.create_window((0, 0), window=sub, anchor="nw")
+    sub.bind("<Configure>", lambda e: sc.configure(scrollregion=sc.bbox("all")))
+    sc.bind("<Configure>", lambda e: sc.itemconfig(wid, width=e.width))
+    sc.bind("<MouseWheel>", lambda e: sc.yview_scroll(int(-1*(e.delta/120)), "units"))
+
+    for s, pace in sorted(zip(runs, paces), key=lambda x: x[0].get("start_date", ""), reverse=True):
+        date_s = s.get("start_date", "")[:10]
+        dist_s = f"{s.get('distance', 0) / 1000:.2f} km"
+        hr_s   = f"  ❤ {s['avg_hr']:.0f}" if s.get("avg_hr") else ""
+        line   = f"{date_s}   {dist_s}   {_fmt_p(pace)}/km{hr_s}   {s.get('name','')[:35]}"
+        fg_col = C["green"] if pace == best_pace else C["text_dim"]
+        lbl = tk.Label(sub, text=line, font=("Courier", 8), fg=fg_col,
+                       bg=C["surface2"], anchor="w", cursor="hand2" if on_open else "")
+        lbl.pack(fill="x", padx=12, pady=1)
+        if on_open:
+            lbl.bind("<Button-1>", lambda e, _s=s: _open_run(on_open, _s))
+
+
+def _open_run(on_open, summary):
+    on_open(summary)
+
 
 # ── Helper ────────────────────────────────────────────────────────────────────
 
