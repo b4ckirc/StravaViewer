@@ -621,7 +621,7 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
     norm_paces = [(p - best_pace) / (max(paces) - best_pace + 0.001) for p in paces]
     colors = [plt.cm.RdYlGn(1 - v) for v in norm_paces]  # type: ignore
 
-    sc = ax.scatter(dates, paces, c=colors, s=60, zorder=3, edgecolors="none")
+    scatter_pts = ax.scatter(dates, paces, c=colors, s=60, zorder=3, edgecolors="none")
 
     # Trend line (regressione lineare semplice)
     if len(dates) >= 3:
@@ -669,6 +669,54 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
     canvas = FigureCanvasTkAgg(fig, master=frame)
     canvas.draw()
     canvas.get_tk_widget().pack(fill="both", expand=True, padx=0, pady=0)
+
+    # ── Tooltip hover sui pallini ─────────────────────────────────────────────
+    annot = ax.annotate(
+        "", xy=(0, 0), xytext=(12, 12), textcoords="offset points",
+        bbox=dict(boxstyle="round,pad=0.45", fc=C["surface"], ec=C["border"],
+                  alpha=0.95, linewidth=1),
+        fontsize=8, color=C["text"],
+        arrowprops=dict(arrowstyle="->", color=C["border"], lw=0.8),
+        zorder=10,
+    )
+    annot.set_visible(False)
+
+    # scatter aggiuntivo per evidenziare il punto hovered
+    highlight, = ax.plot([], [], "o", ms=11, color="white", alpha=0.5,
+                         zorder=5, markeredgewidth=0)
+
+    def _on_hover(event):
+        if event.inaxes != ax:
+            if annot.get_visible():
+                annot.set_visible(False)
+                highlight.set_data([], [])
+                canvas.draw_idle()
+            return
+        cont, ind = scatter_pts.contains(event)
+        if cont:
+            idx  = ind["ind"][0]
+            run  = runs[idx]
+            x, y = scatter_pts.get_offsets()[idx]
+            annot.xy = (x, y)
+            name  = run.get("name", "")
+            date  = (run.get("start_date") or "")[:10]
+            dist  = f"{run.get('distance', 0) / 1000:.1f} km"
+            elev  = run.get("elev_gain", 0)
+            pace_s = _fmt_p(paces[idx])
+            lines = [f"{date}  {name[:32]}" if name else date,
+                     f"{dist}   \u2191{elev:.0f} m   {pace_s}/km"]
+            annot.set_text("\n".join(lines))
+            annot.set_visible(True)
+            highlight.set_data([x], [y])
+            canvas.draw_idle()
+        else:
+            if annot.get_visible():
+                annot.set_visible(False)
+                highlight.set_data([], [])
+                canvas.draw_idle()
+
+    canvas.mpl_connect("motion_notify_event", _on_hover)
+
     plt.close(fig)
 
     # ── Lista corse del gruppo (cliccabile se on_open) ────────────────────────
