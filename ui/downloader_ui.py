@@ -1,9 +1,72 @@
 # ── ui/downloader_ui.py ───────────────────────────────────────────────────────
+import base64
+import hashlib
+import os
+import socket
 import threading
 import tkinter as tk
+import webbrowser
 from tkinter import ttk, messagebox
-from config import C
+from config import C, MONGO_DB
 from i18n import t
+
+_STRAVA_API_URL  = "https://www.strava.com/settings/api"
+_CREDS_DOC_ID    = "strava_credentials"
+_CONFIG_COLL     = "app_config"
+
+# ── Cifratura ─────────────────────────────────────────────────────────────────
+
+def _fernet_key() -> bytes:
+    """Chiave Fernet derivata deterministicamente dall'identità della macchina."""
+    try:
+        user = os.getlogin()
+    except Exception:
+        user = os.environ.get("USERNAME", os.environ.get("USER", "user"))
+    raw = f"{socket.gethostname()}:{user}:strava_viewer_v1"
+    digest = hashlib.sha256(raw.encode()).digest()
+    return base64.urlsafe_b64encode(digest)
+
+
+def _encrypt(plaintext: str) -> str:
+    try:
+        from cryptography.fernet import Fernet
+        return Fernet(_fernet_key()).encrypt(plaintext.encode()).decode()
+    except ImportError:
+        return plaintext          # fallback: testo in chiaro se lib non installata
+
+
+def _decrypt(ciphertext: str) -> str:
+    try:
+        from cryptography.fernet import Fernet
+        return Fernet(_fernet_key()).decrypt(ciphertext.encode()).decode()
+    except (ImportError, Exception):
+        return ciphertext         # fallback: restituisce così com'è
+
+# ── Persistenza credenziali ───────────────────────────────────────────────────
+
+def _load_creds(storage_mgr) -> tuple[str, str]:
+    if storage_mgr.mongo_ok and storage_mgr.mongo_storage:
+        try:
+            coll = storage_mgr.mongo_storage._client[MONGO_DB][_CONFIG_COLL]
+            doc  = coll.find_one({"_id": _CREDS_DOC_ID})
+            if doc:
+                return doc.get("client_id", ""), _decrypt(doc.get("client_secret", ""))
+        except Exception:
+            pass
+    return "", ""
+
+
+def _save_creds(storage_mgr, client_id: str, client_secret: str):
+    if storage_mgr.mongo_ok and storage_mgr.mongo_storage:
+        try:
+            coll = storage_mgr.mongo_storage._client[MONGO_DB][_CONFIG_COLL]
+            coll.update_one(
+                {"_id": _CREDS_DOC_ID},
+                {"$set": {"client_id": client_id, "client_secret": _encrypt(client_secret)}},
+                upsert=True,
+            )
+        except Exception:
+            pass
 
 
 def open_download_window(parent, storage_mgr, on_done_cb=None):
@@ -25,9 +88,32 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     cred_f = tk.Frame(win, bg=C["bg"], pady=8)
     cred_f.pack(fill="x", padx=24)
 
-    tk.Label(cred_f, text=t("downloader_creds_hint"),
-             font=("Courier", 8), fg=C["text_dim"],
-             bg=C["bg"], justify="left").pack(anchor="w", pady=(0, 6))
+    hint_f = tk.Frame(cred_f, bg=C["bg"])
+    hint_f.pack(anchor="w", pady=(0, 6))
+    hint_lines = t("downloader_creds_hint").split("\n")
+    tk.Label(hint_f, text=hint_lines[0], font=("Courier", 8),
+             fg=C["text_dim"], bg=C["bg"], justify="left").pack(anchor="w")
+    if len(hint_lines) > 1:
+        row2 = tk.Frame(hint_f, bg=C["bg"])
+        row2.pack(anchor="w")
+        url_pos = hint_lines[1].find(_STRAVA_API_URL)
+        if url_pos >= 0:
+            prefix = hint_lines[1][:url_pos]
+            if prefix:
+                tk.Label(row2, text=prefix, font=("Courier", 8),
+                         fg=C["text_dim"], bg=C["bg"]).pack(side="left")
+            lnk = tk.Label(row2, text=_STRAVA_API_URL,
+                           font=("Courier", 8, "underline"),
+                           fg=C["accent"], bg=C["bg"], cursor="hand2")
+            lnk.pack(side="left")
+            lnk.bind("<Button-1>", lambda e: webbrowser.open(_STRAVA_API_URL))
+            suffix = hint_lines[1][url_pos + len(_STRAVA_API_URL):]
+            if suffix:
+                tk.Label(row2, text=suffix, font=("Courier", 8),
+                         fg=C["text_dim"], bg=C["bg"]).pack(side="left")
+        else:
+            tk.Label(row2, text=hint_lines[1], font=("Courier", 8),
+                     fg=C["text_dim"], bg=C["bg"]).pack(anchor="w")
 
     def entry_row(lbl_text, show=""):
         f = tk.Frame(cred_f, bg=C["bg"])
@@ -45,6 +131,12 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
 
     cid_var = entry_row("Client ID:")
     csc_var = entry_row("Client Secret:", show="*")
+
+    _saved_cid, _saved_csc = _load_creds(storage_mgr)
+    if _saved_cid:
+        cid_var.set(_saved_cid)
+    if _saved_csc:
+        csc_var.set(_saved_csc)
 
     # ── Destinazione ──────────────────────────────────────────────────────────
     dst_f = tk.Frame(win, bg=C["surface2"],
@@ -107,6 +199,8 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
         if not save_json_var.get() and not save_mongo_var.get():
             messagebox.showerror(t("msg_error"), t("downloader_err_no_dst"), parent=win)
             return
+
+        _save_creds(storage_mgr, cid, csc)
 
         start_btn.config(state="disabled", text=t("btn_downloading"))
         pbar.start(10)
