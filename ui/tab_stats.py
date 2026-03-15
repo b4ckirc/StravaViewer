@@ -2042,7 +2042,7 @@ def _render_race_prediction(body, storage_mgr):
     ctrl_f = tk.Frame(body, bg=C["bg"])
     ctrl_f.pack(fill="x", padx=20, pady=(0, 6))
     info_btn(ctrl_f, t("info_race_pred_title"),
-             _INFO_RACE_PRED).pack(side="right", padx=4)
+             t("info_race_pred")).pack(side="right", padx=4)
 
     # Parameters panel (2 rows)
     param_f = tk.Frame(body, bg=C["surface2"],
@@ -2375,100 +2375,3 @@ def _redraw_race_pred(chart_f, storage_mgr,
                  font=("Courier", 7), fg=C["accent"], bg=C["surface2"]).pack(anchor="w")
 
 
-_INFO_RACE_PRED = """
-## PREVISIONE PRESTAZIONI — SIMULAZIONE MONTE CARLO
-
-Questo strumento stima il tuo tempo possibile su una distanza target, a partire dai tuoi best effort storici. Combina tre fasi: fit della curva di performance (Riegel), correzione personalizzata del dislivello, e simulazione Monte Carlo per quantificare l'incertezza.
-
----
-
-# PARAMETRI DI INPUT
-
-# Distanza
-La distanza della gara da prevedere. Scegli tra le distanze standard (1 km, 5 km, 10 km, Mezza Maratona, Maratona) o seleziona "Personalizzata" per inserire qualsiasi valore.
-
-# km personalizzati
-Attivo solo con "Personalizzata". Inserisci la distanza in km (es. 8.5). Supporta decimali.
-
-# Dislivello + (m)
-Dislivello positivo totale del percorso obiettivo in metri. Lascia 0 per percorsi pianeggianti. La pendenza media viene calcolata come (dislivello_m / distanza_m) × 100 e usata per stimare il rallentamento. Trova questo valore nella scheda tecnica della gara.
-• Esempi: 10K cittadino piatto → 0m. Mezza montagna → 400–800m. Trail KV → 1000m+
-
-# Ultimi giorni
-Finestra temporale dei best effort da considerare nel fit. 0 = tutto lo storico.
-• 90 gg: forma attuale. Ideale se ti sei allenato in modo costante.
-• 180–365 gg: stima stabile. Consigliato se hai pochi dati recenti.
-• 0: massima copertura. Utile se hai poche gare o best effort registrati.
-NOTA: se il filtro lascia meno di 2 distanze con dati, la previsione non può essere calcolata.
-
-# km corsa min / max
-Filtra i best effort in base alla lunghezza dell'attività che li contiene. Utile per considerare solo le corse simili per lunghezza alla gara obiettivo: se vuoi prevedere un 10K, impostare min=8 max=15 esclude best effort registrati durante maratone (paceati lentamente) o uscite brevissime.
-• 0 = nessun limite (si considerano tutte le attività).
-
-# Solo gare
-Usa solo best effort da attività classificate come gara su Strava. Le gare rappresentano lo sforzo massimale e producono previsioni più accurate. Richiede che le attività siano state etichettate correttamente su Strava come "Gara".
-
----
-
-# FASE 1 — FIT DELLA CURVA DI PERFORMANCE
-
-Viene fittata la legge t = A × d^b sui tuoi migliori tempi di movimento (moving_time) per distanza, dopo aver applicato tutti i filtri impostati. Il pannello diagnostico in fondo al grafico mostra esattamente quali distanze e tempi vengono usati: verificare che siano coerenti con le tue prestazioni reali è il primo passo per valutare l'affidabilità della previsione.
-
----
-
-# FASE 2 — CORREZIONE DISLIVELLO PERSONALIZZATA
-
-Se il dislivello è > 0, il rallentamento viene stimato dai tuoi dati reali anziché da un modello fisso:
-• Il grafico "Analisi Pendenza" calcola, tramite regressione lineare sui tuoi split di 1 km, quanti secondi/km perdi per ogni 1% di pendenza media.
-• Questo coefficiente personale viene applicato alla pendenza media del percorso target.
-• Se hai meno di 30 split su terreno variabile, si usa il modello empirico di Minetti come fallback (6 s/km per 1%).
-• Il pannello diagnostico mostra quale fonte è stata usata e l'entità della correzione totale.
-
----
-
-# FASE 3 — MONTE CARLO (5000 simulazioni)
-
-Il tempo previsto non è un valore fisso: dipende dalla forma del giorno, dal meteo, dalla motivazione. Vengono generate 5000 simulazioni con rumore calibrato sui residui del fit (quanto i tuoi best effort si discostano dalla curva ideale). Il risultato è una distribuzione di tempi possibili.
-
----
-
-# COME LEGGERE L'ISTOGRAMMA E I PERCENTILI
-
-# P10 — Top / ottimistica
-Solo il 10% delle simulazioni è più veloce. Potenziale massimo in condizioni ideali.
-
-# P25 — Buona giornata
-Il 25% delle simulazioni prevede un tempo migliore. Obiettivo ambizioso ma realistico.
-
-# P50 — Stima mediana
-Il tempo più probabile. 50% di probabilità di batterlo. Riferimento principale.
-
-# P75 — Giornata normale
-Il 75% delle simulazioni è più veloce. Raggiungibile anche senza condizioni eccezionali.
-
-# P90 — Conservativa
-Solo il 10% delle simulazioni è più lenta. Limite superiore utile per calibrare il ritmo di partenza in sicurezza.
-
----
-
-# PANNELLO DIAGNOSTICO
-
-In fondo al grafico trovi il riepilogo dei dati usati nel calcolo:
-• Equazione del fit e confronto con b=1.060 (Riegel teorico)
-• Tempo base grezzo prima delle correzioni
-• Lista di ogni distanza usata con il tempo e il passo corrispondente
-Verifica che questi tempi siano coerenti con le tue prestazioni: se un best effort è anomalo (es. una corsa lenta usata come 10K di riferimento), puoi escluderla usando i filtri "Ultimi giorni" o "km min/max".
-
----
-
-# CONSIGLI PRATICI
-
-• Parti al ritmo P50–P75 nei primi km. È meglio accelerare nel finale che esplodere.
-• Se parti più veloce di P25, il rischio di crollo aumenta significativamente.
-• Più best effort hai su distanze diverse, più il fit è preciso e l'incertezza si riduce.
-• Per gare con molto dislivello, accumulare split su terreno simile nel grafico Analisi Pendenza migliora la correzione personalizzata.
-
----
-
-NOTA DEL COACH: questo modello non conosce il tuo stato di forma attuale. Controlla il grafico CTL/TSB: se il TSB è positivo (+5 a +15) e il CTL è vicino al massimo storico, punta al P75. Se sei reduce da un blocco intenso o da riposo, punta al P25–P50.
-"""

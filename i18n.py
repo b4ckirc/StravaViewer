@@ -1017,6 +1017,484 @@ Muestra tus mejores tiempos en distancias estándar (400m a maratón) en escala 
 Puntos por encima de la curva = distancia no fuerte. Curva bajando = mejorando.""",
     },
 
+    "info_race_pred": {
+        "it": """\
+## PREVISIONE PRESTAZIONI — SIMULAZIONE MONTE CARLO
+
+Questo strumento stima il tuo tempo possibile su una distanza target, a partire dai tuoi best effort storici. Combina tre fasi: fit della curva di performance (Riegel), correzione personalizzata del dislivello, e simulazione Monte Carlo per quantificare l'incertezza.
+
+---
+
+# PARAMETRI DI INPUT
+
+# Distanza
+La distanza della gara da prevedere. Scegli tra le distanze standard (1 km, 5 km, 10 km, Mezza Maratona, Maratona) o seleziona "Personalizzata" per inserire qualsiasi valore.
+
+# km personalizzati
+Attivo solo con "Personalizzata". Inserisci la distanza in km (es. 8.5). Supporta decimali.
+
+# Dislivello + (m)
+Dislivello positivo totale del percorso obiettivo in metri. Lascia 0 per percorsi pianeggianti. La pendenza media viene calcolata come (dislivello_m / distanza_m) × 100 e usata per stimare il rallentamento. Trova questo valore nella scheda tecnica della gara.
+• Esempi: 10K cittadino piatto → 0m. Mezza montagna → 400–800m. Trail KV → 1000m+
+
+# Ultimi giorni
+Finestra temporale dei best effort da considerare nel fit. 0 = tutto lo storico.
+• 90 gg: forma attuale. Ideale se ti sei allenato in modo costante.
+• 180–365 gg: stima stabile. Consigliato se hai pochi dati recenti.
+• 0: massima copertura. Utile se hai poche gare o best effort registrati.
+NOTA: se il filtro lascia meno di 2 distanze con dati, la previsione non può essere calcolata.
+
+# km corsa min / max
+Filtra i best effort in base alla lunghezza dell'attività che li contiene. Utile per considerare solo le corse simili per lunghezza alla gara obiettivo: se vuoi prevedere un 10K, impostare min=8 max=15 esclude best effort registrati durante maratone (paceati lentamente) o uscite brevissime.
+• 0 = nessun limite (si considerano tutte le attività).
+
+# Solo gare
+Usa solo best effort da attività classificate come gara su Strava. Le gare rappresentano lo sforzo massimale e producono previsioni più accurate. Richiede che le attività siano state etichettate correttamente su Strava come "Gara".
+
+---
+
+# FASE 1 — FIT DELLA CURVA DI PERFORMANCE
+
+Viene fittata la legge t = A × d^b sui tuoi migliori tempi di movimento (moving_time) per distanza, dopo aver applicato tutti i filtri impostati. Il pannello diagnostico in fondo al grafico mostra esattamente quali distanze e tempi vengono usati: verificare che siano coerenti con le tue prestazioni reali è il primo passo per valutare l'affidabilità della previsione.
+
+---
+
+# FASE 2 — CORREZIONE DISLIVELLO PERSONALIZZATA
+
+Se il dislivello è > 0, il rallentamento viene stimato dai tuoi dati reali anziché da un modello fisso:
+• Il grafico "Analisi Pendenza" calcola, tramite regressione lineare sui tuoi split di 1 km, quanti secondi/km perdi per ogni 1% di pendenza media.
+• Questo coefficiente personale viene applicato alla pendenza media del percorso target.
+• Se hai meno di 30 split su terreno variabile, si usa il modello empirico di Minetti come fallback (6 s/km per 1%).
+• Il pannello diagnostico mostra quale fonte è stata usata e l'entità della correzione totale.
+
+---
+
+# FASE 3 — MONTE CARLO (5000 simulazioni)
+
+Il tempo previsto non è un valore fisso: dipende dalla forma del giorno, dal meteo, dalla motivazione. Vengono generate 5000 simulazioni con rumore calibrato sui residui del fit (quanto i tuoi best effort si discostano dalla curva ideale). Il risultato è una distribuzione di tempi possibili.
+
+---
+
+# COME LEGGERE L'ISTOGRAMMA E I PERCENTILI
+
+# P10 — Top / ottimistica
+Solo il 10% delle simulazioni è più veloce. Potenziale massimo in condizioni ideali.
+
+# P25 — Buona giornata
+Il 25% delle simulazioni prevede un tempo migliore. Obiettivo ambizioso ma realistico.
+
+# P50 — Stima mediana
+Il tempo più probabile. 50% di probabilità di batterlo. Riferimento principale.
+
+# P75 — Giornata normale
+Il 75% delle simulazioni è più veloce. Raggiungibile anche senza condizioni eccezionali.
+
+# P90 — Conservativa
+Solo il 10% delle simulazioni è più lenta. Limite superiore utile per calibrare il ritmo di partenza in sicurezza.
+
+---
+
+# PANNELLO DIAGNOSTICO
+
+In fondo al grafico trovi il riepilogo dei dati usati nel calcolo:
+• Equazione del fit e confronto con b=1.060 (Riegel teorico)
+• Tempo base grezzo prima delle correzioni
+• Lista di ogni distanza usata con il tempo e il passo corrispondente
+Verifica che questi tempi siano coerenti con le tue prestazioni: se un best effort è anomalo (es. una corsa lenta usata come 10K di riferimento), puoi escluderla usando i filtri "Ultimi giorni" o "km min/max".
+
+---
+
+# CONSIGLI PRATICI
+
+• Parti al ritmo P50–P75 nei primi km. È meglio accelerare nel finale che esplodere.
+• Se parti più veloce di P25, il rischio di crollo aumenta significativamente.
+• Più best effort hai su distanze diverse, più il fit è preciso e l'incertezza si riduce.
+• Per gare con molto dislivello, accumulare split su terreno simile nel grafico Analisi Pendenza migliora la correzione personalizzata.
+
+---
+
+NOTA DEL COACH: questo modello non conosce il tuo stato di forma attuale. Controlla il grafico CTL/TSB: se il TSB è positivo (+5 a +15) e il CTL è vicino al massimo storico, punta al P75. Se sei reduce da un blocco intenso o da riposo, punta al P25–P50.""",
+        "en": """\
+## PERFORMANCE PREDICTION — MONTE CARLO SIMULATION
+
+This tool estimates your possible time for a target distance based on your historical best efforts. It combines three phases: performance curve fitting (Riegel), personalised elevation correction, and Monte Carlo simulation to quantify uncertainty.
+
+---
+
+# INPUT PARAMETERS
+
+# Distance
+The race distance to predict. Choose from standard distances (1 km, 5 km, 10 km, Half Marathon, Marathon) or select "Custom" to enter any value.
+
+# Custom km
+Active only with "Custom". Enter the distance in km (e.g. 8.5). Supports decimals.
+
+# Elevation gain (m)
+Total positive elevation gain of the target course in metres. Leave 0 for flat routes. Average gradient is calculated as (elevation_m / distance_m) × 100 and used to estimate slowdown. Find this value in the race's technical sheet.
+• Examples: flat city 10K → 0m. Hilly half marathon → 400–800m. Vertical KM trail → 1000m+
+
+# Last days
+Time window for best efforts used in the fit. 0 = full history.
+• 90 days: current form. Ideal if training has been consistent.
+• 180–365 days: stable estimate. Recommended if recent data is sparse.
+• 0: maximum coverage. Useful if you have few races or recorded best efforts.
+NOTE: if the filter leaves fewer than 2 distances with data, the prediction cannot be calculated.
+
+# Min / max run km
+Filters best efforts by activity length. Useful to consider only runs similar in length to the target race: if predicting a 10K, setting min=8 max=15 excludes best efforts recorded during marathons (slow pace) or very short runs.
+• 0 = no limit (all activities are considered).
+
+# Races only
+Use only best efforts from activities classified as a race on Strava. Races represent maximal effort and produce more accurate predictions. Requires activities to be correctly tagged as "Race" on Strava.
+
+---
+
+# PHASE 1 — PERFORMANCE CURVE FITTING
+
+The law t = A × d^b is fitted to your best movement times (moving_time) per distance, after applying all set filters. The diagnostic panel at the bottom of the chart shows exactly which distances and times are used: verify that they match your actual performances — that is the first step in assessing the reliability of the prediction.
+
+---
+
+# PHASE 2 — PERSONALISED ELEVATION CORRECTION
+
+If elevation gain is > 0, slowdown is estimated from your real data rather than a fixed model:
+• The "Grade Analysis" chart calculates, via linear regression on your 1 km splits, how many seconds/km you lose per 1% of average gradient.
+• This personal coefficient is applied to the average gradient of the target course.
+• If you have fewer than 30 splits on variable terrain, Minetti's empirical model is used as a fallback (6 s/km per 1%).
+• The diagnostic panel shows which source was used and the total correction applied.
+
+---
+
+# PHASE 3 — MONTE CARLO (5000 simulations)
+
+The predicted time is not a fixed value: it depends on day form, weather, motivation. 5000 simulations are generated with noise calibrated on the fit residuals (how much your best efforts deviate from the ideal curve). The result is a distribution of possible times.
+
+---
+
+# HOW TO READ THE HISTOGRAM AND PERCENTILES
+
+# P10 — Top / optimistic
+Only 10% of simulations are faster. Maximum potential under ideal conditions.
+
+# P25 — Good day
+25% of simulations predict a better time. An ambitious but realistic goal.
+
+# P50 — Median estimate
+The most likely time. 50% probability of beating it. Main reference point.
+
+# P75 — Normal day
+75% of simulations are faster. Achievable even without exceptional conditions.
+
+# P90 — Conservative
+Only 10% of simulations are slower. A useful upper bound for calibrating a safe starting pace.
+
+---
+
+# DIAGNOSTIC PANEL
+
+At the bottom of the chart you find a summary of the data used:
+• Fit equation and comparison with b=1.060 (theoretical Riegel)
+• Raw base time before corrections
+• List of each distance used with corresponding time and pace
+Verify that these times match your actual performances: if a best effort is an outlier (e.g. a slow run used as a 10K reference), you can exclude it using the "Last days" or "km min/max" filters.
+
+---
+
+# PRACTICAL TIPS
+
+• Start at P50–P75 pace in the first km. It is better to accelerate at the finish than to blow up.
+• Starting faster than P25 significantly increases the risk of a late-race collapse.
+• The more best efforts you have across different distances, the more precise the fit and the lower the uncertainty.
+• For races with significant elevation, accumulating splits on similar terrain in the Grade Analysis chart improves the personalised correction.
+
+---
+
+COACH NOTE: this model does not know your current fitness state. Check the CTL/TSB chart: if TSB is positive (+5 to +15) and CTL is close to your historical peak, aim for P75. If you are coming off an intense block or rest period, aim for P25–P50.""",
+        "de": """\
+## LEISTUNGSVORHERSAGE — MONTE-CARLO-SIMULATION
+
+Dieses Tool schätzt Ihre mögliche Zeit für eine Zieldistanz auf Basis Ihrer historischen Bestleistungen. Es kombiniert drei Phasen: Kurvenanpassung (Riegel), personalisierte Höhenkorrektur und Monte-Carlo-Simulation zur Quantifizierung der Unsicherheit.
+
+---
+
+# EINGABEPARAMETER
+
+# Distanz
+Die vorherzusagende Wettkampfdistanz. Wählen Sie aus Standarddistanzen (1 km, 5 km, 10 km, Halbmarathon, Marathon) oder wählen Sie "Benutzerdefiniert".
+
+# Benutzerdefinierte km
+Nur bei "Benutzerdefiniert" aktiv. Geben Sie die Distanz in km ein (z. B. 8.5). Dezimalzahlen werden unterstützt.
+
+# Höhengewinn (m)
+Gesamter positiver Höhenunterschied der Zielstrecke in Metern. 0 für flache Strecken. Das mittlere Gefälle wird als (Höhe_m / Distanz_m) × 100 berechnet. Den Wert finden Sie in den technischen Daten des Wettkampfs.
+• Beispiele: flacher Stadtkurs 10K → 0m. Hügeliger Halbmarathon → 400–800m. Trail KV → 1000m+
+
+# Letzte Tage
+Zeitfenster der in den Fit einbezogenen Bestleistungen. 0 = vollständige Historie.
+• 90 Tage: aktuelle Form. Ideal bei gleichmäßigem Training.
+• 180–365 Tage: stabile Schätzung. Empfohlen bei wenigen aktuellen Daten.
+• 0: maximale Abdeckung. Sinnvoll bei wenigen Wettkämpfen.
+HINWEIS: Bleiben nach dem Filter weniger als 2 Distanzen übrig, kann keine Vorhersage berechnet werden.
+
+# Min / Max Laufkm
+Filtert Bestleistungen nach Aktivitätslänge. Nützlich, um nur Läufe ähnlicher Länge zur Zieldistanz zu berücksichtigen.
+• 0 = kein Limit.
+
+# Nur Wettkämpfe
+Nur Bestleistungen aus als Wettkampf eingestuften Aktivitäten. Wettkämpfe spiegeln maximale Anstrengung wider und liefern genauere Vorhersagen.
+
+---
+
+# PHASE 1 — KURVENANPASSUNG
+
+Das Gesetz t = A × d^b wird an Ihre besten Bewegungszeiten angepasst. Das Diagnose-Panel zeigt genau, welche Distanzen und Zeiten verwendet wurden.
+
+---
+
+# PHASE 2 — PERSONALISIERTE HÖHENKORREKTUR
+
+Bei Höhengewinn > 0 wird die Verlangsamung aus Ihren echten Daten geschätzt:
+• Das „Steigungsanalyse"-Diagramm berechnet per linearer Regression, wie viele Sek./km Sie pro 1% mittlerem Gefälle verlieren.
+• Bei weniger als 30 Splits wird Minettis empirisches Modell verwendet (6 s/km je 1%).
+• Das Diagnose-Panel zeigt, welche Quelle verwendet wurde und die Gesamtkorrektur.
+
+---
+
+# PHASE 3 — MONTE CARLO (5000 Simulationen)
+
+5000 Simulationen werden mit kalibriertem Rauschen auf Basis der Fit-Residuen generiert. Das Ergebnis ist eine Verteilung möglicher Zeiten.
+
+---
+
+# HISTOGRAMM UND PERZENTILE
+
+# P10 — Optimal / optimistisch
+Nur 10% der Simulationen sind schneller. Maximales Potenzial unter idealen Bedingungen.
+
+# P25 — Guter Tag
+25% der Simulationen prognostizieren eine bessere Zeit. Ambitioniertes, realistisches Ziel.
+
+# P50 — Median-Schätzung
+Die wahrscheinlichste Zeit. 50% Wahrscheinlichkeit, sie zu unterbieten. Hauptreferenz.
+
+# P75 — Normaler Tag
+75% der Simulationen sind schneller. Auch ohne Ausnahmeform erreichbar.
+
+# P90 — Konservativ
+Nur 10% der Simulationen sind langsamer. Obere Grenze für sichere Starttempoplanung.
+
+---
+
+# DIAGNOSE-PANEL
+
+• Fit-Gleichung und Vergleich mit b=1.060 (theoretischer Riegel)
+• Rohe Basiszeit vor Korrekturen
+• Liste jeder verwendeten Distanz mit Zeit und Tempo
+
+---
+
+# PRAKTISCHE TIPPS
+
+• Starten Sie in den ersten km im P50–P75-Tempo. Besser im Finish beschleunigen als früh einbrechen.
+• Start schneller als P25 erhöht das Einbruchsrisiko erheblich.
+• Mehr Bestleistungen auf verschiedenen Distanzen = präziserer Fit und geringere Unsicherheit.
+• Bei Wettkämpfen mit viel Höhenunterschied verbessern mehr Splits auf ähnlichem Terrain die personalisierte Korrektur.
+
+---
+
+TRAINER-HINWEIS: dieses Modell kennt Ihren aktuellen Fitnesszustand nicht. Prüfen Sie den CTL/TSB-Graphen: bei positivem TSB (+5 bis +15) und hohem CTL → P75 anpeilen. Nach intensivem Block oder Erholung → P25–P50.""",
+        "fr": """\
+## PRÉVISION DE PERFORMANCE — SIMULATION MONTE CARLO
+
+Cet outil estime votre temps possible sur une distance cible à partir de vos meilleurs efforts historiques. Il combine trois phases : ajustement de la courbe de performance (Riegel), correction personnalisée du dénivelé et simulation Monte Carlo pour quantifier l'incertitude.
+
+---
+
+# PARAMÈTRES D'ENTRÉE
+
+# Distance
+La distance de course à prévoir. Choisissez parmi les distances standard (1 km, 5 km, 10 km, Semi-marathon, Marathon) ou sélectionnez "Personnalisée".
+
+# km personnalisés
+Actif uniquement avec "Personnalisée". Saisissez la distance en km (ex. 8.5). Accepte les décimales.
+
+# Dénivelé + (m)
+Dénivelé positif total du parcours cible en mètres. Laissez 0 pour les parcours plats. La pente moyenne est calculée comme (dénivelé_m / distance_m) × 100. Trouvez cette valeur dans la fiche technique de la course.
+• Exemples : 10K citadin plat → 0m. Semi de montagne → 400–800m. Trail KV → 1000m+
+
+# Derniers jours
+Fenêtre temporelle des meilleurs efforts à considérer. 0 = tout l'historique.
+• 90 j : forme actuelle. Idéal si l'entraînement est régulier.
+• 180–365 j : estimation stable. Conseillé si les données récentes sont rares.
+• 0 : couverture maximale. Utile si peu de courses enregistrées.
+REMARQUE : si le filtre laisse moins de 2 distances avec données, la prévision ne peut pas être calculée.
+
+# km course min / max
+Filtre les meilleurs efforts selon la longueur de l'activité. Utile pour ne considérer que les courses de longueur similaire à la course cible.
+• 0 = pas de limite.
+
+# Courses uniquement
+Utilise uniquement les meilleurs efforts d'activités classées comme course sur Strava. Les courses représentent l'effort maximal et produisent des prévisions plus précises.
+
+---
+
+# PHASE 1 — AJUSTEMENT DE LA COURBE
+
+La loi t = A × d^b est ajustée sur vos meilleurs temps de déplacement après application des filtres. Le panneau de diagnostic montre exactement quelles distances et temps sont utilisés.
+
+---
+
+# PHASE 2 — CORRECTION DE DÉNIVELÉ PERSONNALISÉE
+
+Si dénivelé > 0, le ralentissement est estimé à partir de vos données réelles :
+• Le graphique « Analyse de pente » calcule, via régression linéaire sur vos fractions de 1 km, combien de sec/km vous perdez par 1% de pente.
+• Ce coefficient personnel est appliqué à la pente moyenne du parcours cible.
+• Si moins de 30 fractions sur terrain varié, le modèle empirique de Minetti est utilisé (6 s/km par 1%).
+• Le panneau de diagnostic indique quelle source a été utilisée et l'ampleur de la correction.
+
+---
+
+# PHASE 3 — MONTE CARLO (5000 simulations)
+
+5000 simulations sont générées avec un bruit calibré sur les résidus du fit. Le résultat est une distribution de temps possibles.
+
+---
+
+# LIRE L'HISTOGRAMME ET LES PERCENTILES
+
+# P10 — Top / optimiste
+Seules 10% des simulations sont plus rapides. Potentiel maximum dans des conditions idéales.
+
+# P25 — Bonne journée
+25% des simulations prévoient un meilleur temps. Objectif ambitieux mais réaliste.
+
+# P50 — Estimation médiane
+Le temps le plus probable. 50% de probabilité de le battre. Référence principale.
+
+# P75 — Journée normale
+75% des simulations sont plus rapides. Atteignable même sans conditions exceptionnelles.
+
+# P90 — Conservatrice
+Seules 10% des simulations sont plus lentes. Borne supérieure pour calibrer l'allure de départ en sécurité.
+
+---
+
+# PANNEAU DE DIAGNOSTIC
+
+• Équation du fit et comparaison avec b=1.060 (Riegel théorique)
+• Temps de base brut avant corrections
+• Liste de chaque distance utilisée avec le temps et l'allure correspondants
+Vérifiez que ces temps correspondent à vos performances réelles : si un effort est aberrant, utilisez les filtres "Derniers jours" ou "km min/max".
+
+---
+
+# CONSEILS PRATIQUES
+
+• Partez à l'allure P50–P75 dans les premiers km. Mieux vaut accélérer en fin de course que s'effondrer.
+• Partir plus vite que P25 augmente significativement le risque d'effondrement.
+• Plus vous avez de meilleurs efforts sur différentes distances, plus le fit est précis.
+• Pour les courses avec beaucoup de dénivelé, accumuler des fractions sur terrain similaire améliore la correction personnalisée.
+
+---
+
+NOTE DU COACH : ce modèle ne connaît pas votre état de forme actuel. Vérifiez le graphique CTL/TSB : si le TSB est positif (+5 à +15) et le CTL proche du maximum historique, visez le P75. Si vous sortez d'un bloc intensif ou d'une période de repos, visez le P25–P50.""",
+        "es": """\
+## PREDICCIÓN DE RENDIMIENTO — SIMULACIÓN MONTE CARLO
+
+Esta herramienta estima tu tiempo posible en una distancia objetivo a partir de tus mejores esfuerzos históricos. Combina tres fases: ajuste de la curva de rendimiento (Riegel), corrección personalizada del desnivel y simulación Monte Carlo para cuantificar la incertidumbre.
+
+---
+
+# PARÁMETROS DE ENTRADA
+
+# Distancia
+La distancia de carrera a predecir. Elige entre las distancias estándar (1 km, 5 km, 10 km, Media Maratón, Maratón) o selecciona "Personalizada".
+
+# km personalizados
+Activo solo con "Personalizada". Introduce la distancia en km (ej. 8.5). Admite decimales.
+
+# Desnivel + (m)
+Desnivel positivo total del recorrido objetivo en metros. Deja 0 para recorridos llanos. La pendiente media se calcula como (desnivel_m / distancia_m) × 100. Encuentra este valor en la ficha técnica de la carrera.
+• Ejemplos: 10K urbano llano → 0m. Media montaña → 400–800m. Trail KV → 1000m+
+
+# Últimos días
+Ventana temporal de los mejores esfuerzos a considerar en el ajuste. 0 = todo el historial.
+• 90 días: forma actual. Ideal si el entrenamiento ha sido constante.
+• 180–365 días: estimación estable. Recomendado si los datos recientes son escasos.
+• 0: cobertura máxima. Útil si tienes pocas carreras registradas.
+NOTA: si el filtro deja menos de 2 distancias con datos, la predicción no puede calcularse.
+
+# km carrera mín / máx
+Filtra los mejores esfuerzos según la longitud de la actividad. Útil para considerar solo las carreras de longitud similar a la carrera objetivo.
+• 0 = sin límite.
+
+# Solo carreras
+Usa solo mejores esfuerzos de actividades clasificadas como carrera en Strava. Las carreras representan el esfuerzo máximo y producen predicciones más precisas.
+
+---
+
+# FASE 1 — AJUSTE DE LA CURVA DE RENDIMIENTO
+
+Se ajusta la ley t = A × d^b a tus mejores tiempos de movimiento después de aplicar todos los filtros. El panel de diagnóstico muestra exactamente qué distancias y tiempos se utilizan.
+
+---
+
+# FASE 2 — CORRECCIÓN DE DESNIVEL PERSONALIZADA
+
+Si el desnivel es > 0, la ralentización se estima a partir de tus datos reales:
+• El gráfico "Análisis de Pendiente" calcula, mediante regresión lineal sobre tus parciales de 1 km, cuántos segundos/km pierdes por cada 1% de pendiente media.
+• Este coeficiente personal se aplica a la pendiente media del recorrido objetivo.
+• Si tienes menos de 30 parciales en terreno variable, se usa el modelo empírico de Minetti (6 s/km por 1%).
+• El panel de diagnóstico muestra qué fuente se usó y la magnitud de la corrección total.
+
+---
+
+# FASE 3 — MONTE CARLO (5000 simulaciones)
+
+Se generan 5000 simulaciones con ruido calibrado sobre los residuos del ajuste. El resultado es una distribución de tiempos posibles.
+
+---
+
+# CÓMO LEER EL HISTOGRAMA Y LOS PERCENTILES
+
+# P10 — Top / optimista
+Solo el 10% de las simulaciones es más rápido. Potencial máximo en condiciones ideales.
+
+# P25 — Buen día
+El 25% de las simulaciones predice un tiempo mejor. Objetivo ambicioso pero realista.
+
+# P50 — Estimación mediana
+El tiempo más probable. 50% de probabilidad de superarlo. Referencia principal.
+
+# P75 — Día normal
+El 75% de las simulaciones es más rápido. Alcanzable incluso sin condiciones excepcionales.
+
+# P90 — Conservadora
+Solo el 10% de las simulaciones es más lento. Límite superior para calibrar el ritmo de salida con seguridad.
+
+---
+
+# PANEL DE DIAGNÓSTICO
+
+• Ecuación del ajuste y comparación con b=1.060 (Riegel teórico)
+• Tiempo base bruto antes de las correcciones
+• Lista de cada distancia utilizada con el tiempo y el ritmo correspondientes
+Verifica que estos tiempos correspondan a tus prestaciones reales: si un mejor esfuerzo es anómalo, puedes excluirlo con los filtros "Últimos días" o "km mín/máx".
+
+---
+
+# CONSEJOS PRÁCTICOS
+
+• Sal al ritmo P50–P75 en los primeros km. Es mejor acelerar al final que explotar.
+• Salir más rápido que P25 aumenta significativamente el riesgo de colapso.
+• Cuantos más mejores esfuerzos tengas en distintas distancias, más preciso será el ajuste.
+• Para carreras con mucho desnivel, acumular parciales en terreno similar mejora la corrección personalizada.
+
+---
+
+NOTA DEL ENTRENADOR: este modelo no conoce tu estado de forma actual. Consulta el gráfico CTL/TSB: si el TSB es positivo (+5 a +15) y el CTL está cerca del máximo histórico, apunta al P75. Si vienes de un bloque intenso o descanso, apunta al P25–P50.""",
+    },
+
     # ── Info / help panel in widgets ──────────────────────────────────────────
     "btn_info":              {"it": "ℹ  Info",    "en": "ℹ  Info",    "de": "ℹ  Info",    "fr": "ℹ  Info",    "es": "ℹ  Info"},
     "btn_info_close":        {"it": "✕  Chiudi",  "en": "✕  Close",   "de": "✕  Schließen","fr": "✕  Fermer",  "es": "✕  Cerrar"},
