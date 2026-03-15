@@ -9,6 +9,7 @@ import config as _cfg
 from config import C, MAX_COMPARE, APP_NAME, APP_VERSION
 from models import ActivityData
 from storage_manager import StorageManager
+from i18n import t, set_language, get_language, SUPPORTED_LANGUAGES
 
 import ui.tab_dashboard  as tab_dashboard
 import ui.tab_charts     as tab_charts
@@ -24,25 +25,33 @@ import ui.tab_raw        as tab_raw
 from ui.downloader_ui    import open_download_window
 from ui.widgets          import topbar_btn, clear
 
-# Definizione tab: (attributo, icona, etichetta, gruppo)
+# Definizione tab: (attributo, icona, chiave_i18n, gruppo)
 _TAB_DEFS = [
-    ("tab_dash",     "⬡",  "Dashboard",    "activity"),
-    ("tab_chart",    "▤",  "Grafici",       "activity"),
-    ("tab_hrzone",   "♥",  "Zone HR",       "activity"),
-    ("tab_map",      "◈",  "Mappa",         "activity"),
-    ("tab_split",    "≡",  "Splits",        "activity"),
-    ("tab_best",     "★",  "Best Efforts",  "activity"),
-    ("tab_compare",  "⇄",  "Confronto",     "activity"),
-    ("tab_raw",      "{ }", "Raw JSON",     "activity"),
-    ("tab_library",  "▣",  "Libreria",      "global"),
-    ("tab_calendar", "▦",  "Calendario",    "global"),
-    ("tab_stats",    "≈",  "Statistiche",   "global"),
+    ("tab_dash",     "⬡",  "tab_dashboard", "activity"),
+    ("tab_chart",    "▤",  "tab_charts",    "activity"),
+    ("tab_hrzone",   "♥",  "tab_hr",        "activity"),
+    ("tab_map",      "◈",  "tab_map",       "activity"),
+    ("tab_split",    "≡",  "tab_splits",    "activity"),
+    ("tab_best",     "★",  "tab_best",      "activity"),
+    ("tab_compare",  "⇄",  "tab_compare",   "activity"),
+    ("tab_raw",      "{ }","tab_raw",       "activity"),
+    ("tab_library",  "▣",  "tab_library",   "global"),
+    ("tab_calendar", "▦",  "tab_calendar",  "global"),
+    ("tab_stats",    "≈",  "tab_stats",     "global"),
 ]
 
 
 class StravaApp(tk.Tk):
     def __init__(self):
         super().__init__()
+        # Load language from settings before building UI
+        try:
+            with open("settings.json", encoding="utf-8") as _f:
+                _s = json.load(_f)
+            set_language(_s.get("language", "it"))
+        except Exception:
+            set_language("it")
+
         self.title(f"{APP_NAME}  v{APP_VERSION}")
         self.configure(bg=C["bg"])
         self.geometry("1500x940")
@@ -64,14 +73,14 @@ class StravaApp(tk.Tk):
             ok, msg = self.storage.connect_mongo(auto_start=True)
             self.after(0, lambda: self._on_mongo_result(ok, msg))
         threading.Thread(target=_connect, daemon=True).start()
-        self._mongo_status_var.set("MongoDB: connessione…")
+        self._mongo_status_var.set(t("mongo_connecting"))
 
     def _on_mongo_result(self, ok, msg):
         if ok:
-            self._mongo_status_var.set("● MongoDB")
+            self._mongo_status_var.set(t("mongo_online"))
             self._mongo_status_lbl.config(fg=C["green"])
         else:
-            self._mongo_status_var.set("○ MongoDB offline")
+            self._mongo_status_var.set(t("mongo_offline"))
             self._mongo_status_lbl.config(fg=C["text_dim"])
 
     # ── Layout ────────────────────────────────────────────────────────────────
@@ -103,29 +112,49 @@ class StravaApp(tk.Tk):
         tk.Frame(topbar, bg=C["border"], width=1).pack(
             side="right", fill="y", pady=12)
 
+        # Language selector
+        lang_frame = tk.Frame(topbar, bg=C["surface"])
+        lang_frame.pack(side="right", padx=6, pady=10)
+        tk.Label(lang_frame, text=t("language_label"),
+                 font=("Courier", 8), fg=C["text_dim"],
+                 bg=C["surface"]).pack(side="left")
+        lang_options = list(SUPPORTED_LANGUAGES.values())
+        lang_keys    = list(SUPPORTED_LANGUAGES.keys())
+        cur_idx      = lang_keys.index(get_language()) if get_language() in lang_keys else 0
+        self._lang_var = tk.StringVar(value=lang_options[cur_idx])
+        lang_menu = ttk.Combobox(lang_frame, textvariable=self._lang_var,
+                                  values=lang_options, state="readonly", width=14,
+                                  font=("Courier", 8))
+        lang_menu.pack(side="left", padx=(4, 0))
+        lang_menu.bind("<<ComboboxSelected>>", self._on_language_change)
+
+        # Separatore
+        tk.Frame(topbar, bg=C["border"], width=1).pack(
+            side="right", fill="y", pady=12)
+
         # Bottoni destra → sinistra
-        topbar_btn(topbar, "📂  Apri File",
+        topbar_btn(topbar, t("btn_open_file"),
                    self._open_file,
-                   tooltip="Apri un file JSON di attività Strava"
+                   tooltip=t("tooltip_open_file")
                    ).pack(side="right", padx=4, pady=10)
-        topbar_btn(topbar, "⬇  Scarica da Strava",
+        topbar_btn(topbar, t("btn_download"),
                    self._open_downloader, primary=True,
-                   tooltip="Autentica con Strava e scarica le tue attività"
+                   tooltip=t("tooltip_download")
                    ).pack(side="right", padx=4, pady=10)
-        topbar_btn(topbar, "💾  Esporta",
+        topbar_btn(topbar, t("btn_export"),
                    self._export_menu,
-                   tooltip="Esporta attività corrente in PNG, PDF, CSV o GPX"
+                   tooltip=t("tooltip_export")
                    ).pack(side="right", padx=4, pady=10)
-        topbar_btn(topbar, "📦  Database",
+        topbar_btn(topbar, t("btn_database"),
                    self._database_menu,
-                   tooltip="Backup ZIP, import e heatmap del database"
+                   tooltip=t("tooltip_database")
                    ).pack(side="right", padx=4, pady=10)
 
         # Toggle tema
-        theme_lbl = "🌙  Scuro" if _cfg._current_theme[0] == "light" else "☀  Chiaro"
+        theme_lbl = t("btn_theme_dark") if _cfg._current_theme[0] == "light" else t("btn_theme_light")
         topbar_btn(topbar, theme_lbl,
                    self._toggle_theme,
-                   tooltip="Passa al tema scuro / chiaro"
+                   tooltip=t("tooltip_theme")
                    ).pack(side="right", padx=4, pady=10)
 
         # ── Separatore topbar / body ──────────────────────────────────────────
@@ -155,18 +184,18 @@ class StravaApp(tk.Tk):
                      font=("Courier", 7, "bold"), fg=C["text_dim"],
                      bg=C["surface"]).pack(anchor="w", padx=16, pady=(8, 2))
 
-        _section("Analisi")
-        activity_tabs = [t for t in _TAB_DEFS if t[3] == "activity"]
-        global_tabs   = [t for t in _TAB_DEFS if t[3] == "global"]
+        _section(t("sidebar_analysis"))
+        activity_tabs = [td for td in _TAB_DEFS if td[3] == "activity"]
+        global_tabs   = [td for td in _TAB_DEFS if td[3] == "global"]
 
-        for attr, icon, label, _ in activity_tabs:
-            self._make_nav_item(sidebar, attr, icon, label)
+        for attr, icon, label_key, _ in activity_tabs:
+            self._make_nav_item(sidebar, attr, icon, t(label_key))
 
         tk.Frame(sidebar, bg=C["border"], height=1).pack(
             fill="x", padx=16, pady=(8, 4))
-        _section("Database")
-        for attr, icon, label, _ in global_tabs:
-            self._make_nav_item(sidebar, attr, icon, label)
+        _section(t("sidebar_database"))
+        for attr, icon, label_key, _ in global_tabs:
+            self._make_nav_item(sidebar, attr, icon, t(label_key))
 
         # Separatore sidebar / content
         tk.Frame(body, bg=C["border"], width=1).pack(side="left", fill="y")
@@ -269,10 +298,7 @@ class StravaApp(tk.Tk):
                      "tab_split","tab_best","tab_compare","tab_raw"):
             clear(getattr(self, attr))
         tk.Label(self.tab_dash,
-                 text="⬡\n\nBenvenuto in Strava Viewer\n\n"
-                      "• Apri un file JSON con «Apri File»\n"
-                      "• Scarica le corse da Strava con «Scarica da Strava»\n"
-                      "• Sfoglia la libreria nel tab «Libreria»",
+                 text=t("welcome_text"),
                  font=("Courier", 12), fg=C["text_dim"], bg=C["bg"],
                  justify="center").pack(expand=True)
         self._show_tab("tab_dash")
@@ -310,7 +336,7 @@ class StravaApp(tk.Tk):
 
     def _open_file(self):
         path = filedialog.askopenfilename(
-            title="Seleziona attività Strava (JSON)",
+            title=t("msg_select_file"),
             filetypes=[("JSON", "*.json"), ("Tutti", "*.*")])
         if not path:
             return
@@ -318,7 +344,7 @@ class StravaApp(tk.Tk):
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except Exception as e:
-            messagebox.showerror("Errore lettura", str(e))
+            messagebox.showerror(t("msg_read_error"), str(e))
             return
         self._load_activity(ActivityData(data))
 
@@ -355,7 +381,7 @@ class StravaApp(tk.Tk):
     def _open_from_library(self, summary: dict):
         act = self.storage.load_activity(summary)
         if not act:
-            messagebox.showerror("Errore", "Impossibile caricare l'attività.")
+            messagebox.showerror(t("msg_error"), t("msg_no_activity"))
             return
         self._load_activity(act)
 
@@ -363,7 +389,8 @@ class StravaApp(tk.Tk):
 
     def _compare_add(self, act: ActivityData):
         if len(self.cmp_list) >= MAX_COMPARE - 1:
-            messagebox.showwarning("Limite", f"Massimo {MAX_COMPARE} attività.")
+            messagebox.showwarning(t("msg_limit"),
+                                   t("msg_max_compare").format(n=MAX_COMPARE))
             return
         self.cmp_list.append(act)
 
@@ -372,17 +399,14 @@ class StravaApp(tk.Tk):
 
     def _run_compare(self):
         if not self.activity and not self.cmp_list:
-            messagebox.showinfo("Info", "Seleziona almeno un'attività.")
+            messagebox.showinfo(t("msg_info"), t("msg_select_activity"))
             return
         if self.activity:
             all_acts = [self.activity] + self.cmp_list
         else:
             all_acts = list(self.cmp_list)
         if len(all_acts) < 2:
-            messagebox.showinfo("Info",
-                                "Aggiungi almeno 2 attività per il confronto.\n\n"
-                                "Prima apri un'attività principale, poi aggiungi "
-                                "altre dal tab Libreria col pulsante ➕.")
+            messagebox.showinfo(t("msg_info"), t("msg_add_two_for_compare"))
             return
         tab_compare.render(self.tab_compare, all_acts)
         self._show_tab("tab_compare")
@@ -392,75 +416,96 @@ class StravaApp(tk.Tk):
     def _toggle_mongo(self):
         if self.storage.mongo_ok:
             self.storage.disconnect_mongo()
-            self._mongo_status_var.set("○ MongoDB offline")
+            self._mongo_status_var.set(t("mongo_offline"))
             self._mongo_status_lbl.config(fg=C["text_dim"])
         else:
-            self._mongo_status_var.set("MongoDB: connessione…")
+            self._mongo_status_var.set(t("mongo_connecting"))
             self._mongo_status_lbl.config(fg=C["text_dim"])
             import threading
             threading.Thread(target=self._try_connect_mongo, daemon=True).start()
+
+    # ── Language change ────────────────────────────────────────────────────────
+
+    def _on_language_change(self, event=None):
+        lang_options = list(SUPPORTED_LANGUAGES.values())
+        lang_keys    = list(SUPPORTED_LANGUAGES.keys())
+        chosen = self._lang_var.get()
+        if chosen in lang_options:
+            lang_code = lang_keys[lang_options.index(chosen)]
+            try:
+                with open("settings.json", encoding="utf-8") as f:
+                    s = json.load(f)
+            except Exception:
+                s = {}
+            s["language"] = lang_code
+            try:
+                with open("settings.json", "w", encoding="utf-8") as f:
+                    json.dump(s, f, indent=2)
+            except Exception:
+                pass
+            messagebox.showinfo(t("msg_language_changed"), t("msg_language_restart"))
 
     # ── Export attività corrente ───────────────────────────────────────────────
 
     def _export_menu(self):
         win = tk.Toplevel(self)
-        win.title("Esporta")
+        win.title(t("btn_export").strip())
         win.configure(bg=C["bg"])
         win.geometry("340x370")
         win.resizable(False, False)
-        tk.Label(win, text="SCEGLI FORMATO",
+        tk.Label(win, text=t("export_choose_format"),
                  font=("Courier", 10, "bold"), fg=C["accent"],
                  bg=C["bg"]).pack(pady=(20, 4))
-        tk.Label(win, text="— attività corrente —",
+        tk.Label(win, text=t("export_current"),
                  font=("Courier", 8), fg=C["text_dim"],
                  bg=C["bg"]).pack(pady=(0, 8))
         b = dict(font=("Courier", 10, "bold"), bd=0, pady=10,
                  cursor="hand2", relief="flat", width=28)
         act_cmds = [
-            ("📊  PNG — Grafici",   self._export_png),
-            ("📄  PDF — Report",    self._export_pdf),
-            ("📋  CSV — Splits",    self._export_csv),
-            ("📍  GPX — Tracciato", self._export_gpx),
+            (t("export_png"),        self._export_png),
+            (t("export_pdf"),        self._export_pdf),
+            (t("export_csv_splits"), self._export_csv),
+            (t("export_gpx"),        self._export_gpx),
         ]
         for txt, cmd in act_cmds:
             tk.Button(win, text=txt, bg=C["surface2"], fg=C["text"],
                       command=lambda c=cmd: [win.destroy(),
                                              c() if self.activity else
                                              messagebox.showinfo(
-                                                 "Info",
-                                                 "Apri prima un'attività.")],
+                                                 t("msg_info"),
+                                                 t("msg_open_activity_first"))],
                       **b).pack(pady=3)
 
-        tk.Label(win, text="— database completo —",
+        tk.Label(win, text=t("export_database"),
                  font=("Courier", 8), fg=C["text_dim"],
                  bg=C["bg"]).pack(pady=(10, 4))
-        tk.Button(win, text="📈  CSV — Statistiche",
+        tk.Button(win, text=t("export_csv_stats"),
                   bg=C["surface2"], fg=C["text"],
                   command=lambda: [win.destroy(), self._export_stats_csv()],
                   **b).pack(pady=3)
-        tk.Button(win, text="✕  Annulla", bg=C["bg"], fg=C["text_dim"],
+        tk.Button(win, text=t("btn_cancel"), bg=C["bg"], fg=C["text_dim"],
                   command=win.destroy, **b).pack(pady=(8, 0))
 
     # ── Database backup/restore ────────────────────────────────────────────────
 
     def _database_menu(self):
         win = tk.Toplevel(self)
-        win.title("Database")
+        win.title(t("btn_database").strip())
         win.configure(bg=C["bg"])
         win.geometry("340x280")
         win.resizable(False, False)
-        tk.Label(win, text="GESTIONE DATABASE",
+        tk.Label(win, text=t("db_manage"),
                  font=("Courier", 10, "bold"), fg=C["accent"],
                  bg=C["bg"]).pack(pady=(20, 12))
         b = dict(font=("Courier", 10, "bold"), bd=0, pady=10,
                  cursor="hand2", relief="flat", width=28)
-        tk.Button(win, text="📦  Esporta tutto (ZIP)",  bg=C["surface2"], fg=C["text"],
+        tk.Button(win, text=t("db_export_zip"),  bg=C["surface2"], fg=C["text"],
                   command=lambda: [win.destroy(), self._export_zip()], **b).pack(pady=4)
-        tk.Button(win, text="📥  Importa da ZIP",       bg=C["surface2"], fg=C["text"],
+        tk.Button(win, text=t("db_import_zip"),  bg=C["surface2"], fg=C["text"],
                   command=lambda: [win.destroy(), self._import_zip()], **b).pack(pady=4)
-        tk.Button(win, text="🗺  Heatmap corse",        bg=C["surface2"], fg=C["text"],
+        tk.Button(win, text=t("db_heatmap"),     bg=C["surface2"], fg=C["text"],
                   command=lambda: [win.destroy(), self._open_heatmap()], **b).pack(pady=4)
-        tk.Button(win, text="✕  Annulla",               bg=C["bg"],       fg=C["text_dim"],
+        tk.Button(win, text=t("btn_cancel"),     bg=C["bg"],       fg=C["text_dim"],
                   command=win.destroy, **b).pack(pady=(8, 0))
 
     def _export_zip(self):
@@ -475,7 +520,6 @@ class StravaApp(tk.Tk):
             count = 0
             with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
                 if self.storage.mongo_ok and self.storage.mongo_storage:
-                    # Esporta da MongoDB
                     cursor = self.storage.mongo_storage._coll.find({})
                     for doc in cursor:
                         doc.pop("_id", None)
@@ -489,21 +533,20 @@ class StravaApp(tk.Tk):
                                     json.dumps(doc, ensure_ascii=False, indent=2))
                         count += 1
                 else:
-                    # Esporta da file JSON locali
                     json_dir = self.storage.json_storage.directory
                     for fname in os.listdir(json_dir):
                         if fname.endswith(".json"):
                             zf.write(os.path.join(json_dir, fname), fname)
                             count += 1
             messagebox.showinfo("Export ZIP",
-                                f"Backup completato.\n{count} corse esportate in:\n{path}")
+                                f"{t('msg_backup_done')}\n{count} {t('msg_runs_exported')}\n{path}")
         except Exception as e:
-            messagebox.showerror("Errore export ZIP", str(e))
+            messagebox.showerror(t("msg_export_error"), str(e))
 
     def _import_zip(self):
         import zipfile
         path = filedialog.askopenfilename(
-            title="Seleziona backup ZIP",
+            title=t("msg_select_backup"),
             filetypes=[("ZIP", "*.zip"), ("Tutti", "*.*")])
         if not path:
             return
@@ -527,13 +570,13 @@ class StravaApp(tk.Tk):
                     except Exception:
                         err_count += 1
             messagebox.showinfo("Import ZIP",
-                                f"Importazione completata:\n"
-                                f"• {new_count} corse importate\n"
-                                f"• {skip_count} già presenti (saltate)\n"
-                                f"• {err_count} errori")
+                                f"{t('msg_import_done')}\n"
+                                f"• {new_count} {t('msg_imported')}\n"
+                                f"• {skip_count} {t('msg_already_present')}\n"
+                                f"• {err_count} {t('msg_errors')}")
             self._render_library()
         except Exception as e:
-            messagebox.showerror("Errore import ZIP", str(e))
+            messagebox.showerror(t("msg_error"), str(e))
 
     def _export_png(self):
         if not self.activity:
@@ -551,9 +594,9 @@ class StravaApp(tk.Tk):
             fig = _build_export_fig(a)
             fig.savefig(path, dpi=180, bbox_inches="tight", facecolor=C["bg"])
             plt.close(fig)
-            messagebox.showinfo("Export", f"PNG salvato:\n{path}")
+            messagebox.showinfo(t("msg_export_saved"), f"{t('msg_png_saved')}\n{path}")
         except Exception as e:
-            messagebox.showerror("Errore export", str(e))
+            messagebox.showerror(t("msg_export_error"), str(e))
 
     def _export_pdf(self):
         if not self.activity:
@@ -567,9 +610,9 @@ class StravaApp(tk.Tk):
                 filetypes=[("PDF", "*.pdf")])
             if path:
                 export_pdf(a, path)
-                messagebox.showinfo("Export", f"PDF salvato:\n{path}")
+                messagebox.showinfo(t("msg_export_saved"), f"{t('msg_pdf_saved')}\n{path}")
         except Exception as e:
-            messagebox.showerror("Errore export", str(e))
+            messagebox.showerror(t("msg_export_error"), str(e))
 
     def _export_csv(self):
         import csv
@@ -587,7 +630,7 @@ class StravaApp(tk.Tk):
             w.writeheader()
             for row in a.splits:
                 w.writerow({k: row.get(k, "") for k in fields})
-        messagebox.showinfo("Export", f"CSV salvato:\n{path}")
+        messagebox.showinfo(t("msg_export_saved"), f"{t('msg_csv_saved')}\n{path}")
 
     # ── Export GPX ────────────────────────────────────────────────────────────
 
@@ -596,7 +639,7 @@ class StravaApp(tk.Tk):
             return
         a = self.activity
         if not a.gps_points:
-            messagebox.showinfo("GPX", "Nessun dato GPS disponibile per questa attività.")
+            messagebox.showinfo("GPX", t("msg_no_gps"))
             return
         path = filedialog.asksaveasfilename(
             defaultextension=".gpx",
@@ -606,9 +649,9 @@ class StravaApp(tk.Tk):
             return
         try:
             _write_gpx(a, path)
-            messagebox.showinfo("Export GPX", f"GPX salvato:\n{path}")
+            messagebox.showinfo(t("msg_export_saved"), f"{t('msg_gpx_saved')}\n{path}")
         except Exception as e:
-            messagebox.showerror("Errore GPX", str(e))
+            messagebox.showerror(t("msg_gpx_error"), str(e))
 
     # ── Export statistiche CSV ────────────────────────────────────────────────
 
@@ -637,19 +680,19 @@ class StravaApp(tk.Tk):
                         "dislivello_m": f"{d['elev_gain']:.0f}",
                         "passo_medio":  fmt_pace(d["avg_speed"]),
                     })
-            messagebox.showinfo("Export CSV", f"Statistiche esportate:\n{path}")
+            messagebox.showinfo(t("msg_export_saved"), f"{t('msg_stats_exported')}\n{path}")
         except Exception as e:
-            messagebox.showerror("Errore CSV", str(e))
+            messagebox.showerror(t("msg_csv_error"), str(e))
 
     # ── Heatmap ───────────────────────────────────────────────────────────────
 
     def _open_heatmap(self):
         import threading
         win = tk.Toplevel(self)
-        win.title("Heatmap — caricamento…")
+        win.title(t("heatmap_win_title"))
         win.configure(bg=C["bg"])
         win.geometry("320x120")
-        lbl = tk.Label(win, text="Caricamento polyline in corso…",
+        lbl = tk.Label(win, text=t("msg_heatmap_loading"),
                        font=("Courier", 10), fg=C["text_dim"],
                        bg=C["bg"])
         lbl.pack(expand=True)
@@ -701,14 +744,14 @@ def _build_and_open(polys: list, progress_win):
 
     if not polys:
         from tkinter import messagebox
-        messagebox.showinfo("Heatmap", "Nessun tracciato GPS trovato nel database.")
+        messagebox.showinfo("Heatmap", t("msg_heatmap_no_gps"))
         return
 
     try:
         import folium
     except ImportError:
         from tkinter import messagebox
-        messagebox.showerror("Heatmap", "Libreria 'folium' non installata.\nEsegui: pip install folium")
+        messagebox.showerror("Heatmap", t("msg_folium_missing"))
         return
 
     # Centro mappa = media di tutti i punti

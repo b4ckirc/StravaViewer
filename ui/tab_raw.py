@@ -3,11 +3,12 @@ import json, tkinter as tk
 from tkinter import ttk
 from config import C
 from ui.widgets import clear
+from i18n import t
 
 
 def render(tab, activity):
     clear(tab)
-    tk.Label(tab, text="JSON GREZZO DELL'ATTIVITÀ",
+    tk.Label(tab, text=t("raw_title"),
              font=("Courier", 10, "bold"), fg=C["accent"],
              bg=C["surface"], pady=11).pack(fill="x")
 

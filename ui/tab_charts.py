@@ -3,6 +3,7 @@ import tkinter as tk
 from config import C
 from models import speed_to_pace, pace_label
 from ui.widgets import embed_mpl, style_ax, no_data, clear
+from i18n import t
 
 try:
     import matplotlib.pyplot as plt
@@ -22,11 +23,11 @@ PACE_SLOW   = "#f85149"   # rosso  → più lento della media
 def render(tab, activity):
     clear(tab)
     if not HAS_MPL:
-        no_data(tab, "Installa matplotlib:  pip install matplotlib")
+        no_data(tab, t("install_matplotlib"))
         return
     a = activity
     if not a.splits:
-        no_data(tab, "Nessun dato split disponibile.")
+        no_data(tab, t("chart_no_splits"))
         return
 
     splits   = a.splits
@@ -60,7 +61,7 @@ def render(tab, activity):
     ax1.invert_yaxis()
     ax1.set_ylabel("min/km", fontsize=7)
     ax1.set_xlabel("Km", fontsize=7)
-    style_ax(ax1, "PASSO PER CHILOMETRO")
+    style_ax(ax1, t("chart_pace_per_km"))
     ax1.yaxis.set_major_formatter(FuncFormatter(lambda y, _: pace_label(y) if y > 0 else ""))
     for bar, pace in zip(bars, paces):
         if pace > 0:
@@ -69,12 +70,12 @@ def render(tab, activity):
                      fontsize=6, color=C["text"], fontfamily="monospace")
     if avg_pace:
         ax1.axhline(avg_pace, color=C["yellow"], linestyle="--", lw=1.4,
-                    label=f"Media {pace_label(avg_pace)}")
+                    label=f"{t('chart_pace_avg_line')} {pace_label(avg_pace)}")
 
     patches = [
-        mpatches.Patch(color=PACE_FAST, label="Più veloce della media"),
-        mpatches.Patch(color=PACE_AVG,  label="In media"),
-        mpatches.Patch(color=PACE_SLOW, label="Più lento della media"),
+        mpatches.Patch(color=PACE_FAST, label=t("chart_pace_faster")),
+        mpatches.Patch(color=PACE_AVG,  label=t("chart_pace_avg")),
+        mpatches.Patch(color=PACE_SLOW, label=t("chart_pace_slower")),
     ]
     ax1.legend(handles=patches, fontsize=6.5, facecolor=C["surface2"],
                edgecolor=C["border"], labelcolor=C["text"], loc="upper right")
@@ -86,7 +87,7 @@ def render(tab, activity):
     ax2.fill_between(kms, spd, alpha=0.12, color=C["blue"])
     ax2.set_ylabel("km/h", fontsize=7)
     ax2.set_xlabel("Km", fontsize=7)
-    style_ax(ax2, "VELOCITÀ (km/h)")
+    style_ax(ax2, t("chart_speed"))
 
     # ── Dislivello ────────────────────────────────────────────────────────────
     ax3 = fig.add_subplot(gs[1, 1])
@@ -96,7 +97,7 @@ def render(tab, activity):
     ax3.axhline(0, color=C["border"], lw=0.8)
     ax3.set_ylabel("m", fontsize=7)
     ax3.set_xlabel("Km", fontsize=7)
-    style_ax(ax3, "DISLIVELLO PER KM")
+    style_ax(ax3, t("chart_elev_per_km"))
 
     # ── HR ────────────────────────────────────────────────────────────────────
     if has_hr and has_extra:
@@ -106,10 +107,10 @@ def render(tab, activity):
         ax4.fill_between(kms, hv, alpha=0.12, color=C["red"])
         ax4.set_ylabel("bpm", fontsize=7)
         ax4.set_xlabel("Km", fontsize=7)
-        style_ax(ax4, "FREQUENZA CARDIACA")
+        style_ax(ax4, t("chart_hr"))
         if a.avg_hr:
             ax4.axhline(a.avg_hr, color=C["accent2"], linestyle="--",
-                        lw=1, label=f"Media {a.avg_hr:.0f}")
+                        lw=1, label=f"{t('chart_pace_avg_line')} {a.avg_hr:.0f}")
             ax4.legend(fontsize=7, facecolor=C["surface2"],
                        edgecolor=C["border"], labelcolor=C["text"])
 
@@ -121,7 +122,7 @@ def render(tab, activity):
         ax5.fill_between(kms, cv, alpha=0.12, color=C["purple"])
         ax5.set_ylabel("spm", fontsize=7)
         ax5.set_xlabel("Km", fontsize=7)
-        style_ax(ax5, "CADENZA (passi/min)")
+        style_ax(ax5, t("chart_cadence"))
 
     fig.suptitle(f"{a.name}  •  {a.date_str}",
                  color=C["text"], fontsize=10, fontweight="bold", fontfamily="monospace")

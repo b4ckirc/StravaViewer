@@ -3,11 +3,12 @@ import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
 from config import C
+from i18n import t
 
 
 def open_download_window(parent, storage_mgr, on_done_cb=None):
     win = tk.Toplevel(parent)
-    win.title("Download da Strava")
+    win.title(t("downloader_win_title"))
     win.configure(bg=C["bg"])
     win.geometry("700x620")
     win.resizable(True, True)
@@ -16,7 +17,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     win.focus_force()
 
     # ── Header ────────────────────────────────────────────────────────────────
-    tk.Label(win, text="⬇  DOWNLOAD DA STRAVA",
+    tk.Label(win, text=t("downloader_title"),
              font=("Courier", 13, "bold"), fg=C["accent"],
              bg=C["surface"], pady=14).pack(fill="x")
 
@@ -24,9 +25,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     cred_f = tk.Frame(win, bg=C["bg"], pady=8)
     cred_f.pack(fill="x", padx=24)
 
-    tk.Label(cred_f,
-             text="Inserisci le credenziali della tua app Strava\n"
-                  "(crea l'app su https://www.strava.com/settings/api)",
+    tk.Label(cred_f, text=t("downloader_creds_hint"),
              font=("Courier", 8), fg=C["text_dim"],
              bg=C["bg"], justify="left").pack(anchor="w", pady=(0, 6))
 
@@ -51,7 +50,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     dst_f = tk.Frame(win, bg=C["surface2"],
                      highlightthickness=1, highlightbackground=C["border"])
     dst_f.pack(fill="x", padx=24, pady=(4, 0))
-    tk.Label(dst_f, text="SALVA IN:", font=("Courier", 8, "bold"),
+    tk.Label(dst_f, text=t("downloader_save_in"), font=("Courier", 8, "bold"),
              fg=C["text_dim"], bg=C["surface2"], pady=8).pack(side="left", padx=12)
     save_json_var  = tk.BooleanVar(value=True)
     save_mongo_var = tk.BooleanVar(value=storage_mgr.mongo_ok)
@@ -66,15 +65,15 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     mongo_cb.pack(side="left", padx=10)
     if not storage_mgr.mongo_ok:
         mongo_cb.config(state="disabled")
-        tk.Label(dst_f, text="(MongoDB non connesso)", font=("Courier", 7),
+        tk.Label(dst_f, text=t("downloader_mongo_off"), font=("Courier", 7),
                  fg=C["red"], bg=C["surface2"]).pack(side="left")
 
     # ── Contatori ─────────────────────────────────────────────────────────────
     stat_f = tk.Frame(win, bg=C["surface2"])
     stat_f.pack(fill="x", padx=24, pady=(6, 0))
-    new_var  = tk.StringVar(value="Nuove: 0")
-    skip_var = tk.StringVar(value="Già presenti: 0")
-    err_var  = tk.StringVar(value="Errori: 0")
+    new_var  = tk.StringVar(value=t("downloader_new").format(n=0))
+    skip_var = tk.StringVar(value=t("downloader_skip").format(n=0))
+    err_var  = tk.StringVar(value=t("downloader_errors").format(n=0))
     for var, col in [(new_var, C["green"]), (skip_var, C["text_dim"]), (err_var, C["red"])]:
         tk.Label(stat_f, textvariable=var, font=("Courier", 9, "bold"),
                  fg=col, bg=C["surface2"], padx=16, pady=5).pack(side="left")
@@ -100,25 +99,25 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
         cid = cid_var.get().strip()
         csc = csc_var.get().strip()
         if not cid:
-            messagebox.showerror("Errore", "Inserisci il Client ID.", parent=win)
+            messagebox.showerror(t("msg_error"), t("downloader_err_no_cid"), parent=win)
             return
         if not csc:
-            messagebox.showerror("Errore", "Inserisci il Client Secret.", parent=win)
+            messagebox.showerror(t("msg_error"), t("downloader_err_no_csc"), parent=win)
             return
         if not save_json_var.get() and not save_mongo_var.get():
-            messagebox.showerror("Errore", "Seleziona almeno una destinazione.", parent=win)
+            messagebox.showerror(t("msg_error"), t("downloader_err_no_dst"), parent=win)
             return
 
-        start_btn.config(state="disabled", text="⏳ In corso…")
+        start_btn.config(state="disabled", text=t("btn_downloading"))
         pbar.start(10)
         log("🔵 Thread worker avviato.")
 
         counters = {"new": 0, "skip": 0, "err": 0}
 
         def upd():
-            new_var.set(f"Nuove: {counters['new']}")
-            skip_var.set(f"Già presenti: {counters['skip']}")
-            err_var.set(f"Errori: {counters['err']}")
+            new_var.set(t("downloader_new").format(n=counters['new']))
+            skip_var.set(t("downloader_skip").format(n=counters['skip']))
+            err_var.set(t("downloader_errors").format(n=counters['err']))
 
         def worker():
             try:
@@ -166,13 +165,13 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
             finally:
                 win.after(0, pbar.stop)
                 win.after(0, lambda: start_btn.config(
-                    state="normal", text="▶  AVVIA DOWNLOAD"))
+                    state="normal", text=t("btn_start_download")))
 
         threading.Thread(target=worker, daemon=True).start()
 
     start_btn = tk.Button(
         btn_f,
-        text="▶  AVVIA DOWNLOAD",
+        text=t("btn_start_download"),
         font=("Courier", 11, "bold"),
         bg=C["accent"], fg="white",
         activebackground="#d43d00", activeforeground="white",
@@ -184,7 +183,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     start_btn.pack(side="left")
 
     tk.Button(
-        btn_f, text="✕  Chiudi",
+        btn_f, text=t("btn_close"),
         font=("Courier", 9), bg=C["surface2"],
         fg=C["text"], bd=0, padx=12, pady=10,
         cursor="hand2", command=win.destroy,
@@ -206,4 +205,4 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     log_sb.pack(side="right", fill="y")
     log_txt.pack(fill="both", expand=True)
 
-    log("✔ Finestra pronta. Inserisci le credenziali e clicca AVVIA DOWNLOAD.")
+    log(t("downloader_ready"))

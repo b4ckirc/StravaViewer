@@ -4,6 +4,7 @@
 import tkinter as tk
 from tkinter import ttk
 from config import C
+from i18n import t
 
 try:
     import matplotlib.pyplot as plt
@@ -143,7 +144,9 @@ def section_label(parent, text):
         side="left", fill="x", expand=True, padx=(12, 0), pady=8)
 
 
-def no_data(parent, msg="Nessun dato disponibile."):
+def no_data(parent, msg=None):
+    if msg is None:
+        msg = t("msg_no_data")
     tk.Label(parent, text=msg, font=FONT["body"],
              fg=C["text_dim"], bg=C["bg"], justify="center").pack(expand=True)
 
@@ -234,12 +237,12 @@ def info_btn(parent, title: str, body: str):
 
         txt.config(state="disabled")
 
-        tk.Button(win, text="✕  Chiudi",
+        tk.Button(win, text=t("btn_info_close"),
                   font=("Courier", 9, "bold"), bg=C["surface2"], fg=C["text"],
                   bd=0, padx=16, pady=8, cursor="hand2",
                   command=win.destroy).pack(pady=(0, 16))
 
-    return tk.Button(parent, text="ℹ  Info",
+    return tk.Button(parent, text=t("btn_info"),
                      font=("Courier", 8, "bold"),
                      bg=C["surface2"], fg=C["blue"],
                      bd=0, padx=8, pady=3,

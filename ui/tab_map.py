@@ -19,6 +19,7 @@ import webbrowser
 from config import C
 from models import fmt_dist, fmt_time, fmt_pace, speed_to_pace, pace_label
 from ui.widgets import clear
+from i18n import t
 
 try:
     import folium
@@ -77,15 +78,14 @@ def render(tab, activity):
 
     if not HAS_FOLIUM:
         tk.Label(tab,
-                 text="⚠️  Installa folium per la mappa:\n  pip install folium",
+                 text=t("map_no_folium"),
                  font=("Courier", 11), fg=C["yellow"], bg=C["bg"],
                  justify="center").place(relx=0.5, rely=0.5, anchor="center")
         return
 
     if not activity or not activity.gps_points:
         tk.Label(tab,
-                 text="⚠️  Nessun dato GPS disponibile.\n\n"
-                      "La polyline richiede il permesso Strava «activity:read_all».",
+                 text=t("map_no_gps"),
                  font=("Courier", 11), fg=C["text_dim"], bg=C["bg"],
                  justify="center").place(relx=0.5, rely=0.5, anchor="center")
         return
@@ -102,7 +102,7 @@ def render(tab, activity):
                    f"⏱ {fmt_time(a.moving_time)}    "
                    f"👟 {a.avg_pace_str} /km    "
                    f"⛰ +{a.elev_gain:.0f} m    "
-                   f"📍 {len(a.gps_points)} punti GPS"),
+                   f"📍 {len(a.gps_points)} {t('map_gps_points')}"),
              font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]
              ).place(relx=0.5, rely=0.38, anchor="center")
 
@@ -112,7 +112,7 @@ def render(tab, activity):
              justify="center").place(relx=0.5, rely=0.62, anchor="center")
 
     def _open_map():
-        status_var.set("⏳ Generazione mappa…")
+        status_var.set(t("map_generating"))
         tab.update_idletasks()
         try:
             pts    = a.gps_points
@@ -138,7 +138,7 @@ def render(tab, activity):
             ).add_to(m)
             folium.TileLayer(
                 "CartoDB positron",
-                name="Chiaro", overlay=False, control=True
+                name=t("map_light_tile"), overlay=False, control=True
             ).add_to(m)
 
             # ── B: Tracciato colorato per passo ───────────────────────────────
@@ -157,16 +157,16 @@ def render(tab, activity):
                     elev  = split.get("elevation_difference") or 0
 
                     if pace and pace_min and pace_max and pace_max > pace_min:
-                        t = (pace - pace_min) / (pace_max - pace_min)
+                        ratio = (pace - pace_min) / (pace_max - pace_min)
                     else:
-                        t = 0.5
-                    color = _val_to_color(t)
+                        ratio = 0.5
+                    color = _val_to_color(ratio)
 
-                    parts = [f"Km {i + 1}", f"Passo: {pace_label(pace)} /km"]
+                    parts = [f"Km {i + 1}", f"{t('map_pace_km')} {pace_label(pace)} /km"]
                     if hr:
-                        parts.append(f"FC: {hr:.0f} bpm")
+                        parts.append(f"{t('map_fc')} {hr:.0f} bpm")
                     if elev:
-                        parts.append(f"Δalt: {elev:+.0f} m")
+                        parts.append(f"{t('map_elevation_delta')} {elev:+.0f} m")
                     tooltip = "  •  ".join(parts)
 
                     if len(seg) >= 2:
@@ -190,11 +190,11 @@ def render(tab, activity):
                     continue
 
                 rows = [f"<b>Km {km_num}</b>",
-                        f"Passo: <b>{pace_label(pace)} /km</b>"]
+                        f"{t('map_pace_km')} <b>{pace_label(pace)} /km</b>"]
                 if hr:
-                    rows.append(f"FC: <b>{hr:.0f} bpm</b>")
+                    rows.append(f"{t('map_fc')} <b>{hr:.0f} bpm</b>")
                 if elev:
-                    rows.append(f"Dislivello: <b>{elev:+.0f} m</b>")
+                    rows.append(f"{t('stat_elev_gain')}: <b>{elev:+.0f} m</b>")
                 popup_html = (
                     "<div style='font-family:monospace;font-size:13px;"
                     "min-width:150px;padding:4px 6px;line-height:1.6'>"
@@ -219,29 +219,29 @@ def render(tab, activity):
 
             # ── F: Marker Start/End con popup ricco ───────────────────────────
             start_rows = [
-                f"<b style='color:#2a9d5c;font-size:14px'>▶ Inizio</b>",
+                f"<b style='color:#2a9d5c;font-size:14px'>{t('map_start')}</b>",
                 f"📅 {a.date_str}",
                 f"📏 {fmt_dist(a.distance)}",
                 f"⏱ {fmt_time(a.moving_time)}",
                 f"👟 {a.avg_pace_str} /km",
             ]
             if a.avg_hr:
-                start_rows.append(f"❤️ {a.avg_hr:.0f} bpm media")
+                start_rows.append(f"❤️ {a.avg_hr:.0f} bpm {t('avg_pace_label')}")
             start_rows.append(f"⛰ +{a.elev_gain:.0f} m")
             if a.calories:
                 start_rows.append(f"🔥 {a.calories} kcal")
             if a.suffer_score:
-                start_rows.append(f"💢 Suffer score: {a.suffer_score}")
+                start_rows.append(f"{t('map_suffer')} {a.suffer_score}")
 
             end_rows = [
-                f"<b style='color:#e63946;font-size:14px'>⏹ Arrivo</b>",
+                f"<b style='color:#e63946;font-size:14px'>{t('map_finish')}</b>",
                 f"📏 {fmt_dist(a.distance)}",
-                f"⏱ totale {fmt_time(a.elapsed_time)}",
+                f"⏱ {t('map_total')} {fmt_time(a.elapsed_time)}",
             ]
             if a.max_speed:
-                end_rows.append(f"👟 max {a.max_pace_str} /km")
+                end_rows.append(f"👟 {t('map_max')} {a.max_pace_str} /km")
             if a.max_hr:
-                end_rows.append(f"❤️ max {a.max_hr:.0f} bpm")
+                end_rows.append(f"❤️ {t('map_max')} {a.max_hr:.0f} bpm")
 
             def _popup(rows):
                 body = "<br>".join(rows)
@@ -252,9 +252,9 @@ def render(tab, activity):
                     max_width=220,
                 )
 
-            folium.Marker(pts[0],  popup=_popup(start_rows), tooltip="▶ Inizio",
+            folium.Marker(pts[0],  popup=_popup(start_rows), tooltip=t("map_start"),
                           icon=folium.Icon(color="green", icon="play")).add_to(m)
-            folium.Marker(pts[-1], popup=_popup(end_rows),   tooltip="⏹ Arrivo",
+            folium.Marker(pts[-1], popup=_popup(end_rows),   tooltip=t("map_finish"),
                           icon=folium.Icon(color="red",   icon="stop")).add_to(m)
 
             # ── F: Overlay statistiche (barra in cima) ────────────────────────
@@ -282,8 +282,8 @@ def render(tab, activity):
             # ── D: FullScreen ─────────────────────────────────────────────────
             folium.plugins.Fullscreen(
                 position="topright",
-                title="Schermo intero",
-                title_cancel="Esci da schermo intero",
+                title=t("map_fullscreen"),
+                title_cancel=t("map_exit_fullscreen"),
                 force_separate_button=True,
             ).add_to(m)
 
@@ -304,15 +304,15 @@ def render(tab, activity):
             tmp.close()
             m.save(map_path)
             webbrowser.open(f"file:///{map_path.replace(os.sep, '/')}")
-            status_var.set("✅ Mappa aperta nel browser.")
-            btn.config(text="🗺  Riapri nel browser")
+            status_var.set(t("map_opened"))
+            btn.config(text=t("map_reopen"))
 
         except Exception as e:
-            status_var.set(f"❌ Errore: {e}")
+            status_var.set(t("map_error").format(e=e))
 
     btn = tk.Button(
         tab,
-        text="🗺  Apri mappa nel browser",
+        text=t("map_open_browser"),
         font=("Courier", 12, "bold"),
         bg=C["accent"], fg="white",
         activebackground="#d43d00", activeforeground="white",
@@ -323,6 +323,6 @@ def render(tab, activity):
     btn.place(relx=0.5, rely=0.50, anchor="center")
 
     tk.Label(tab,
-             text="La mappa viene aperta nel browser predefinito",
+             text=t("map_hint"),
              font=("Courier", 8), fg=C["text_dim"], bg=C["bg"]
              ).place(relx=0.5, rely=0.70, anchor="center")

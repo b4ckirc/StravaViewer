@@ -4,20 +4,21 @@ from tkinter import ttk
 from config import C
 from models import fmt_dist, fmt_time, fmt_pace, speed_to_pace
 from ui.widgets import no_data, clear
+from i18n import t
 
 
 def render(tab, activity):
     clear(tab)
     a = activity
     if not a.splits:
-        no_data(tab, "Nessun dato split disponibile.")
+        no_data(tab, t("no_split_data"))
         return
 
-    tk.Label(tab, text="SPLITS PER CHILOMETRO",
+    tk.Label(tab, text=t("splits_title"),
              font=("Courier", 11, "bold"), fg=C["accent"],
              bg=C["surface"], pady=12).pack(fill="x")
 
-    cols   = ["KM", "DISTANZA", "TEMPO", "PASSO", "VELOCITÀ", "HR", "DISLIVELLO", "CADENZA"]
+    cols   = [t("col_km"), t("col_distance_label"), t("col_time"), t("col_pace"), t("col_speed"), t("col_hr"), t("col_elevation"), t("col_cadence")]
     widths = [4, 9, 8, 8, 9, 7, 10, 9]
 
     outer = tk.Frame(tab, bg=C["bg"])
@@ -70,7 +71,7 @@ def render(tab, activity):
     tot = tk.Frame(inner, bg=C["surface"])
     tot.pack(fill="x", pady=(4, 0))
     for (v, col), w in zip([
-        ("TOT",                    C["accent"]),
+        (t("splits_total"),        C["accent"]),
         (f"{a.distance/1000:.2f}", C["text"]),
         (fmt_time(a.moving_time),  C["blue"]),
         (a.avg_pace_str,           C["green"]),

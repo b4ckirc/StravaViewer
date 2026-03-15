@@ -5,6 +5,7 @@ from tkinter import ttk, messagebox
 from datetime import datetime
 from config import C, COMPARE_EMOJIS, MAX_COMPARE
 from models import fmt_time, fmt_pace
+from i18n import t
 
 PAGE_SIZE = 100
 
@@ -38,10 +39,10 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     fbar = tk.Frame(tab, bg=C["surface"], pady=10)
     fbar.pack(fill="x")
 
-    tk.Label(fbar, text="FILTRI:", font=("Courier", 9, "bold"),
+    tk.Label(fbar, text=t("filter_label"), font=("Courier", 9, "bold"),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left", padx=(16, 8))
 
-    tk.Label(fbar, text="Nome:", font=("Courier", 8),
+    tk.Label(fbar, text=t("filter_name"), font=("Courier", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     name_var = tk.StringVar()
     tk.Entry(fbar, textvariable=name_var, font=("Courier", 9),
@@ -50,7 +51,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 14))
 
-    tk.Label(fbar, text="Dist km:", font=("Courier", 8),
+    tk.Label(fbar, text=t("filter_dist_km"), font=("Courier", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     dist_min_var = tk.StringVar()
     dist_max_var = tk.StringVar()
@@ -67,7 +68,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(2, 14))
 
-    tk.Label(fbar, text="Disl m:", font=("Courier", 8),
+    tk.Label(fbar, text=t("filter_elev_m"), font=("Courier", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     elev_min_var = tk.StringVar()
     elev_max_var = tk.StringVar()
@@ -84,7 +85,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(2, 14))
 
-    tk.Label(fbar, text="Dal:", font=("Courier", 8),
+    tk.Label(fbar, text=t("filter_date_from"), font=("Courier", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     date_from_var = tk.StringVar()
     date_to_var   = tk.StringVar()
@@ -93,7 +94,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 2))
-    tk.Label(fbar, text="Al:", fg=C["text_dim"], bg=C["surface"],
+    tk.Label(fbar, text=t("filter_date_to"), fg=C["text_dim"], bg=C["surface"],
              font=("Courier", 8)).pack(side="left", padx=(6, 0))
     tk.Entry(fbar, textvariable=date_to_var, font=("Courier", 9),
              bg=C["surface2"], fg=C["text"], width=11, bd=0,
@@ -105,7 +106,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
 
     races_var = tk.BooleanVar(value=False)
     tk.Checkbutton(
-        fbar, text="Solo gare", variable=races_var,
+        fbar, text=t("filter_races_only"), variable=races_var,
         font=("Courier", 8), fg=C["text"], bg=C["surface"],
         selectcolor=C["surface2"], activebackground=C["surface"],
         activeforeground=C["text"],
@@ -127,30 +128,30 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     # ── Barra confronto ───────────────────────────────────────────────────────
     cbar = tk.Frame(tab, bg=C["surface2"], pady=8)
     cbar.pack(fill="x")
-    cmp_label = tk.Label(cbar, text="Confronto: nessuna selezione",
+    cmp_label = tk.Label(cbar, text=t("compare_none"),
                          font=("Courier", 9), fg=C["text_dim"], bg=C["surface2"])
     cmp_label.pack(side="left", padx=16)
 
     def refresh_cmp_label():
         n = len(app_ref.cmp_list)
         if n == 0:
-            cmp_label.config(text="Confronto: nessuna selezione", fg=C["text_dim"])
+            cmp_label.config(text=t("compare_none"), fg=C["text_dim"])
         else:
             names = "  ".join(f"{COMPARE_EMOJIS[i+1]} {app_ref.cmp_list[i].name[:20]}"
                               for i in range(n))
-            cmp_label.config(text=f"Confronto [{n}/4]: {names}", fg=C["accent"])
+            cmp_label.config(text=f"{t('compare_count').format(n=n)} {names}", fg=C["accent"])
 
-    tk.Button(cbar, text="🗑 Svuota confronto", font=("Courier", 8, "bold"),
+    tk.Button(cbar, text=t("btn_clear_compare"), font=("Courier", 8, "bold"),
               bg=C["surface2"], fg=C["text_dim"], bd=0, padx=10, cursor="hand2",
               command=lambda: [on_compare_clear(), refresh_cmp_label(), _render_page()]
               ).pack(side="right", padx=8)
-    tk.Button(cbar, text="▶ Avvia confronto", font=("Courier", 8, "bold"),
+    tk.Button(cbar, text=t("btn_run_compare"), font=("Courier", 8, "bold"),
               bg=C["accent"], fg="white", bd=0, padx=10, cursor="hand2",
               command=lambda: app_ref._run_compare()
               ).pack(side="right", padx=4)
 
     # ── Intestazione tabella ──────────────────────────────────────────────────
-    cols   = ["DATA",  "NOME", "DIST.", "TEMPO", "PASSO", "HR",  "↑ELEV", "AZIONI"]
+    cols   = [t("col_date"), t("col_name"), t("col_dist"), t("col_time"), t("col_pace"), t("col_hr"), t("col_elev"), t("col_actions")]
     widths = [12,       32,     9,       8,       8,       6,     8,       18]
 
     hdr_f = tk.Frame(tab, bg=C["surface"])
@@ -181,12 +182,12 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     tk.Label(pag_f, textvariable=page_var, font=("Courier", 9),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left", padx=16)
 
-    btn_next = tk.Button(pag_f, text="▶  Pag. successiva", font=("Courier", 9, "bold"),
+    btn_next = tk.Button(pag_f, text=t("page_next"), font=("Courier", 9, "bold"),
                          bg=C["surface2"], fg=C["text"], bd=0, padx=12, pady=4,
                          cursor="hand2", command=lambda: _go_page(state["page"] + 1))
     btn_next.pack(side="right", padx=8)
 
-    btn_prev = tk.Button(pag_f, text="◀  Pag. precedente", font=("Courier", 9, "bold"),
+    btn_prev = tk.Button(pag_f, text=t("page_prev"), font=("Courier", 9, "bold"),
                          bg=C["surface2"], fg=C["text"], bd=0, padx=12, pady=4,
                          cursor="hand2", command=lambda: _go_page(state["page"] - 1))
     btn_prev.pack(side="right", padx=4)
@@ -226,7 +227,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
 
         state["summaries"] = get_summaries(filters)
         state["page"]      = 0
-        count_var.set(f"{len(state['summaries'])} corse totali")
+        count_var.set(t("runs_total").format(n=len(state["summaries"])))
         _render_page()
 
     def _go_page(n):
@@ -248,16 +249,16 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
         end         = start + PAGE_SIZE
         page_items  = summaries[start:end]
 
-        page_var.set(f"Pagina {page + 1} / {total_pages}  "
-                     f"(righe {start + 1}–{min(end, len(summaries))} "
-                     f"di {len(summaries)})")
+        page_var.set(t("page_info").format(
+            cur=page + 1, tot=total_pages,
+            **{"from": start + 1}, to=min(end, len(summaries)),
+            all=len(summaries)))
         btn_prev.config(state="normal" if page > 0             else "disabled")
         btn_next.config(state="normal" if page < total_pages-1 else "disabled")
 
         if not summaries:
             tk.Label(list_frame,
-                     text="Nessuna corsa trovata.\n\n"
-                          "Scarica le attività da Strava oppure apri un file JSON.",
+                     text=t("library_empty"),
                      font=("Courier", 11), fg=C["text_dim"], bg=C["bg"],
                      pady=40, justify="center").pack()
             return
@@ -300,24 +301,24 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
             cells.append(act_f)
             summary = s
 
-            btn_open = tk.Button(act_f, text="📂 Apri", font=("Courier", 8, "bold"),
+            btn_open = tk.Button(act_f, text=t("btn_open"), font=("Courier", 8, "bold"),
                       bg=C["surface"], fg=C["text"], bd=0, padx=6, pady=2,
                       cursor="hand2",
                       command=lambda s=summary: on_open(s))
             btn_open.pack(side="left", padx=2)
-            btn_cmp = tk.Button(act_f, text="➕ Confronto", font=("Courier", 8, "bold"),
+            btn_cmp = tk.Button(act_f, text=t("btn_compare_add"), font=("Courier", 8, "bold"),
                       bg=C["surface"], fg=C["accent"], bd=0, padx=6, pady=2,
                       cursor="hand2",
                       command=lambda s=summary: _add_to_compare(s))
             btn_cmp.pack(side="left", padx=2)
             if summary.get("strava_id"):
-                tk.Button(act_f, text="🟠 Strava", font=("Courier", 8, "bold"),
+                tk.Button(act_f, text=t("btn_open_strava"), font=("Courier", 8, "bold"),
                           bg=C["surface"], fg="#FC4C02", bd=0, padx=6, pady=2,
                           cursor="hand2",
                           command=lambda sid=summary["strava_id"]:
                               webbrowser.open(f"https://www.strava.com/activities/{sid}")
                           ).pack(side="left", padx=2)
-            btn_del = tk.Button(act_f, text="🗑", font=("Courier", 8, "bold"),
+            btn_del = tk.Button(act_f, text=t("btn_delete"), font=("Courier", 8, "bold"),
                       bg=C["surface"], fg=C["red"], bd=0, padx=6, pady=2,
                       cursor="hand2",
                       command=lambda s=summary: _delete(s))
@@ -342,8 +343,8 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
 
     def _add_to_compare(summary):
         if len(app_ref.cmp_list) >= MAX_COMPARE - 1:
-            messagebox.showwarning("Limite",
-                                   f"Puoi confrontare al massimo {MAX_COMPARE} attività.")
+            messagebox.showwarning(t("msg_limit"),
+                                   t("compare_limit").format(n=MAX_COMPARE))
             return
         act = storage_mgr.load_activity(summary)
         if act:
@@ -351,13 +352,13 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
             refresh_cmp_label()
 
     def _delete(summary):
-        name = summary.get("name", "questa attività")
-        if not messagebox.askyesno("Elimina", f"Eliminare '{name}'?"):
+        name = summary.get("name", "")
+        if not messagebox.askyesno(t("msg_delete"), t("msg_delete_confirm").format(name=name)):
             return
         try:
             storage_mgr.delete(summary)
         except Exception as e:
-            messagebox.showerror("Errore", str(e))
+            messagebox.showerror(t("msg_error"), str(e))
             return
         _search()
 

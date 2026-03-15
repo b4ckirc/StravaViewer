@@ -1,6 +1,7 @@
 # ── ui/export_pdf.py ──────────────────────────────────────────────────────────
 from config import C
 from models import fmt_dist, fmt_time, fmt_pace, speed_to_pace, pace_label
+from i18n import t as tr
 
 try:
     import matplotlib.pyplot as plt
@@ -32,22 +33,24 @@ def export_pdf(activity, path: str):
         t(0.05, 0.87, a.name,     fontsize=13, color=C["text"])
         t(0.05, 0.83, a.date_str, fontsize=9,  color=C["text_dim"])
 
-        left_stats = [
-            ("Distanza",       fmt_dist(a.distance)),
-            ("Tempo attivo",   fmt_time(a.moving_time)),
-            ("Passo medio",    f"{a.avg_pace_str} /km"),
-            ("Passo migliore", f"{a.max_pace_str} /km"),
-            ("Velocità media", f"{a.avg_speed*3.6:.1f} km/h"),
-            ("Dislivello +",   f"{a.elev_gain:.0f} m"),
-        ]
-        right_stats = [
-            ("HR media",    f"{a.avg_hr:.0f} bpm"        if a.avg_hr       else "–"),
-            ("HR massima",  f"{a.max_hr:.0f} bpm"        if a.max_hr       else "–"),
-            ("Calorie",     f"{a.calories:.0f} kcal"     if a.calories     else "–"),
-            ("Cadenza",     f"{a.avg_cadence*2:.0f} spm" if a.avg_cadence  else "–"),
-            ("Suffer Score",str(a.suffer_score)           if a.suffer_score else "–"),
-            ("Device",      a.device or "–"),
-        ]
+        _left_labels  = tr("pdf_left_stats")
+        _right_labels = tr("pdf_right_stats")
+        left_stats = list(zip(_left_labels, [
+            fmt_dist(a.distance),
+            fmt_time(a.moving_time),
+            f"{a.avg_pace_str} /km",
+            f"{a.max_pace_str} /km",
+            f"{a.avg_speed*3.6:.1f} km/h",
+            f"{a.elev_gain:.0f} m",
+        ]))
+        right_stats = list(zip(_right_labels, [
+            f"{a.avg_hr:.0f} bpm"        if a.avg_hr       else "–",
+            f"{a.max_hr:.0f} bpm"        if a.max_hr       else "–",
+            f"{a.calories:.0f} kcal"     if a.calories     else "–",
+            f"{a.avg_cadence*2:.0f} spm" if a.avg_cadence  else "–",
+            str(a.suffer_score)          if a.suffer_score else "–",
+            a.device or "–",
+        ]))
         for i, (lbl, val) in enumerate(left_stats):
             y = 0.74 - i * 0.07
             t(0.05, y,       lbl.upper(), fontsize=7,  color=C["text_dim"])
@@ -58,7 +61,7 @@ def export_pdf(activity, path: str):
             t(0.38, y-0.033, val,          fontsize=11, fontweight="bold", color=C["text"])
 
         if a.splits:
-            t(0.05, 0.27, "▸ SPLITS PER CHILOMETRO",
+            t(0.05, 0.27, tr("pdf_splits_header"),
               fontsize=8, fontweight="bold", color=C["accent"])
             hdr = f"{'KM':>3}  {'DIST':>7}  {'TEMPO':>7}  {'PASSO':>7}  {'KM/H':>6}  {'HR':>5}  {'ELEV':>7}"
             t(0.05, 0.23, hdr, fontsize=6.5, color=C["text_dim"])
@@ -81,7 +84,7 @@ def export_pdf(activity, path: str):
                         f"{el:>+7.1f}")
                 t(0.05, 0.20 - i * 0.011, line, fontsize=5.8, color=C["text"])
 
-        t(0.05, 0.02, f"Generato da Strava Viewer v3.0",
+        t(0.05, 0.02, tr("pdf_generated_by"),
           fontsize=6, color=C["text_dim"])
         pdf.savefig(fig1, bbox_inches="tight", facecolor=C["bg"])
         plt.close(fig1)

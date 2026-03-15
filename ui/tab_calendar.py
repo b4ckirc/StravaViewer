@@ -10,12 +10,7 @@ from datetime import date
 from config import C
 from models import fmt_pace
 from ui.widgets import clear
-
-MONTHS_IT = [
-    "", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
-]
-DAYS_IT = ["LUN", "MAR", "MER", "GIO", "VEN", "SAB", "DOM"]
+from i18n import t
 
 CELL_W = 130
 CELL_H = 90
@@ -74,7 +69,7 @@ def render(tab, storage_mgr, on_open):
               bg=C["surface2"], fg=C["text"], bd=0, padx=14, pady=4,
               cursor="hand2",
               command=lambda: _go_month(-1)).pack(side="right", padx=4)
-    tk.Button(nav, text="Oggi", font=("Courier", 9, "bold"),
+    tk.Button(nav, text=t("calendar_today"), font=("Courier", 9, "bold"),
               bg=C["accent"], fg="white", bd=0, padx=10, pady=4,
               cursor="hand2",
               command=lambda: _go_today()).pack(side="right", padx=8)
@@ -82,7 +77,7 @@ def render(tab, storage_mgr, on_open):
     # ── Intestazione giorni ────────────────────────────────────────────────────
     hdr = tk.Frame(tab, bg=C["surface"])
     hdr.pack(fill="x", padx=4)
-    for i, day_name in enumerate(DAYS_IT):
+    for i, day_name in enumerate(t("days_long")):
         col = C["red"] if i >= 5 else C["text_dim"]
         tk.Label(hdr, text=day_name, font=("Courier", 8, "bold"),
                  fg=col, bg=C["surface"],
@@ -128,7 +123,7 @@ def render(tab, storage_mgr, on_open):
             w.destroy()
 
         y, m = state["year"], state["month"]
-        month_var.set(f"{MONTHS_IT[m]}  {y}")
+        month_var.set(f"{t('months_long')[m]}  {y}")
 
         weeks = calendar.monthcalendar(y, m)
 
@@ -147,8 +142,8 @@ def render(tab, storage_mgr, on_open):
         max_km = max(day_km.values(), default=0.0)
 
         if month_runs:
-            month_total_var.set(
-                f"  {month_runs} cors{'a' if month_runs == 1 else 'e'}  •  {month_km:.1f} km")
+            run_word = t("calendar_run_singular") if month_runs == 1 else t("calendar_run_plural")
+            month_total_var.set(f"  {month_runs} {run_word}  •  {month_km:.1f} km")
         else:
             month_total_var.set("  —")
 
@@ -176,9 +171,9 @@ def render(tab, storage_mgr, on_open):
         if runs:
             # Heatmap: intensità proporzionale ai km del giorno vs massimo mese
             km     = day_km.get(d_str, 0.0)
-            t      = min(km / max_km, 1.0) if max_km > 0 else 0.0
+            ratio  = min(km / max_km, 1.0) if max_km > 0 else 0.0
             # Blend da surface verso accent con intensità [15%–55%]
-            t_scaled   = 0.15 + t * 0.40
+            t_scaled   = 0.15 + ratio * 0.40
             bg_cell    = _blend_color(C["surface"], C["accent"], t_scaled)
             border_col = C["accent"]
         elif is_today:

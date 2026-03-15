@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from config import C
 from models import fmt_time, fmt_pace
 from ui.widgets import StatCard, make_scrollable, section_label, no_data, clear, info_btn
+from i18n import t
 
 try:
     import matplotlib.pyplot as plt
@@ -19,8 +20,6 @@ except ImportError:
     HAS_MPL = False
 
 SETTINGS_FILE = "settings.json"
-MONTHS_IT = ["", "Gen", "Feb", "Mar", "Apr", "Mag", "Giu",
-             "Lug", "Ago", "Set", "Ott", "Nov", "Dic"]
 
 
 def _load_settings() -> dict:
@@ -42,7 +41,7 @@ def _save_settings(s: dict):
 def render(tab, storage_mgr, on_open=None):
     clear(tab)
 
-    tk.Label(tab, text="STATISTICHE GLOBALI",
+    tk.Label(tab, text=t("stats_global_title"),
              font=("Courier", 12, "bold"), fg=C["accent"],
              bg=C["surface"], pady=12).pack(fill="x")
 
@@ -50,11 +49,11 @@ def render(tab, storage_mgr, on_open=None):
     try:
         all_summaries = storage_mgr.list_all()
     except Exception as e:
-        no_data(tab, f"Errore caricamento dati:\n{e}")
+        no_data(tab, f"{t('error_loading_data')}\n{e}")
         return
 
     if not all_summaries:
-        no_data(tab, "Nessuna corsa in libreria.\n\nScarica o importa delle attività prima.")
+        no_data(tab, t("no_runs_library"))
         return
 
     _, body = make_scrollable(tab)
@@ -75,29 +74,29 @@ def render(tab, storage_mgr, on_open=None):
     total_cals = sum(cals)
 
     # ── Stat principali ────────────────────────────────────────────────────────
-    section_label(body, "RIEPILOGO COMPLESSIVO")
+    section_label(body, t("section_overview"))
     g = tk.Frame(body, bg=C["bg"])
     g.pack(fill="x", padx=20, pady=(0, 4))
     cards = [
-        ("Corse totali",    f"{n_runs}",           "",          C["accent"]),
-        ("Km totali",       f"{total_dist:.1f}",   "km",        C["blue"]),
-        ("Ore totali",      fmt_time(total_time),  "",          C["green"]),
-        ("Dislivello tot.", f"{total_elev:.0f}",   "m",         C["yellow"]),
-        ("Passo medio",     fmt_pace(avg_speed),   "min/km",    C["accent2"]),
-        ("HR media",        f"{avg_hr:.0f}" if avg_hr else "–", "bpm", C["red"]),
+        (t("stat_total_runs"),    f"{n_runs}",           "",          C["accent"]),
+        (t("stat_total_km"),      f"{total_dist:.1f}",   "km",        C["blue"]),
+        (t("stat_total_hours"),   fmt_time(total_time),  "",          C["green"]),
+        (t("stat_total_elev"),    f"{total_elev:.0f}",   "m",         C["yellow"]),
+        (t("stat_avg_pace_label"),fmt_pace(avg_speed),   "min/km",    C["accent2"]),
+        (t("stat_hr_avg"),        f"{avg_hr:.0f}" if avg_hr else "–", "bpm", C["red"]),
     ]
     for i, (l, v, u, col) in enumerate(cards):
         StatCard(g, l, v, u, col).grid(row=0, column=i, padx=5, pady=5, sticky="nsew")
         g.columnconfigure(i, weight=1)
 
-    section_label(body, "DETTAGLI")
+    section_label(body, t("section_details"))
     g2 = tk.Frame(body, bg=C["bg"])
     g2.pack(fill="x", padx=20, pady=(0, 4))
     extra = [
-        ("Dist. media",   f"{avg_dist:.1f}",     "km",   C["text"]),
-        ("Corsa più lunga", f"{max_dist:.1f}",   "km",   C["green"]),
-        ("Calorie totali",  f"{total_cals:.0f}", "kcal", C["orange"]),
-        ("Media km/sett.", _avg_km_per_week(all_summaries), "km", C["purple"]),
+        (t("stat_avg_dist"),    f"{avg_dist:.1f}",     "km",   C["text"]),
+        (t("stat_longest_run"), f"{max_dist:.1f}",     "km",   C["green"]),
+        (t("stat_total_calories"), f"{total_cals:.0f}","kcal", C["orange"]),
+        (t("stat_km_per_week"), _avg_km_per_week(all_summaries), "km", C["purple"]),
     ]
     for i, (l, v, u, col) in enumerate(extra):
         StatCard(g2, l, v, u, col).grid(row=0, column=i, padx=5, pady=5, sticky="nsew")
@@ -117,11 +116,11 @@ def render(tab, storage_mgr, on_open=None):
     # ── Statistiche per anno ───────────────────────────────────────────────────
     by_year = _group_by_year(all_summaries)
     if by_year:
-        section_label(body, "STATISTICHE PER ANNO")
+        section_label(body, t("section_by_year"))
         tbl = tk.Frame(body, bg=C["surface2"],
                        highlightthickness=1, highlightbackground=C["border"])
         tbl.pack(fill="x", padx=20, pady=(0, 10))
-        yr_cols   = ["ANNO", "CORSE", "KM TOT.", "TEMPO TOT.", "PASSO MEDIO", "↑ ELEV."]
+        yr_cols   = [t("col_year"), t("col_runs"), t("col_km_total"), t("col_time_total"), t("col_avg_pace"), t("col_elev")]
         yr_widths = [8, 7, 10, 11, 12, 10]
         hrow = tk.Frame(tbl, bg=C["surface"])
         hrow.pack(fill="x")
@@ -147,7 +146,7 @@ def render(tab, storage_mgr, on_open=None):
 
         # ── Grafico km per anno ────────────────────────────────────────────────
         if HAS_MPL and len(by_year) > 1:
-            section_label(body, "KM PER ANNO")
+            section_label(body, t("section_km_per_year"))
             cf = tk.Frame(body, bg=C["bg"])
             cf.pack(fill="x", padx=20, pady=(0, 20))
 
@@ -162,7 +161,7 @@ def render(tab, storage_mgr, on_open=None):
             ax1 = fig.add_subplot(gs[0, 0])
             bars = ax1.bar(years, km_vals, color=C["accent"], alpha=0.85, width=0.6)
             ax1.set_facecolor(C["surface"])
-            ax1.set_title("KM PER ANNO", color=C["text"], fontsize=9,
+            ax1.set_title(t("chart_km_per_year"), color=C["text"], fontsize=9,
                           fontweight="bold", fontfamily="monospace", pad=6)
             ax1.tick_params(colors=C["text_dim"], labelsize=7)
             ax1.set_ylabel("km", fontsize=7, color=C["text_dim"])
@@ -176,10 +175,10 @@ def render(tab, storage_mgr, on_open=None):
             ax2 = fig.add_subplot(gs[0, 1])
             bars2 = ax2.bar(years, n_vals, color=C["blue"], alpha=0.85, width=0.6)
             ax2.set_facecolor(C["surface"])
-            ax2.set_title("CORSE PER ANNO", color=C["text"], fontsize=9,
+            ax2.set_title(t("chart_runs_per_year"), color=C["text"], fontsize=9,
                           fontweight="bold", fontfamily="monospace", pad=6)
             ax2.tick_params(colors=C["text_dim"], labelsize=7)
-            ax2.set_ylabel("n. corse", fontsize=7, color=C["text_dim"])
+            ax2.set_ylabel(t("axis_n_runs"), fontsize=7, color=C["text_dim"])
             for sp in ax2.spines.values(): sp.set_edgecolor(C["border"])
             ax2.grid(axis="y", color=C["border"], linestyle="--", linewidth=0.4, alpha=0.6)
             for bar, v in zip(bars2, n_vals):
@@ -212,7 +211,7 @@ def render(tab, storage_mgr, on_open=None):
 
     # ── Distribuzione distanze ─────────────────────────────────────────────────
     if HAS_MPL and dists:
-        section_label(body, "DISTRIBUZIONE DISTANZE")
+        section_label(body, t("section_dist_distrib"))
         cf3 = tk.Frame(body, bg=C["bg"])
         cf3.pack(fill="x", padx=20, pady=(0, 20))
 
@@ -243,7 +242,7 @@ def render(tab, storage_mgr, on_open=None):
         )
         for at in autotexts:
             at.set_fontsize(7)
-        ax3.set_title("DISTRIBUZIONE DISTANZE", color=C["text"], fontsize=9,
+        ax3.set_title(t("section_dist_distrib"), color=C["text"], fontsize=9,
                       fontweight="bold", fontfamily="monospace", pad=10)
 
         cnv3 = FigureCanvasTkAgg(fig3, master=cf3)
@@ -251,14 +250,14 @@ def render(tab, storage_mgr, on_open=None):
         cnv3.get_tk_widget().pack()
 
     # ── Record personali ──────────────────────────────────────────────────────
-    section_label(body, "RECORD PERSONALI")
+    section_label(body, t("section_personal_records"))
     rec_outer = tk.Frame(body, bg=C["surface2"],
                          highlightthickness=1, highlightbackground=C["border"])
     rec_outer.pack(fill="x", padx=20, pady=(0, 24))
 
     hrow = tk.Frame(rec_outer, bg=C["surface"])
     hrow.pack(fill="x")
-    for col_text, w in [("DISTANZA", 18), ("TEMPO", 10), ("ATTIVITÀ", 34), ("DATA", 14)]:
+    for col_text, w in [(t("col_distance_label"), 18), (t("col_time_label"), 10), (t("col_activity"), 34), (t("col_date_label"), 14)]:
         tk.Label(hrow, text=col_text, font=("Courier", 8, "bold"),
                  fg=C["text_dim"], bg=C["surface"],
                  width=w, anchor="center", pady=8).pack(side="left", padx=3)
@@ -272,8 +271,8 @@ def render(tab, storage_mgr, on_open=None):
         ("1k",            "🏃 1 km"),
         ("5k",            "🏃 5 km"),
         ("10k",           "🏃 10 km"),
-        ("Half-Marathon", "🏃 Mezza Maratona"),
-        ("Marathon",      "🏃 Maratona"),
+        ("Half-Marathon", f"🏃 {t('pr_half_marathon')}"),
+        ("Marathon",      f"🏃 {t('pr_marathon')}"),
     ]
     found_any = False
     for i, (key, label) in enumerate(DIST_ORDER):
@@ -291,7 +290,7 @@ def render(tab, storage_mgr, on_open=None):
         else:
             label_txt = label.replace("🏃", "  ")
             time_str  = "–"
-            act_name  = "nessun dato"
+            act_name  = t("no_data_label")
             date_str  = "–"
             act_id    = None
 
@@ -329,8 +328,7 @@ def render(tab, storage_mgr, on_open=None):
                     f"\"Half-Marathon\", \"Marathon\".\n"
                     f"  Segnala i nomi trovati per aggiornare il riconoscimento.")
         else:
-            hint = ("  Nessun best effort trovato. Le corse scaricate con activity:read_all\n"
-                    "  includono automaticamente i best efforts.")
+            hint = t("hint_no_efforts")
         tk.Label(rec_outer, text=hint,
                  font=("Courier", 8), fg=C["text_dim"], bg=C["surface2"],
                  pady=10, wraplength=760, justify="left").pack(anchor="w", padx=16)
@@ -377,7 +375,7 @@ def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
     CELL = 1.0
     GAP  = 0.18
 
-    section_label(body, "HEATMAP ATTIVITÀ — ultime 52 settimane")
+    section_label(body, t("section_heatmap"))
     cf = tk.Frame(body, bg=C["bg"])
     cf.pack(fill="x", padx=20, pady=(0, 20))
 
@@ -405,7 +403,7 @@ def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
         first_day = start + timedelta(weeks=w)
         if first_day.month != prev_month and first_day <= today:
             month_ticks.append(w * (CELL + GAP) + CELL / 2)
-            month_labels.append(MONTHS_IT[first_day.month])
+            month_labels.append(t("months_short")[first_day.month])
             prev_month = first_day.month
 
     # Assi
@@ -414,9 +412,8 @@ def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
     ax.set_xticks(month_ticks)
     ax.set_xticklabels(month_labels, fontsize=7, color=C["text_dim"],
                        fontfamily="monospace")
-    days_it = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
     ax.set_yticks([(6 - d) * (CELL + GAP) + CELL / 2 for d in range(7)])
-    ax.set_yticklabels(days_it, fontsize=6, color=C["text_dim"],
+    ax.set_yticklabels(t("days_short"), fontsize=6, color=C["text_dim"],
                        fontfamily="monospace")
     ax.tick_params(length=0)
     for sp in ax.spines.values():
@@ -455,7 +452,7 @@ def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
                 km = day_km.get(day, 0)
                 annot.xy = (col * (CELL + GAP) + CELL / 2,
                             (6 - d_idx) * (CELL + GAP) + CELL)
-                km_str = f"{km:.1f} km" if km > 0 else "riposo"
+                km_str = f"{km:.1f} km" if km > 0 else t("heatmap_rest")
                 annot.set_text(f"{day.strftime('%d %b %Y')}  {km_str}")
                 annot.set_visible(True)
                 canvas_hm.draw_idle()
@@ -527,8 +524,8 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
     else:
         score_progress = 50   # dati insufficienti → neutro
 
-    labels  = ["Velocita'", "Fondo", "Dislivello",
-               "Costanza", "Volume", "Progressione"]
+    labels  = [t("radar_speed"), t("radar_endurance"), t("radar_elevation"),
+               t("radar_consistency"), t("radar_volume"), t("radar_progress")]
     scores  = [score_speed, score_endurance, score_elev,
                score_consistency, score_volume, score_progress]
     N = len(labels)
@@ -536,7 +533,7 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
     angles += [angles[0]]
     vals    = scores + [scores[0]]
 
-    section_label(body, "PROFILO ATLETICO")
+    section_label(body, t("section_athlete_profile"))
     outer = tk.Frame(body, bg=C["bg"])
     outer.pack(fill="x", padx=20, pady=(0, 20))
     outer.columnconfigure(0, weight=2)
@@ -574,17 +571,17 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
                    highlightthickness=1, highlightbackground=C["border"])
     leg.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
 
-    tk.Label(leg, text="COME SI CALCOLANO LE DIMENSIONI",
+    tk.Label(leg, text=t("radar_how_calculated"),
              font=("Courier", 8, "bold"), fg=C["text_dim"],
              bg=C["surface"], pady=8).pack(fill="x")
 
     DESCRIPTIONS = [
-        ("Velocita'",    C["accent"],  "Passo medio di tutte le corse\n(scala 2–5 m/s, 8:20/km → 3:20/km)"),
-        ("Fondo",        C["blue"],    "Mediana delle distanze percorse\n(scala 3–42 km)"),
-        ("Dislivello",   C["yellow"],  "Media del dislivello positivo per km\n(scala 0–40 m/km)"),
-        ("Costanza",     C["green"],   "% settimane con almeno 1 corsa\nnelle ultime 52 settimane"),
-        ("Volume",       C["purple"],  "Media km/settimana nelle ultime 52 sett.\n(scala 0–70 km/sett.)"),
-        ("Progressione", C["blue"],    "Confronto passo medio: ultimi 3 mesi\nvs 3 mesi precedenti"),
+        (t("radar_speed"),       C["accent"],  t("radar_desc_speed")),
+        (t("radar_endurance"),   C["blue"],    t("radar_desc_endurance")),
+        (t("radar_elevation"),   C["yellow"],  t("radar_desc_elevation")),
+        (t("radar_consistency"), C["green"],   t("radar_desc_consistency")),
+        (t("radar_volume"),      C["purple"],  t("radar_desc_volume")),
+        (t("radar_progress"),    C["blue"],    t("radar_desc_progress")),
     ]
     for i, (name, col, desc) in enumerate(DESCRIPTIONS):
         bg = C["surface2"] if i % 2 == 0 else C["surface"]
@@ -614,11 +611,11 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
 
 def _calc_vdot(distance_m: float, time_s: float) -> float:
     """Calcola VDOT (formula Jack Daniels) da distanza (m) e tempo (s)."""
-    t = time_s / 60          # minuti
-    v = distance_m / t       # m/min
+    t_min = time_s / 60          # minuti
+    v = distance_m / t_min       # m/min
     vo2  = -4.60 + 0.182258 * v + 0.000104 * v * v
-    pct  = (0.8 + 0.1894393 * math.exp(-0.012778 * t)
-                + 0.2989558 * math.exp(-0.1932605 * t))
+    pct  = (0.8 + 0.1894393 * math.exp(-0.012778 * t_min)
+                + 0.2989558 * math.exp(-0.1932605 * t_min))
     return vo2 / pct if pct > 0 else 0.0
 
 
@@ -655,12 +652,12 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
     if not race_data:
         return
 
-    section_label(body, "ANALISI GARE E VDOT")
+    section_label(body, t("section_vdot"))
 
     hdr_f = tk.Frame(body, bg=C["bg"])
     hdr_f.pack(fill="x", padx=20, pady=(0, 4))
-    info_btn(hdr_f, "Analisi Gare e VDOT — Come funziona",
-             _INFO_VDOT).pack(side="right", padx=4)
+    info_btn(hdr_f, t("section_vdot"),
+             t("info_vdot")).pack(side="right", padx=4)
 
     best   = max(race_data, key=lambda r: r["vdot"])
     latest = race_data[-1]
@@ -669,9 +666,9 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
     g = tk.Frame(body, bg=C["bg"])
     g.pack(fill="x", padx=20, pady=(0, 4))
     cards = [
-        ("Gare totali",   str(len(race_data)),     "",   C["accent"]),
-        ("VDOT migliore", f"{best['vdot']:.1f}",   "",   C["green"]),
-        ("VDOT recente",  f"{latest['vdot']:.1f}", "",   C["blue"]),
+        (t("vdot_total_races"), str(len(race_data)),     "",   C["accent"]),
+        (t("vdot_best"),        f"{best['vdot']:.1f}",   "",   C["green"]),
+        (t("vdot_recent"),      f"{latest['vdot']:.1f}", "",   C["blue"]),
     ]
     for i, (l, v, u, col) in enumerate(cards):
         StatCard(g, l, v, u, col).grid(row=0, column=i, padx=5, pady=5, sticky="nsew")
@@ -692,7 +689,7 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
                 marker="o", markersize=5, zorder=3)
         ax.axhline(best["vdot"], color=C["green"], linewidth=0.8,
                    linestyle="--", alpha=0.55, label=f"Best {best['vdot']:.1f}")
-        ax.set_title("EVOLUZIONE VDOT", color=C["text"], fontsize=9,
+        ax.set_title(t("vdot_evolution"), color=C["text"], fontsize=9,
                      fontweight="bold", fontfamily="monospace", pad=6)
         ax.tick_params(colors=C["text_dim"], labelsize=7)
         ax.set_ylabel("VDOT", fontsize=7, color=C["text_dim"])
@@ -724,7 +721,7 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
     # Header colonne fisso
     hrow = tk.Frame(tbl_outer, bg=C["surface"])
     hrow.pack(fill="x")
-    for col_text, w in [("DATA", 12), ("KM", 9), ("TEMPO", 10), ("VDOT", 7), ("GARA", 22)]:
+    for col_text, w in [(t("col_date_label"), 12), ("KM", 9), (t("col_time_label"), 10), ("VDOT", 7), (t("col_race"), 22)]:
         tk.Label(hrow, text=col_text, font=("Courier", 8, "bold"),
                  fg=C["text_dim"], bg=C["surface"],
                  width=w, anchor="center", pady=6).pack(side="left", padx=2)
@@ -774,7 +771,7 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
                 for child in row.winfo_children():
                     child.config(cursor="hand2")
                     child.bind("<Button-1>", _open)
-        lbl_page.config(text=f"Pag. {p + 1} / {n_pages}")
+        lbl_page.config(text=t("page_label").format(cur=p + 1, tot=n_pages))
         btn_prev.config(state="normal" if p > 0 else "disabled")
         btn_next.config(state="normal" if p < n_pages - 1 else "disabled")
 
@@ -796,29 +793,29 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
                    highlightthickness=1, highlightbackground=C["border"])
     prd.grid(row=0, column=1, sticky="nsew")
 
-    tk.Label(prd, text=f"PREVISIONI  (VDOT {pred_vdot:.1f})",
+    tk.Label(prd, text=f"{t('vdot_predictions')}  (VDOT {pred_vdot:.1f})",
              font=("Courier", 8, "bold"), fg=C["text_dim"], bg=C["surface"],
              pady=6).pack(fill="x")
-    tk.Label(prd, text=f"  da: {latest['name'][:30]}",
+    tk.Label(prd, text=f"  {t('vdot_from')} {latest['name'][:30]}",
              font=("Courier", 7), fg=C["text_dim"], bg=C["surface"],
              pady=2).pack(fill="x")
 
     PRED_DIST = [
-        ("1 km",          1000),
-        ("5 km",          5000),
-        ("10 km",        10000),
-        ("Mezza",        21097),
-        ("Maratona",     42195),
+        ("1 km",               1000),
+        ("5 km",               5000),
+        ("10 km",             10000),
+        (t("vdot_half"),      21097),
+        (t("vdot_marathon"),  42195),
     ]
     for i, (label, dist) in enumerate(PRED_DIST):
         bg = C["surface2"] if i % 2 == 0 else C["surface"]
-        t  = int(_predict_time(pred_vdot, dist))
-        ms = dist / t if t > 0 else 0
+        pred_t = int(_predict_time(pred_vdot, dist))
+        ms = dist / pred_t if pred_t > 0 else 0
         row = tk.Frame(prd, bg=bg)
         row.pack(fill="x", padx=4)
         tk.Label(row, text=label, font=("Courier", 9), fg=C["accent"],
                  bg=bg, width=10, anchor="w", pady=5, padx=4).pack(side="left")
-        tk.Label(row, text=fmt_time(t), font=("Courier", 9, "bold"),
+        tk.Label(row, text=fmt_time(pred_t), font=("Courier", 9, "bold"),
                  fg=C["green"], bg=bg, width=9, anchor="center").pack(side="left")
         tk.Label(row, text=f"{fmt_pace(ms)}/km", font=("Courier", 8),
                  fg=C["text_dim"], bg=bg, anchor="w").pack(side="left")
@@ -903,7 +900,7 @@ def _group_immediate_location(group: list, storage_mgr) -> tuple[str, bool]:
 # ── Percorsi ricorrenti ───────────────────────────────────────────────────────
 
 def _render_route_analysis(body, storage_mgr, on_open):
-    section_label(body, "PERCORSI RICORRENTI")
+    section_label(body, t("section_recurring_routes"))
 
     try:
         groups = storage_mgr.get_route_groups(min_runs=3)
@@ -911,7 +908,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
         groups = []
 
     if not groups:
-        tk.Label(body, text="  Nessun percorso ricorrente trovato (minimo 3 corse sullo stesso tracciato).",
+        tk.Label(body, text=t("recurring_none"),
                  font=("Courier", 9), fg=C["text_dim"], bg=C["bg"],
                  pady=12).pack(anchor="w", padx=20)
         return
@@ -926,7 +923,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
     list_panel.pack(side="left", fill="y", padx=(0, 10))
     list_panel.pack_propagate(False)
 
-    tk.Label(list_panel, text=f"  {len(groups)} percorsi  (min. 3 corse)",
+    tk.Label(list_panel, text=f"  {t('recurring_routes_count').format(n=len(groups))}",
              font=("Courier", 8), fg=C["text_dim"], bg=C["surface2"],
              pady=6, anchor="w").pack(fill="x")
     tk.Frame(list_panel, bg=C["border"], height=1).pack(fill="x")
@@ -952,7 +949,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
     chart_panel.pack(side="left", fill="both", expand=True)
 
     tk.Label(chart_panel,
-             text="← Seleziona un percorso per vedere l'andamento del passo",
+             text=t("recurring_select_hint"),
              font=("Courier", 10), fg=C["text_dim"], bg=C["surface2"],
              pady=60).pack(expand=True)
 
@@ -1001,7 +998,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
 
         location, is_final = _group_immediate_location(group, storage_mgr)
         loc_line = f"\n   📍 {location}" if location else ""
-        label    = f"🔁 {top_name[:24]}\n   {dist_km:.1f} km · {n} corse\n   {span}{loc_line}"
+        label    = f"🔁 {top_name[:24]}\n   {dist_km:.1f} km · {n} {t('unit_runs')}\n   {span}{loc_line}"
 
         bg = C["surface"] if i % 2 == 0 else C["surface2"]
         btn = tk.Button(list_inner, text=label, font=("Courier", 8),
@@ -1023,7 +1020,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
                 loc = _get_group_location(g, sm)
                 if loc:  # aggiorna solo se trovata, altrimenti le coordinate restano
                     ll = f"\n   📍 {loc}"
-                    q.put((b, f"🔁 {top[:24]}\n   {dkm:.1f} km · {n} corse\n   {sp}{ll}"))
+                    q.put((b, f"🔁 {top[:24]}\n   {dkm:.1f} km · {n} {t('unit_runs')}\n   {sp}{ll}"))
                 time.sleep(1.1)  # rispetta rate limit Nominatim
         threading.Thread(target=_geocode_all,
                          args=(pending, loc_queue, storage_mgr),
@@ -1062,7 +1059,7 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
         runs.append(s)
 
     if not dates or not HAS_MPL:
-        tk.Label(frame, text="Dati insufficienti per il grafico.",
+        tk.Label(frame, text=t("insufficient_data"),
                  font=("Courier", 9), fg=C["text_dim"], bg=C["surface2"]).pack(pady=20)
         return
 
@@ -1080,18 +1077,18 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
         m = int(p); s = int((p - m) * 60)
         return f"{m}:{s:02d}"
 
-    trend_txt = (f"↑ migliorato di {abs(trend_sec):.0f}s/km"
+    trend_txt = (t("trend_improved").format(sec=f"{abs(trend_sec):.0f}")
                  if trend_sec > 5 else
-                 f"↓ peggiorato di {abs(trend_sec):.0f}s/km"
-                 if trend_sec < -5 else "→ stabile")
+                 t("trend_worsened").format(sec=f"{abs(trend_sec):.0f}")
+                 if trend_sec < -5 else t("trend_stable"))
     trend_col = C["green"] if trend_sec > 5 else C["red"] if trend_sec < -5 else C["text_dim"]
 
     loc_txt = f"  📍 {location}" if location else ""
     for txt, col, side in [
-        (f"  {top_name[:40]}  —  {dist_km:.1f} km  ·  {len(dates)} corse{loc_txt}",
+        (f"  {top_name[:40]}  —  {dist_km:.1f} km  ·  {len(dates)} {t('unit_runs')}{loc_txt}",
          C["text"], "left"),
-        (f"miglior passo {_fmt_p(best_pace)}/km    "
-         f"media {_fmt_p(avg_pace)}/km    {trend_txt}  ",
+        (f"{t('best_pace_label')} {_fmt_p(best_pace)}/km    "
+         f"{t('avg_pace_label')} {_fmt_p(avg_pace)}/km    {trend_txt}  ",
          trend_col, "right"),
     ]:
         tk.Label(hdr, text=txt, font=("Courier", 9), fg=col,
@@ -1099,7 +1096,7 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
 
     if storage_mgr:
         map_btn = tk.Button(
-            hdr, text="📍 Mappa", font=("Courier", 10),
+            hdr, text=t("btn_map"), font=("Courier", 10),
             fg=C["accent"], bg=C["surface"], relief="flat",
             cursor="hand2", bd=0,
             command=lambda g=group, sm=storage_mgr: _open_group_map(g, sm),
@@ -1136,9 +1133,9 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
     # Evidenzia best e last
     best_idx = paces.index(best_pace)
     ax.scatter([dates[best_idx]], [best_pace], s=120, color=C["green"],
-               zorder=4, edgecolors="white", linewidths=1.2, label="Miglior corsa")
+               zorder=4, edgecolors="white", linewidths=1.2, label=t("best_run"))
     ax.scatter([dates[-1]], [paces[-1]], s=100, color=C["accent"],
-               zorder=4, edgecolors="white", linewidths=1.2, label="Ultima corsa")
+               zorder=4, edgecolors="white", linewidths=1.2, label=t("last_run"))
 
     # Asse Y invertito: passo più basso = più veloce = in cima
     ax.invert_yaxis()
@@ -1149,7 +1146,7 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
 
     import matplotlib.ticker as mticker
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(_ytick))
-    ax.set_ylabel("Passo (min/km)", color=C["text_dim"], fontsize=8)
+    ax.set_ylabel(t("axis_pace_minkm"), color=C["text_dim"], fontsize=8)
     ax.tick_params(colors=C["text_dim"], labelsize=8)
     for spine in ax.spines.values():
         spine.set_edgecolor(C["border"])
@@ -1261,7 +1258,7 @@ def _open_group_map(group: list, storage_mgr):
     tracks = storage_mgr.get_group_polylines(group)
     if not tracks:
         import tkinter.messagebox as mb
-        mb.showinfo("Nessuna traccia", "Nessuna traccia GPS disponibile per questo gruppo.")
+        mb.showinfo("GPS", t("msg_no_gps_tracks"))
         return
 
     # Centro della mappa = media di tutti i punti
@@ -1272,7 +1269,7 @@ def _open_group_map(group: list, storage_mgr):
     m = folium.Map(location=[center_lat, center_lon], zoom_start=13, tiles=None)
 
     # ── Layer tiles ───────────────────────────────────────────────────────────
-    folium.TileLayer("CartoDB positron", name="Mappa chiara", show=True).add_to(m)
+    folium.TileLayer("CartoDB positron", name=t("map_tile_light"), show=True).add_to(m)
     folium.TileLayer("OpenStreetMap",    name="OpenStreetMap", show=False).add_to(m)
     folium.TileLayer(
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -1280,11 +1277,11 @@ def _open_group_map(group: list, storage_mgr):
     ).add_to(m)
     folium.TileLayer(
         tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-        attr="Esri World Topo", name="Topografica", show=False,
+        attr="Esri World Topo", name=t("map_tile_topo"), show=False,
     ).add_to(m)
 
     # ── Plugin fullscreen ─────────────────────────────────────────────────────
-    Fullscreen(position="topleft", title="Schermo intero", title_cancel="Esci").add_to(m)
+    Fullscreen(position="topleft", title=t("map_fullscreen"), title_cancel=t("map_fullscreen_exit")).add_to(m)
 
     # ── Lookup statistiche dal gruppo (match per data) ───────────────────────
     stats_by_date = {}
@@ -1371,10 +1368,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var masterLbl = document.createElement('label');
         masterLbl.htmlFor = 'sv-master-toggle';
         masterLbl.style.cssText = 'font-weight:bold;font-size:12px;cursor:pointer;user-select:none';
-        masterLbl.textContent = 'Deseleziona tutti';
+        masterLbl.textContent = '__DESELECT_ALL__';
 
         function refreshLabel() {
-            masterLbl.textContent = masterChk.checked ? 'Deseleziona tutti' : 'Seleziona tutti';
+            masterLbl.textContent = masterChk.checked ? '__DESELECT_ALL__' : '__SELECT_ALL__';
         }
 
         var isBulkToggling = false;
@@ -1408,6 +1405,11 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 """
+    master_toggle_js = master_toggle_js.replace(
+        "__DESELECT_ALL__", t("map_deselect_all")
+    ).replace(
+        "__SELECT_ALL__", t("map_select_all")
+    )
     m.get_root().html.add_child(folium.Element(master_toggle_js))
 
     with tempfile.NamedTemporaryFile(suffix=".html", delete=False,
@@ -1464,7 +1466,7 @@ def _avg_km_per_week(summaries):
 # ── Sezione obiettivo annuale ──────────────────────────────────────────────────
 
 def _render_annual_goal(body, all_summaries):
-    section_label(body, "OBIETTIVO ANNUALE")
+    section_label(body, t("section_annual_goal"))
     settings    = _load_settings()
     current_year = date.today().year
 
@@ -1483,7 +1485,7 @@ def _render_annual_goal(body, all_summaries):
     row_f = tk.Frame(outer, bg=C["surface2"])
     row_f.pack(fill="x", padx=16, pady=10)
 
-    tk.Label(row_f, text=f"Obiettivo {current_year}:",
+    tk.Label(row_f, text=f"{t('annual_goal_label')} {current_year}:",
              font=("Courier", 9), fg=C["text_dim"],
              bg=C["surface2"]).pack(side="left")
 
@@ -1504,7 +1506,7 @@ def _render_annual_goal(body, all_summaries):
         except Exception:
             pass
 
-    tk.Button(row_f, text="✓ Salva", font=("Courier", 8, "bold"),
+    tk.Button(row_f, text=t("btn_save"), font=("Courier", 8, "bold"),
               bg=C["accent"], fg="white", bd=0, padx=8, pady=3,
               cursor="hand2", command=_save).pack(side="left", padx=10)
 
@@ -1568,12 +1570,12 @@ def _render_monthly_stats(body, all_summaries):
     months_sorted = sorted(by_month.keys(), reverse=True)[:12]  # ultimi 12 mesi
     months_sorted.sort()  # ora in ordine cronologico
 
-    section_label(body, "STATISTICHE PER MESE  (ultimi 12 mesi)")
+    section_label(body, t("section_monthly"))
     tbl = tk.Frame(body, bg=C["surface2"],
                    highlightthickness=1, highlightbackground=C["border"])
     tbl.pack(fill="x", padx=20, pady=(0, 8))
 
-    mo_cols   = ["MESE", "CORSE", "KM TOT.", "TEMPO TOT.", "PASSO MEDIO", "↑ ELEV."]
+    mo_cols   = [t("col_month"), t("col_runs"), t("col_km_total"), t("col_time_total"), t("col_avg_pace"), t("col_elev")]
     mo_widths = [9, 7, 10, 11, 12, 10]
 
     hrow = tk.Frame(tbl, bg=C["surface"])
@@ -1592,7 +1594,7 @@ def _render_monthly_stats(body, all_summaries):
         row.pack(fill="x")
         yr, mo = int(ym[:4]), int(ym[5:7])
         mo_vals = [
-            (f"{MONTHS_IT[mo]} {yr}",          C["accent"]),
+            (f"{t('months_short')[mo]} {yr}",   C["accent"]),
             (str(d["count"]),                   C["text"]),
             (f"{d['dist_km']:.1f} km",          C["blue"]),
             (fmt_time(d["time_sec"]),            C["text"]),
@@ -1613,7 +1615,7 @@ def _render_monthly_stats(body, all_summaries):
         n_vals   = []
         for ym in months_sorted:
             yr, mo = int(ym[:4]), int(ym[5:7])
-            labels.append(f"{MONTHS_IT[mo]}\n{yr}")
+            labels.append(f"{t('months_short')[mo]}\n{yr}")
             km_vals.append(by_month[ym]["dist_km"])
             n_vals.append(by_month[ym]["count"])
 
@@ -1624,7 +1626,7 @@ def _render_monthly_stats(body, all_summaries):
         bars = ax.bar(range(len(labels)), km_vals, color=C["blue"],
                       alpha=0.85, width=0.6)
         ax.set_facecolor(C["surface"])
-        ax.set_title("KM PER MESE", color=C["text"], fontsize=9,
+        ax.set_title(t("chart_km_per_month"), color=C["text"], fontsize=9,
                      fontweight="bold", fontfamily="monospace", pad=6)
         ax.set_xticks(range(len(labels)))
         ax.set_xticklabels(labels, fontsize=6)
@@ -1708,20 +1710,20 @@ def _render_training_load(body, all_summaries):
     if not dates:
         return
 
-    section_label(body, "CARICO DI ALLENAMENTO  (ultimi 12 mesi)")
+    section_label(body, t("section_training_load"))
 
     # Legenda testuale + bottone info
     leg_f = tk.Frame(body, bg=C["bg"])
     leg_f.pack(fill="x", padx=20, pady=(0, 4))
     for txt, col in [
-        ("■ CTL – Fitness (42 gg)", C["blue"]),
-        ("■ ATL – Fatica (7 gg)",   C["red"]),
-        ("■ TSB – Forma (CTL-ATL)", C["green"]),
+        (f"■ {t('training_load_ctl')}", C["blue"]),
+        (f"■ {t('training_load_atl')}", C["red"]),
+        (f"■ {t('training_load_tsb')}", C["green"]),
     ]:
         tk.Label(leg_f, text=txt, font=("Courier", 8), fg=col,
                  bg=C["bg"]).pack(side="left", padx=10)
-    info_btn(leg_f, "Come leggere il grafico del Carico di Allenamento",
-             _INFO_TRAINING_LOAD).pack(side="right", padx=8)
+    info_btn(leg_f, t("info_training_load_title"),
+             t("info_training_load")).pack(side="right", padx=8)
 
     cf = tk.Frame(body, bg=C["bg"])
     cf.pack(fill="x", padx=20, pady=(0, 20))
@@ -1885,7 +1887,7 @@ _GRADE_BINS = [
 
 
 def _render_grade_analysis(body, storage_mgr):
-    section_label(body, "ANALISI PENDENZA  (passo mediano per gradiente)")
+    section_label(body, t("section_grade"))
 
     ctrl_f = tk.Frame(body, bg=C["bg"])
     ctrl_f.pack(fill="x", padx=20, pady=(0, 4))
@@ -1901,12 +1903,12 @@ def _render_grade_analysis(body, storage_mgr):
         _redraw_grade(chart_f, storage_mgr, races_var.get(), db)
 
     races_var = tk.BooleanVar(value=False)
-    tk.Checkbutton(ctrl_f, text="Solo gare", font=("Courier", 8),
+    info_btn(ctrl_f, t("section_grade"),
+             t("info_grade")).pack(side="right", padx=4)
+    tk.Checkbutton(ctrl_f, text=t("filter_races_only"), font=("Courier", 8),
                    variable=races_var, fg=C["text"], bg=C["bg"],
                    selectcolor=C["surface2"], activebackground=C["bg"],
                    command=_refresh).pack(side="right", padx=8)
-    info_btn(ctrl_f, "Analisi Pendenza — Come leggere il grafico",
-             _INFO_GRADE).pack(side="right", padx=4)
 
     days_var = tk.StringVar(value="365")
     tk.Entry(ctrl_f, textvariable=days_var, width=5,
@@ -1972,11 +1974,11 @@ def _redraw_grade(chart_f, storage_mgr, races_only: bool, days_back: int = 0):
     ax.set_xticks(range(len(labels_v)))
     ax.set_xticklabels(labels_v, fontsize=8, fontfamily="monospace")
     ax.tick_params(colors=C["text_dim"], labelsize=7)
-    ax.set_ylabel("Passo (min/km)", fontsize=7, color=C["text_dim"])
+    ax.set_ylabel(t("axis_pace_minkm"), fontsize=7, color=C["text_dim"])
     ax.yaxis.set_major_formatter(
         plt.FuncFormatter(lambda v, _: f"{int(v)}:{int((v - int(v)) * 60):02d}"))
-    period_lbl = f"ultimi {days_back}gg" if days_back > 0 else "tutto lo storico"
-    ax.set_title(f"PASSO MEDIANO PER PENDENZA  [{period_lbl}]",
+    period_lbl = t("period_last_days").format(n=days_back) if days_back > 0 else t("period_all_history")
+    ax.set_title(f"{t('chart_grade_pace')}  [{period_lbl}]",
                  color=C["text"], fontsize=9, fontweight="bold",
                  fontfamily="monospace", pad=6)
     for sp in ax.spines.values():
@@ -2057,11 +2059,11 @@ NOTA DEL COACH: i dati di questo grafico alimentano direttamente la correzione d
 # ── Sezione curva di performance ───────────────────────────────────────────────
 
 def _render_performance_curve(body, storage_mgr):
-    section_label(body, "CURVA DI PERFORMANCE  (legge potenza su distanze standard)")
+    section_label(body, t("section_perf_curve"))
 
     ctrl_f = tk.Frame(body, bg=C["bg"])
     ctrl_f.pack(fill="x", padx=20, pady=(0, 4))
-    tk.Label(ctrl_f, text="● best effort effettivo  — curva fit potenza",
+    tk.Label(ctrl_f, text=t("perf_curve_legend"),
              font=("Courier", 8), fg=C["text_dim"], bg=C["bg"]).pack(side="left")
 
     def _refresh():
@@ -2072,12 +2074,12 @@ def _render_performance_curve(body, storage_mgr):
         _redraw_perf_curve(chart_f, storage_mgr, races_var.get(), db)
 
     races_var = tk.BooleanVar(value=False)
-    tk.Checkbutton(ctrl_f, text="Solo gare", font=("Courier", 8),
+    info_btn(ctrl_f, t("section_perf_curve"),
+             t("info_perf_curve")).pack(side="right", padx=4)
+    tk.Checkbutton(ctrl_f, text=t("filter_races_only"), font=("Courier", 8),
                    variable=races_var, fg=C["text"], bg=C["bg"],
                    selectcolor=C["surface2"], activebackground=C["bg"],
                    command=_refresh).pack(side="right", padx=8)
-    info_btn(ctrl_f, "Curva di Performance — Come leggere il grafico",
-             _INFO_PERF_CURVE).pack(side="right", padx=4)
 
     days_var = tk.StringVar(value="365")
     tk.Entry(ctrl_f, textvariable=days_var, width=5,
@@ -2122,9 +2124,9 @@ def _redraw_perf_curve(chart_f, storage_mgr, races_only: bool, days_back: int = 
     best: dict[str, float] = {}
     for e in efforts:
         c = e["canonical"]
-        t = e["elapsed_time"]
-        if c not in best or t < best[c]:
-            best[c] = t
+        elapsed = e["elapsed_time"]
+        if c not in best or elapsed < best[c]:
+            best[c] = elapsed
 
     pts = [(dist_m, best[key])
            for key, dist_m in _EFFORT_DISTANCES.items()
@@ -2174,10 +2176,10 @@ def _redraw_perf_curve(chart_f, storage_mgr, races_only: bool, days_back: int = 
                     textcoords="offset points", xytext=(6, 4),
                     fontsize=6.5, color=C["text"], fontfamily="monospace")
 
-    ax.set_xlabel("Distanza (m)", fontsize=7, color=C["text_dim"])
-    ax.set_ylabel("Tempo (s)", fontsize=7, color=C["text_dim"])
-    period_lbl = f"ultimi {days_back}gg" if days_back > 0 else "tutto lo storico"
-    ax.set_title(f"CURVA DI PERFORMANCE — DISTANZA vs TEMPO  [{period_lbl}]",
+    ax.set_xlabel(t("axis_dist_m"), fontsize=7, color=C["text_dim"])
+    ax.set_ylabel(t("axis_time_s"), fontsize=7, color=C["text_dim"])
+    period_lbl = t("period_last_days").format(n=days_back) if days_back > 0 else t("period_all_history")
+    ax.set_title(f"{t('chart_perf_curve_ttl')}  [{period_lbl}]",
                  color=C["text"], fontsize=9, fontweight="bold",
                  fontfamily="monospace", pad=6)
     ax.tick_params(colors=C["text_dim"], labelsize=7)
@@ -2284,11 +2286,11 @@ _PREDICT_DISTS = {
 
 
 def _render_race_prediction(body, storage_mgr):
-    section_label(body, "PREVISIONE PRESTAZIONI  (simulazione Monte Carlo)")
+    section_label(body, t("section_race_pred"))
 
     ctrl_f = tk.Frame(body, bg=C["bg"])
     ctrl_f.pack(fill="x", padx=20, pady=(0, 6))
-    info_btn(ctrl_f, "Previsione Prestazioni — Come funziona",
+    info_btn(ctrl_f, t("info_race_pred_title"),
              _INFO_RACE_PRED).pack(side="right", padx=4)
 
     # Pannello parametri (2 righe)
@@ -2375,7 +2377,7 @@ def _render_race_prediction(body, storage_mgr):
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left", padx=(0, 12))
 
     races_var = tk.BooleanVar(value=False)
-    tk.Checkbutton(r2, text="Solo gare", font=("Courier", 8),
+    tk.Checkbutton(r2, text=t("filter_races_only"), font=("Courier", 8),
                    variable=races_var, fg=C["text"], bg=C["surface2"],
                    selectcolor=C["surface"], activebackground=C["surface2"]
                    ).pack(side="left", padx=8)
@@ -2412,7 +2414,7 @@ def _render_race_prediction(body, storage_mgr):
                           dist_m, elev_gain, races_var.get(), days_back,
                           km_min, km_max)
 
-    tk.Button(r2, text="▶  CALCOLA", font=("Courier", 9, "bold"),
+    tk.Button(r2, text=t("btn_calculate"), font=("Courier", 9, "bold"),
               bg=C["accent"], fg="white", bd=0, padx=12, pady=4,
               cursor="hand2", command=_calc).pack(side="left", padx=4)
 
@@ -2488,9 +2490,9 @@ def _redraw_race_pred(chart_f, storage_mgr,
     best: dict[str, float] = {}
     for e in efforts:
         c = e["canonical"]
-        t = e["elapsed_time"]
-        if c not in best or t < best[c]:
-            best[c] = t
+        elapsed = e["elapsed_time"]
+        if c not in best or elapsed < best[c]:
+            best[c] = elapsed
 
     pts = [(dm, best[key]) for key, dm in _EFFORT_DISTANCES.items() if key in best]
     if len(pts) < 2:
@@ -2552,7 +2554,7 @@ def _redraw_race_pred(chart_f, storage_mgr,
 
     ax.set_xlabel("Tempo previsto (min)", fontsize=7, color=C["text_dim"])
     ax.set_ylabel("Frequenza (simulazioni)", fontsize=7, color=C["text_dim"])
-    period_lbl = f"ultimi {days_back}gg" if days_back > 0 else "tutto lo storico"
+    period_lbl = t("period_last_days").format(n=days_back) if days_back > 0 else t("period_all_history")
     km_lbl = ""
     if km_min > 0 or km_max > 0:
         lo = f"{km_min:.0f}" if km_min > 0 else "0"
