@@ -35,9 +35,9 @@ def render(tab, activity):
 
     _, body = make_scrollable(tab)
 
-    # ── Statistiche principali — griglia 2×3 con stripe semantica ─────────────
-    # Riga 0: metriche di corsa (distanza, tempo, passo)
-    # Riga 1: metriche di fatica/tecnica (dislivello, tempo totale, passo best)
+    # ── Main statistics — 2×3 grid with semantic stripe ───────────────────────
+    # Row 0: running metrics (distance, time, pace)
+    # Row 1: effort/technique metrics (elevation, total time, best pace)
     section_label(body, t("section_main_stats"))
     g = tk.Frame(body, bg=C["bg"])
     g.pack(fill="x", padx=20, pady=(0, 4))
@@ -56,7 +56,7 @@ def render(tab, activity):
             row=row, column=col, padx=5, pady=5, sticky="nsew")
         g.columnconfigure(col, weight=1)
 
-    # ── Frequenza cardiaca ─────────────────────────────────────────────────────
+    # ── Heart rate ────────────────────────────────────────────────────────────
     if a.avg_hr or a.max_hr:
         section_label(body, t("section_heart_rate"))
         g2 = tk.Frame(body, bg=C["bg"])
@@ -70,7 +70,7 @@ def render(tab, activity):
                 row=0, column=i, padx=5, pady=5, sticky="nsew")
             g2.columnconfigure(i, weight=1)
 
-    # ── Dettagli aggiuntivi ────────────────────────────────────────────────────
+    # ── Other details ────────────────────────────────────────────────────
     extra = []
     if a.calories:     extra.append((t("stat_calories"),     f"{a.calories:.0f}",  "kcal", C["yellow"],  C["yellow"]))
     if a.suffer_score: extra.append((t("stat_suffer_score"), f"{a.suffer_score}",  "",     C["red"],     C["red"]))
@@ -91,7 +91,7 @@ def render(tab, activity):
                 row=r, column=c_, padx=5, pady=5, sticky="nsew")
             g3.columnconfigure(c_, weight=1)
 
-    # ── Indici di performance ──────────────────────────────────────────────────
+    # ── Performance indices ───────────────────────────────────────────────────
     section_label(body, t("section_perf_indices"))
     g4 = tk.Frame(body, bg=C["bg"])
     g4.pack(fill="x", padx=20, pady=(0, 20))

@@ -14,20 +14,20 @@ except ImportError:
     HAS_MPL = False
 
 
-# ── Scala tipografica ──────────────────────────────────────────────────────────
+# ── Fonts ──────────────────────────────────────────────────────────
 FONT = {
-    "title":    ("Courier", 18, "bold"),    # titoli sezione/tab
-    "section":  ("Courier", 10, "bold"),    # intestazioni gruppo
-    "body":     ("Courier", 10),            # testo corrente
-    "caption":  ("Courier", 8),             # note, date, label secondarie
-    "metric":   ("Courier", 26, "bold"),    # valori grandi nelle StatCard
-    "label":    ("Courier", 9, "bold"),     # etichette uppercase
-    "mono_sm":  ("Courier", 8, "bold"),     # testo monospace piccolo
+    "title":    ("Courier", 18, "bold"),    # titles tabs sections
+    "section":  ("Courier", 10, "bold"),    # group labels, section headers
+    "body":     ("Courier", 10),            # current text
+    "caption":  ("Courier", 8),             # notes, tooltip
+    "metric":   ("Courier", 26, "bold"),    # big numbers in stat cards
+    "label":    ("Courier", 9, "bold"),     # uppercase labels in stat cards, buttons
+    "mono_sm":  ("Courier", 8, "bold"),     # monospace small, used in coach tab for code snippets
 }
 
 
 class Tooltip:
-    """Tooltip semplice che appare dopo 500 ms di hover."""
+    """Simple tooltip that appears after 500 ms of hover."""
     _delay_ms = 500
 
     def __init__(self, widget, text: str):
@@ -67,18 +67,18 @@ class Tooltip:
 class StatCard(tk.Frame):
     def __init__(self, parent, label, value, unit="", color=None, stripe=None, **kw):
         """
-        stripe: colore hex opzionale per il bordo sinistro colorato (4px).
-                Se None, nessun bordo laterale colorato.
+        stripe: Optional hex color for the colored left border (4px).
+                If None, no colored side border.
         """
         super().__init__(parent, bg=C["surface2"], bd=0,
                          highlightthickness=1, highlightbackground=C["border"], **kw)
         color = color or C["text"]
 
-        # Stripe sinistra colorata (4px)
+        # Left colored stripe (4px)
         if stripe:
             tk.Frame(self, bg=stripe, width=4).pack(side="left", fill="y")
 
-        # Contenuto
+        # Content
         inner = tk.Frame(self, bg=C["surface2"])
         inner.pack(side="left", fill="both", expand=True,
                    padx=(10 if stripe else 18, 14), pady=14)
@@ -95,7 +95,7 @@ class StatCard(tk.Frame):
 
 
 def make_scrollable(parent):
-    """Ritorna (canvas, inner_frame) con scrollbar verticale."""
+    """Returns (canvas, inner_frame) with a vertical scrollbar."""
     c = tk.Canvas(parent, bg=C["bg"], bd=0, highlightthickness=0)
     sb = ttk.Scrollbar(parent, orient="vertical", command=c.yview)
     c.configure(yscrollcommand=sb.set)
@@ -111,7 +111,7 @@ def make_scrollable(parent):
 
 
 def embed_mpl(parent, fig):
-    """Incorpora figura matplotlib in un frame tkinter con toolbar."""
+    """Includes matplotlib figure in frame tkinter with toolbar."""
     cf = tk.Frame(parent, bg=C["bg"])
     cf.pack(fill="both", expand=True)
     cnv = FigureCanvasTkAgg(fig, master=cf)
@@ -178,8 +178,8 @@ def topbar_btn(parent, text, command, primary=False, tooltip: str = ""):
 
 def info_btn(parent, title: str, body: str):
     """
-    Piccolo pulsante ℹ che apre una finestra modale con testo formattato.
-    Usato per spiegare i grafici con stile coach.
+    Small ℹ button that opens a modal window with formatted text.
+    Used to explain charts with a coach-style approach.
     """
     def _open():
         win = tk.Toplevel()
@@ -194,7 +194,7 @@ def info_btn(parent, title: str, body: str):
                  bg=C["bg"], pady=14).pack(fill="x")
         tk.Frame(win, bg=C["border"], height=1).pack(fill="x", padx=20)
 
-        # Testo scrollabile
+        # Scrollable text area
         frame = tk.Frame(win, bg=C["bg"])
         frame.pack(fill="both", expand=True, padx=20, pady=12)
 
@@ -211,7 +211,7 @@ def info_btn(parent, title: str, body: str):
         txt.pack(fill="both", expand=True)
         sb.config(command=txt.yview)
 
-        # Tag di formattazione
+        # Formatting tags
         txt.tag_configure("title",   font=("Courier", 10, "bold"),
                           foreground=C["accent"])
         txt.tag_configure("section", font=("Courier", 9, "bold"),
@@ -221,7 +221,7 @@ def info_btn(parent, title: str, body: str):
         txt.tag_configure("bullet",  font=("Courier", 9),
                           foreground=C["green"])
 
-        # Inserimento testo con tag automatici
+        # Text formatting based on simple markdown-like syntax:
         for line in body.splitlines():
             stripped = line.strip()
             if stripped.startswith("##"):

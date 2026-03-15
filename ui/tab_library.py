@@ -11,10 +11,10 @@ PAGE_SIZE = 100
 
 
 def _pace_chip_color(speed_ms: float) -> str:
-    """Colore semantico per il passo: verde < 5:00, giallo < 6:30, rosso oltre."""
+    """Semantic color for pace: green < 5:00, yellow < 6:30, red beyond."""
     if speed_ms <= 0:
         return C["text_dim"]
-    pace_sec = 1000 / speed_ms          # secondi per km
+    pace_sec = 1000 / speed_ms          # seconds per km
     if pace_sec < 300:                  # < 5:00/km
         return C["green"]
     if pace_sec < 390:                  # < 6:30/km
@@ -26,16 +26,16 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     for w in tab.winfo_children():
         w.destroy()
 
-    # ── Fonte dati ────────────────────────────────────────────────────────────
+    # ── Data source ───────────────────────────────────────────────────────────
     def get_summaries(filters=None):
         if storage_mgr.mongo_ok and storage_mgr.mongo_storage:
             return storage_mgr.mongo_storage.list_all(filters)
         return storage_mgr.json_storage.list_all(filters)
 
-    # Stato paginazione
+    # Pagination state
     state = {"page": 0, "summaries": []}
 
-    # ── Filtri ────────────────────────────────────────────────────────────────
+    # ── Filters ────────────────────────────────────────────────────────────────
     fbar = tk.Frame(tab, bg=C["surface"], pady=10)
     fbar.pack(fill="x")
 
@@ -125,7 +125,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
               fg="white", bd=0, padx=10, pady=4, cursor="hand2",
               command=lambda: _search()).pack(side="left", padx=4)
 
-    # ── Barra confronto ───────────────────────────────────────────────────────
+    # ── Comparison bar ───────────────────────────────────────────────────────
     cbar = tk.Frame(tab, bg=C["surface2"], pady=8)
     cbar.pack(fill="x")
     cmp_label = tk.Label(cbar, text=t("compare_none"),
@@ -150,7 +150,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
               command=lambda: app_ref._run_compare()
               ).pack(side="right", padx=4)
 
-    # ── Intestazione tabella ──────────────────────────────────────────────────
+    # ── Table header ─────────────────────────────────────────────────────────
     cols   = [t("col_date"), t("col_name"), t("col_dist"), t("col_time"), t("col_pace"), t("col_hr"), t("col_elev"), t("col_actions")]
     widths = [12,       32,     9,       8,       8,       6,     8,       18]
 
@@ -162,7 +162,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
                  width=w, anchor="w" if col == "NOME" else "center",
                  pady=8, padx=4).pack(side="left")
 
-    # ── Lista scrollabile ─────────────────────────────────────────────────────
+    # ── Scrollable list ─────────────────────────────────────────────────────
     sc = tk.Canvas(tab, bg=C["bg"], bd=0, highlightthickness=0)
     sb = ttk.Scrollbar(tab, orient="vertical", command=sc.yview)
     sc.configure(yscrollcommand=sb.set)
@@ -174,7 +174,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     sc.bind("<Configure>",         lambda e: sc.itemconfig(wid, width=e.width))
     sc.bind_all("<MouseWheel>",    lambda e: sc.yview_scroll(int(-1*(e.delta/120)), "units"))
 
-    # ── Barra di paginazione (in fondo) ───────────────────────────────────────
+    # ── Pagination bar (in the bottom) ───────────────────────────────────────
     pag_f = tk.Frame(tab, bg=C["surface"], pady=8)
     pag_f.pack(fill="x", side="bottom")
 
@@ -192,10 +192,10 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
                          cursor="hand2", command=lambda: _go_page(state["page"] - 1))
     btn_prev.pack(side="right", padx=4)
 
-    # ── Logica ────────────────────────────────────────────────────────────────
+    # ── Logic ────────────────────────────────────────────────────────────────
 
     def _search():
-        """Carica tutti i summary filtrati, poi va alla pagina 0."""
+        """Load all filtered summaries, then go to page 0."""
         filters = {}
         if name_var.get().strip():
             filters["name"] = name_var.get().strip()
@@ -236,7 +236,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
             return
         state["page"] = n
         _render_page()
-        sc.yview_moveto(0)   # torna in cima
+        sc.yview_moveto(0)   # go to top of the list on page change
 
     def _render_page():
         for w in list_frame.winfo_children():
@@ -324,7 +324,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
                       command=lambda s=summary: _delete(s))
             btn_del.pack(side="left", padx=2)
 
-            # Hover effect sulla riga
+            # Hover effect on the entire row (including action buttons)
             all_row_widgets = [row, act_f] + cells
 
             def _on_enter(e, widgets=all_row_widgets, hbg=bg_hover, lbgs=cells, rbg=bg):
@@ -362,5 +362,5 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
             return
         _search()
 
-    # Caricamento iniziale
+    # Init: load first page
     _search()

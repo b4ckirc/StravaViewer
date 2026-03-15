@@ -1,6 +1,6 @@
 # ── ui/tab_stats.py ───────────────────────────────────────────────────────────
 """
-Tab statistiche globali su tutte le corse in libreria.
+Global statistics tab for all runs in the library.
 """
 
 import tkinter as tk
@@ -45,7 +45,7 @@ def render(tab, storage_mgr, on_open=None):
              font=("Courier", 12, "bold"), fg=C["accent"],
              bg=C["surface"], pady=12).pack(fill="x")
 
-    # Carica tutti i summary
+    # Load all summaries
     try:
         all_summaries = storage_mgr.list_all()
     except Exception as e:
@@ -58,7 +58,7 @@ def render(tab, storage_mgr, on_open=None):
 
     _, body = make_scrollable(tab)
 
-    # ── Calcola aggregati ──────────────────────────────────────────────────────
+    # ── Calculate aggregates ──────────────────────────────────────────────────
     n_runs     = len(all_summaries)
     total_dist = sum(s.get("distance", 0) for s in all_summaries) / 1000
     total_time = sum(s.get("moving_time", 0) for s in all_summaries)
@@ -73,7 +73,7 @@ def render(tab, storage_mgr, on_open=None):
     cals       = [s.get("calories", 0) or 0 for s in all_summaries]
     total_cals = sum(cals)
 
-    # ── Stat principali ────────────────────────────────────────────────────────
+    # ── Main statistics ────────────────────────────────────────────────────────
     section_label(body, t("section_overview"))
     g = tk.Frame(body, bg=C["bg"])
     g.pack(fill="x", padx=20, pady=(0, 4))
@@ -102,18 +102,18 @@ def render(tab, storage_mgr, on_open=None):
         StatCard(g2, l, v, u, col).grid(row=0, column=i, padx=5, pady=5, sticky="nsew")
         g2.columnconfigure(i, weight=1)
 
-    # ── Heatmap attività ──────────────────────────────────────────────────────
+    # ── Activity heatmap ──────────────────────────────────────────────────────
     if HAS_MPL:
         _render_activity_heatmap(body, all_summaries)
 
-    # ── Profilo atletico ──────────────────────────────────────────────────────
+    # ── Athletic profile ──────────────────────────────────────────────────────
     if HAS_MPL:
         _render_athlete_radar(body, all_summaries)
 
-    # ── Obiettivo annuale ──────────────────────────────────────────────────────
+    # ── Annual goal ────────────────────────────────────────────────────────────
     _render_annual_goal(body, all_summaries)
 
-    # ── Statistiche per anno ───────────────────────────────────────────────────
+    # ── Statistics per year ───────────────────────────────────────────────────
     by_year = _group_by_year(all_summaries)
     if by_year:
         section_label(body, t("section_by_year"))
@@ -144,7 +144,7 @@ def render(tab, storage_mgr, on_open=None):
                 tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
                          width=w, anchor="center", pady=7).pack(side="left", padx=3)
 
-        # ── Grafico km per anno ────────────────────────────────────────────────
+        # ── km per year chart ─────────────────────────────────────────────────
         if HAS_MPL and len(by_year) > 1:
             section_label(body, t("section_km_per_year"))
             cf = tk.Frame(body, bg=C["bg"])
@@ -190,26 +190,26 @@ def render(tab, storage_mgr, on_open=None):
             cnv.draw()
             cnv.get_tk_widget().pack(fill="x")
 
-    # ── Statistiche per mese (ultimi 12 mesi) ────────────────────────────────
+    # ── Statistics per month (last 12 months) ────────────────────────────────
     _render_monthly_stats(body, all_summaries)
 
-    # ── Carico di allenamento (ATL / CTL / TSB) ───────────────────────────────
+    # ── Training load (ATL / CTL / TSB) ───────────────────────────────────────
     if HAS_MPL:
         _render_training_load(body, all_summaries)
 
-    # ── Analisi pendenza ──────────────────────────────────────────────────────
+    # ── Grade analysis ────────────────────────────────────────────────────────
     if HAS_MPL:
         _render_grade_analysis(body, storage_mgr)
 
-    # ── Curva di performance ──────────────────────────────────────────────────
+    # ── Performance curve ─────────────────────────────────────────────────────
     if HAS_MPL:
         _render_performance_curve(body, storage_mgr)
 
-    # ── Previsione prestazioni ─────────────────────────────────────────────────
+    # ── Performance prediction ────────────────────────────────────────────────
     if HAS_MPL:
         _render_race_prediction(body, storage_mgr)
 
-    # ── Distribuzione distanze ─────────────────────────────────────────────────
+    # ── Distance distribution ─────────────────────────────────────────────────
     if HAS_MPL and dists:
         section_label(body, t("section_dist_distrib"))
         cf3 = tk.Frame(body, bg=C["bg"])
@@ -249,7 +249,7 @@ def render(tab, storage_mgr, on_open=None):
         cnv3.draw()
         cnv3.get_tk_widget().pack()
 
-    # ── Record personali ──────────────────────────────────────────────────────
+    # ── Personal records ──────────────────────────────────────────────────────
     section_label(body, t("section_personal_records"))
     rec_outer = tk.Frame(body, bg=C["surface2"],
                          highlightthickness=1, highlightbackground=C["border"])
@@ -333,18 +333,18 @@ def render(tab, storage_mgr, on_open=None):
                  font=("Courier", 8), fg=C["text_dim"], bg=C["surface2"],
                  pady=10, wraplength=760, justify="left").pack(anchor="w", padx=16)
 
-    # ── Analisi gare e VDOT ───────────────────────────────────────────────────
+    # ── Race analysis and VDOT ────────────────────────────────────────────────
     if HAS_MPL:
         _render_vdot_analysis(body, all_summaries, on_open)
 
-    # ── Percorsi ricorrenti ────────────────────────────────────────────────────
+    # ── Recurring routes ──────────────────────────────────────────────────────
     _render_route_analysis(body, storage_mgr, on_open)
 
 
-# ── Heatmap attività ──────────────────────────────────────────────────────────
+# ── Activity heatmap ──────────────────────────────────────────────────────────
 
 def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
-    """Heatmap calendario stile GitHub: ultime 52 settimane, intensità = km."""
+    """GitHub-style calendar heatmap: last 52 weeks, intensity = km."""
     if not HAS_MPL:
         return
     import numpy as np
@@ -352,7 +352,7 @@ def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
     from matplotlib.colors import LinearSegmentedColormap
     from matplotlib.patches import Rectangle
 
-    # Costruisce dizionario giorno → km totali
+    # Build day → total km dictionary
     day_km: dict = {}
     for s in all_summaries:
         d_str = s.get("start_date", "")[:10]
@@ -363,9 +363,9 @@ def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
             pass
 
     today   = _date.today()
-    # Inizia dal lunedì di 52 settimane fa
+    # Start from Monday 52 weeks ago
     start   = today - timedelta(weeks=52)
-    start  -= timedelta(days=start.weekday())   # allinea al lunedì
+    start  -= timedelta(days=start.weekday())   # align to Monday
     N_WEEKS = 53
 
     max_km  = max((v for v in day_km.values()), default=1)
@@ -388,7 +388,7 @@ def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
     prev_month = None
 
     for w in range(N_WEEKS):
-        for d in range(7):                         # 0=Lun … 6=Dom
+        for d in range(7):                         # 0=Mon … 6=Sun
             day = start + timedelta(weeks=w, days=d)
             if day > today:
                 continue
@@ -399,14 +399,14 @@ def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
             y = (6 - d) * (CELL + GAP)
             ax.add_patch(Rectangle((x, y), CELL, CELL,
                                    color=color, linewidth=0, zorder=2))
-        # etichetta mese sul primo giorno della settimana (lunedì)
+        # month label on the first day of the week (Monday)
         first_day = start + timedelta(weeks=w)
         if first_day.month != prev_month and first_day <= today:
             month_ticks.append(w * (CELL + GAP) + CELL / 2)
             month_labels.append(t("months_short")[first_day.month])
             prev_month = first_day.month
 
-    # Assi
+    # Axes
     ax.set_xlim(-0.5, N_WEEKS * (CELL + GAP) + 0.5)
     ax.set_ylim(-0.5, 7 * (CELL + GAP) + 0.5)
     ax.set_xticks(month_ticks)
@@ -419,7 +419,7 @@ def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
     for sp in ax.spines.values():
         sp.set_visible(False)
 
-    # Legenda scala colore
+    # Color scale legend
     sm = plt.cm.ScalarMappable(cmap=cmap,
                                norm=plt.Normalize(vmin=0, vmax=max_km))
     sm.set_array([])
@@ -467,10 +467,10 @@ def _render_activity_heatmap(body: tk.Frame, all_summaries: list):
     canvas_hm.mpl_connect("motion_notify_event", _on_hover)
 
 
-# ── Radar profilo atletico ─────────────────────────────────────────────────────
+# ── Athletic radar profile ────────────────────────────────────────────────────
 
 def _render_athlete_radar(body: tk.Frame, all_summaries: list):
-    """Radar chart esagonale del profilo atletico con 6 dimensioni."""
+    """Hexagonal radar chart of the athletic profile with 6 dimensions."""
     if not HAS_MPL or not all_summaries:
         return
     from datetime import date as _date, timedelta
@@ -483,35 +483,35 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
 
     runs = [s for s in all_summaries if s.get("distance", 0) > 0]
 
-    # ── 1. Velocità: avg pace, scala 2.0–5.0 m/s ──────────────────────────
+    # ── 1. Speed: avg pace, scale 2.0–5.0 m/s ────────────────────────────
     speeds = [s["avg_speed"] for s in runs if s.get("avg_speed", 0) > 0]
     score_speed = min(100, max(0, (sum(speeds)/len(speeds) - 2.0) / 3.0 * 100)) \
                   if speeds else 0
 
-    # ── 2. Fondo: mediana distanza, scala 3–42 km ─────────────────────────
+    # ── 2. Endurance: median distance, scale 3–42 km ─────────────────────
     dists = [s["distance"] / 1000 for s in runs]
     score_endurance = min(100, max(0,
         (statistics.median(dists) - 3) / 39 * 100)) if dists else 0
 
-    # ── 3. Dislivello: media m↑ per km, scala 0–40 m/km ──────────────────
+    # ── 3. Elevation: avg m↑ per km, scale 0–40 m/km ─────────────────────
     ep_km = [s["elev_gain"] / max(s["distance"] / 1000, 0.1)
              for s in runs if s.get("elev_gain", 0) > 0]
     score_elev = min(100, (sum(ep_km)/len(ep_km)) / 40 * 100) if ep_km else 0
 
-    # ── 4. Costanza: % settimane con corsa nelle ultime 52 ────────────────
+    # ── 4. Consistency: % weeks with a run in the last 52 ────────────────
     weeks_run = {((_date.fromisoformat(s["start_date"][:10]) - cut_52w).days // 7)
                  for s in runs
                  if s.get("start_date", "")[:10] >= cut_52w.isoformat()
                  and _date.fromisoformat(s["start_date"][:10]) <= today}
     score_consistency = min(100, len(weeks_run) / 52 * 100)
 
-    # ── 5. Volume: media km/settimana nelle ultime 52 sett., scala 0–70 ──
+    # ── 5. Volume: avg km/week in the last 52 weeks, scale 0–70 ──────────
     recent_runs = [s for s in runs
                    if s.get("start_date", "")[:10] >= cut_52w.isoformat()]
     avg_km_w = sum(s["distance"]/1000 for s in recent_runs) / 52 if recent_runs else 0
     score_volume = min(100, avg_km_w / 70 * 100)
 
-    # ── 6. Progressione: passo medio ultimi 3m vs 3m precedenti ──────────
+    # ── 6. Progression: avg pace last 3m vs previous 3m ─────────────────
     sp_rec  = [s["avg_speed"] for s in runs
                if s.get("start_date", "")[:10] >= cut_3m.isoformat()
                and s.get("avg_speed", 0) > 0]
@@ -522,7 +522,7 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
         ratio = (sum(sp_rec)/len(sp_rec)) / (sum(sp_prev)/len(sp_prev))
         score_progress = min(100, max(0, (ratio - 0.9) / 0.2 * 100))
     else:
-        score_progress = 50   # dati insufficienti → neutro
+        score_progress = 50   # insufficient data → neutral
 
     labels  = [t("radar_speed"), t("radar_endurance"), t("radar_elevation"),
                t("radar_consistency"), t("radar_volume"), t("radar_progress")]
@@ -539,7 +539,7 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
     outer.columnconfigure(0, weight=2)
     outer.columnconfigure(1, weight=3)
 
-    # ── Grafico polare ────────────────────────────────────────────────────
+    # ── Polar chart ───────────────────────────────────────────────────────
     cf = tk.Frame(outer, bg=C["bg"])
     cf.grid(row=0, column=0, sticky="nsew")
 
@@ -566,7 +566,7 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
     cnv.draw()
     cnv.get_tk_widget().pack(fill="both", expand=True)
 
-    # ── Legenda dimensioni ────────────────────────────────────────────────
+    # ── Dimension legend ──────────────────────────────────────────────────
     leg = tk.Frame(outer, bg=C["surface2"],
                    highlightthickness=1, highlightbackground=C["border"])
     leg.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
@@ -597,7 +597,7 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
         tk.Label(row, text=bar_str, font=("Courier", 7),
                  fg=col, bg=bg).pack(side="left")
 
-    # Descrizioni estese
+    # Extended descriptions
     detail = tk.Frame(leg, bg=C["surface2"])
     detail.pack(fill="x", padx=8, pady=(4, 8))
     for name, col, desc in DESCRIPTIONS:
@@ -610,8 +610,8 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
 # ── VDOT helpers ──────────────────────────────────────────────────────────────
 
 def _calc_vdot(distance_m: float, time_s: float) -> float:
-    """Calcola VDOT (formula Jack Daniels) da distanza (m) e tempo (s)."""
-    t_min = time_s / 60          # minuti
+    """Calculates VDOT (Jack Daniels formula) from distance (m) and time (s)."""
+    t_min = time_s / 60          # minutes
     v = distance_m / t_min       # m/min
     vo2  = -4.60 + 0.182258 * v + 0.000104 * v * v
     pct  = (0.8 + 0.1894393 * math.exp(-0.012778 * t_min)
@@ -620,19 +620,19 @@ def _calc_vdot(distance_m: float, time_s: float) -> float:
 
 
 def _predict_time(vdot: float, distance_m: float) -> float:
-    """Predice il tempo (secondi) per una data distanza dato il VDOT."""
+    """Predicts the time (seconds) for a given distance given the VDOT."""
     lo, hi = distance_m / 10.0, distance_m * 3.0
     for _ in range(64):
         mid = (lo + hi) / 2
         if _calc_vdot(distance_m, mid) > vdot:
-            lo = mid   # troppo veloce → allunghiamo
+            lo = mid   # too fast → extend
         else:
-            hi = mid   # troppo lento  → accorciamo
+            hi = mid   # too slow → shorten
     return (lo + hi) / 2
 
 
 def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
-    """Sezione 'Analisi Gare e VDOT' con grafico evoluzione e tabella previsioni."""
+    """'Race Analysis and VDOT' section with evolution chart and predictions table."""
     import datetime as dt
 
     races = [s for s in all_summaries
@@ -647,7 +647,7 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
     race_data = []
     for s in races:
         v = _calc_vdot(s["distance"], s["moving_time"])
-        if v > 20:   # scarta valori non plausibili
+        if v > 20:   # discard implausible values
             race_data.append({**s, "vdot": round(v, 1)})
     if not race_data:
         return
@@ -674,7 +674,7 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
         StatCard(g, l, v, u, col).grid(row=0, column=i, padx=5, pady=5, sticky="nsew")
         g.columnconfigure(i, weight=1)
 
-    # ── Grafico VDOT nel tempo ─────────────────────────────────────────────
+    # ── VDOT over time chart ──────────────────────────────────────────────
     if len(race_data) >= 2:
         cf = tk.Frame(body, bg=C["bg"])
         cf.pack(fill="x", padx=20, pady=(0, 8))
@@ -702,23 +702,23 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
         cnv.draw()
         cnv.get_tk_widget().pack(fill="x")
 
-    # ── Layout a due colonne: tabella gare | previsioni ────────────────────
+    # ── Two-column layout: race table | predictions ────────────────────────
     two = tk.Frame(body, bg=C["bg"])
     two.pack(fill="x", padx=20, pady=(0, 20))
     two.columnconfigure(0, weight=3)
     two.columnconfigure(1, weight=2)
 
-    # Tabella gare (sinistra) con paginazione
+    # Race table (left) with pagination
     PAGE_SIZE = 10
     races_rev = list(reversed(race_data))
     n_pages   = max(1, math.ceil(len(races_rev) / PAGE_SIZE))
-    page_var  = [0]   # indice pagina corrente (mutabile via lista)
+    page_var  = [0]   # current page index (mutable via list)
 
     tbl_outer = tk.Frame(two, bg=C["surface2"],
                          highlightthickness=1, highlightbackground=C["border"])
     tbl_outer.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
 
-    # Header colonne fisso
+    # Fixed column header
     hrow = tk.Frame(tbl_outer, bg=C["surface"])
     hrow.pack(fill="x")
     for col_text, w in [(t("col_date_label"), 12), ("KM", 9), (t("col_time_label"), 10), ("VDOT", 7), (t("col_race"), 22)]:
@@ -726,11 +726,11 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
                  fg=C["text_dim"], bg=C["surface"],
                  width=w, anchor="center", pady=6).pack(side="left", padx=2)
 
-    # Area righe (ricreata ad ogni cambio pagina)
+    # Row area (recreated on each page change)
     rows_frame = tk.Frame(tbl_outer, bg=C["surface2"])
     rows_frame.pack(fill="x")
 
-    # Barra paginazione in fondo
+    # Pagination bar at the bottom
     nav = tk.Frame(tbl_outer, bg=C["surface"])
     nav.pack(fill="x")
     lbl_page = tk.Label(nav, text="", font=("Courier", 8), fg=C["text_dim"],
@@ -787,7 +787,7 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
     btn_next.config(command=_next)
     _draw_page()
 
-    # Tabella previsioni (destra) basata su VDOT più recente
+    # Predictions table (right) based on most recent VDOT
     pred_vdot = latest["vdot"]
     prd = tk.Frame(two, bg=C["surface2"],
                    highlightthickness=1, highlightbackground=C["border"])
@@ -824,7 +824,7 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
 # ── Geocoding helpers ─────────────────────────────────────────────────────────
 
 def _reverse_geocode(lat: float, lon: float, storage_mgr) -> str:
-    """Reverse geocoding con Nominatim. Cache su MongoDB o file JSON."""
+    """Reverse geocoding with Nominatim. Cache on MongoDB or JSON file."""
     cached = storage_mgr.get_geocode(lat, lon)
     if cached is not None:
         return cached
@@ -839,17 +839,17 @@ def _reverse_geocode(lat: float, lon: float, storage_mgr) -> str:
             addr = _json.loads(resp).get("address", {})
         city = (addr.get("city") or addr.get("town") or
                 addr.get("village") or addr.get("municipality") or "")
-        print(f"[geocode] città trovata: '{city}'")
+        print(f"[geocode] city found: '{city}'")
     except Exception as e:
         print(f"[geocode] ERRORE {lat:.3f},{lon:.3f}: {type(e).__name__}: {e}")
         city = ""
-    if city:  # salva solo se trovata, così i fallimenti vengono ritentati
+    if city:  # save only if found, so failures can be retried
         storage_mgr.set_geocode(lat, lon, city)
     return city
 
 
 def _get_group_location(group: list, storage_mgr) -> str:
-    """Restituisce la città del gruppo: prima dai metadati Strava, poi via Nominatim."""
+    """Returns the city for the group: first from Strava metadata, then via Nominatim."""
     from collections import Counter
     cities = Counter(s.get("city", "") for s in group if s.get("city"))
     if cities:
@@ -863,18 +863,18 @@ def _get_group_location(group: list, storage_mgr) -> str:
 
 def _group_immediate_location(group: list, storage_mgr) -> tuple[str, bool]:
     """
-    Ritorna (testo_localizzazione, è_definitiva).
-    Definitiva=True → nessun thread necessario.
-    Definitiva=False → mostra placeholder e avvia geocoding in background.
+    Returns (location_text, is_definitive).
+    Definitive=True → no thread needed.
+    Definitive=False → show placeholder and start geocoding in background.
     """
     from collections import Counter
 
-    # 1. Città dai metadati Strava
+    # 1. City from Strava metadata
     cities = Counter(s.get("city", "") for s in group if s.get("city"))
     if cities:
         return cities.most_common(1)[0][0], True
 
-    # 2. Trova prime coordinate valide
+    # 2. Find first valid coordinates
     lat, lon = None, None
     for s in group:
         slat, slon = s.get("start_lat"), s.get("start_lon")
@@ -888,16 +888,16 @@ def _group_immediate_location(group: list, storage_mgr) -> tuple[str, bool]:
     ew = "E" if lon >= 0 else "O"
     coord_str = f"{lat:.2f}°N  {abs(lon):.2f}°{ew}"
 
-    # 3. Controlla cache persistente
+    # 3. Check persistent cache
     cached = storage_mgr.get_geocode(lat, lon)
-    if cached:          # stringa non vuota → città trovata
+    if cached:          # non-empty string → city found
         return cached, True
 
-    # 4. Non in cache (o vecchio fallimento vuoto) → coordinate come placeholder, avvia thread
+    # 4. Not in cache (or old empty failure) → coordinates as placeholder, start thread
     return coord_str, False
 
 
-# ── Percorsi ricorrenti ───────────────────────────────────────────────────────
+# ── Recurring routes ──────────────────────────────────────────────────────────
 
 def _render_route_analysis(body, storage_mgr, on_open):
     section_label(body, t("section_recurring_routes"))
@@ -916,7 +916,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
     outer = tk.Frame(body, bg=C["bg"])
     outer.pack(fill="x", padx=20, pady=(0, 24))
 
-    # ── Lista sinistra ────────────────────────────────────────────────────────
+    # ── Left list panel ───────────────────────────────────────────────────────
     list_panel = tk.Frame(outer, bg=C["surface2"],
                           highlightthickness=1, highlightbackground=C["border"],
                           width=230)
@@ -943,7 +943,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
     list_canvas.bind("<Configure>",
                      lambda e: list_canvas.itemconfig(_lwid, width=e.width))
 
-    # ── Pannello destro: grafico ───────────────────────────────────────────────
+    # ── Right panel: chart ────────────────────────────────────────────────────
     chart_panel = tk.Frame(outer, bg=C["surface2"],
                            highlightthickness=1, highlightbackground=C["border"])
     chart_panel.pack(side="left", fill="both", expand=True)
@@ -953,7 +953,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
              font=("Courier", 10), fg=C["text_dim"], bg=C["surface2"],
              pady=60).pack(expand=True)
 
-    # ── Coda tkinter-safe per aggiornamenti da thread ─────────────────────────
+    # ── tkinter-safe queue for thread updates ─────────────────────────────────
     import queue, threading
     loc_queue: queue.Queue = queue.Queue()
 
@@ -974,7 +974,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
 
     list_inner.after(300, _poll_queue)
 
-    # ── Bottoni lista ─────────────────────────────────────────────────────────
+    # ── List buttons ──────────────────────────────────────────────────────────
     selected = {"btn": None}
 
     def _select(group, btn):
@@ -986,7 +986,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
             w.destroy()
         _draw_route_chart(chart_panel, group, on_open, storage_mgr)
 
-    pending = []   # gruppi che necessitano geocoding
+    pending = []   # groups that need geocoding
     for i, group in enumerate(groups):
         from collections import Counter
         dist_km  = group[0].get("distance", 0) / 1000
@@ -1008,25 +1008,25 @@ def _render_route_analysis(body, storage_mgr, on_open):
         btn.pack(fill="x", pady=1)
         btn.config(command=lambda g=group, b=btn: _select(g, b))
 
-        # Accoda i gruppi che necessitano geocoding
+        # Queue groups that need geocoding
         if not is_final:
             pending.append((btn, group, top_name, dist_km, n, span))
 
-    # Un unico thread sequenziale — rispetta il rate limit di Nominatim (1 req/sec)
+    # Single sequential thread — respects Nominatim rate limit (1 req/sec)
     if pending:
         def _geocode_all(items, q, sm):
             import time
             for b, g, top, dkm, n, sp in items:
                 loc = _get_group_location(g, sm)
-                if loc:  # aggiorna solo se trovata, altrimenti le coordinate restano
+                if loc:  # update only if found, otherwise coordinates remain
                     ll = f"\n   📍 {loc}"
                     q.put((b, f"🔁 {top[:24]}\n   {dkm:.1f} km · {n} {t('unit_runs')}\n   {sp}{ll}"))
-                time.sleep(1.1)  # rispetta rate limit Nominatim
+                time.sleep(1.1)  # respect Nominatim rate limit
         threading.Thread(target=_geocode_all,
                          args=(pending, loc_queue, storage_mgr),
                          daemon=True).start()
 
-    # Auto-seleziona il primo gruppo
+    # Auto-select the first group
     if list_inner.winfo_children():
         first_btn = list_inner.winfo_children()[0]
         first_btn.after(100, lambda: _select(groups[0], first_btn))
@@ -1041,7 +1041,7 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
     top_name = names.most_common(1)[0][0] or f"{dist_km:.1f} km"
     location = _get_group_location(group, storage_mgr) if storage_mgr else ""
 
-    # Dati per il grafico
+    # Data for the chart
     dates, paces, hrs, runs = [], [], [], []
     for s in group:
         spd = s.get("avg_speed", 0)
@@ -1071,7 +1071,7 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
     avg_pace   = sum(paces) / len(paces)
     first_pace = paces[0]
     last_pace  = paces[-1]
-    trend_sec  = (first_pace - last_pace) * 60   # positivo = migliorato
+    trend_sec  = (first_pace - last_pace) * 60   # positive = improved
 
     def _fmt_p(p):
         m = int(p); s = int((p - m) * 60)
@@ -1103,17 +1103,17 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
         )
         map_btn.pack(side="right", padx=6)
 
-    # ── Grafico matplotlib ────────────────────────────────────────────────────
+    # ── Matplotlib chart ──────────────────────────────────────────────────────
     fig, ax = plt.subplots(figsize=(7, 3.2), facecolor=C["surface2"])
     ax.set_facecolor(C["surface2"])
 
-    # Scatter colorato: verde=veloce, rosso=lento
+    # Colored scatter: green=fast, red=slow
     norm_paces = [(p - best_pace) / (max(paces) - best_pace + 0.001) for p in paces]
     colors = [plt.cm.RdYlGn(1 - v) for v in norm_paces]  # type: ignore
 
     scatter_pts = ax.scatter(dates, paces, c=colors, s=60, zorder=3, edgecolors="none")
 
-    # Trend line (regressione lineare semplice)
+    # Trend line (simple linear regression)
     if len(dates) >= 3:
         x_num = [(d - dates[0]).days for d in dates]
         n = len(x_num)
@@ -1130,14 +1130,14 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
                     color=C["accent"], linewidth=1.5, linestyle="--",
                     alpha=0.7, zorder=2)
 
-    # Evidenzia best e last
+    # Highlight best and last
     best_idx = paces.index(best_pace)
     ax.scatter([dates[best_idx]], [best_pace], s=120, color=C["green"],
                zorder=4, edgecolors="white", linewidths=1.2, label=t("best_run"))
     ax.scatter([dates[-1]], [paces[-1]], s=100, color=C["accent"],
                zorder=4, edgecolors="white", linewidths=1.2, label=t("last_run"))
 
-    # Asse Y invertito: passo più basso = più veloce = in cima
+    # Inverted Y axis: lower pace = faster = at top
     ax.invert_yaxis()
 
     def _ytick(p, _):
@@ -1160,7 +1160,7 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
     canvas.draw()
     canvas.get_tk_widget().pack(fill="both", expand=True, padx=0, pady=0)
 
-    # ── Tooltip hover sui pallini ─────────────────────────────────────────────
+    # ── Hover tooltip on data points ──────────────────────────────────────────
     annot = ax.annotate(
         "", xy=(0, 0), xytext=(12, 12), textcoords="offset points",
         bbox=dict(boxstyle="round,pad=0.45", fc=C["surface"], ec=C["border"],
@@ -1171,7 +1171,7 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
     )
     annot.set_visible(False)
 
-    # scatter aggiuntivo per evidenziare il punto hovered
+    # additional scatter to highlight hovered point
     highlight, = ax.plot([], [], "o", ms=11, color="white", alpha=0.5,
                          zorder=5, markeredgewidth=0)
 
@@ -1209,7 +1209,7 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
 
     plt.close(fig)
 
-    # ── Lista corse del gruppo (cliccabile se on_open) ────────────────────────
+    # ── Group run list (clickable if on_open) ─────────────────────────────────
     runs_frame = tk.Frame(frame, bg=C["surface2"], height=130)
     runs_frame.pack(fill="x", padx=0)
     runs_frame.pack_propagate(False)
@@ -1244,15 +1244,15 @@ def _open_run(on_open, summary):
 
 
 def _open_group_map(group: list, storage_mgr):
-    """Apre una mappa Folium nel browser con tutte le tracce del gruppo sovrapposte."""
+    """Opens a Folium map in the browser with all group tracks overlaid."""
     try:
         import folium
         from folium.plugins import Fullscreen
         import tempfile, webbrowser, os
     except ImportError:
         import tkinter.messagebox as mb
-        mb.showerror("Folium non disponibile",
-                     "Installa folium con: pip install folium")
+        mb.showerror("Folium not found",
+                     "Please install folium with: pip install folium")
         return
 
     tracks = storage_mgr.get_group_polylines(group)
@@ -1261,7 +1261,7 @@ def _open_group_map(group: list, storage_mgr):
         mb.showinfo("GPS", t("msg_no_gps_tracks"))
         return
 
-    # Centro della mappa = media di tutti i punti
+    # Map center = average of all points
     all_pts = [pt for _, _, pts in tracks for pt in pts]
     center_lat = sum(p[0] for p in all_pts) / len(all_pts)
     center_lon = sum(p[1] for p in all_pts) / len(all_pts)
@@ -1280,10 +1280,10 @@ def _open_group_map(group: list, storage_mgr):
         attr="Esri World Topo", name=t("map_tile_topo"), show=False,
     ).add_to(m)
 
-    # ── Plugin fullscreen ─────────────────────────────────────────────────────
+    # ── Fullscreen plugin ─────────────────────────────────────────────────────
     Fullscreen(position="topleft", title=t("map_fullscreen"), title_cancel=t("map_fullscreen_exit")).add_to(m)
 
-    # ── Lookup statistiche dal gruppo (match per data) ───────────────────────
+    # ── Group statistics lookup (match by date) ───────────────────────────────
     stats_by_date = {}
     for s in group:
         d = (s.get("start_date") or s.get("start_date_local") or "")[:10]
@@ -1314,11 +1314,11 @@ def _open_group_map(group: list, storage_mgr):
                  f"🏃 {pace}")
         return f'{title}<br><span style="font-size:12px">{rows}</span>'
 
-    # ── Tracce ordinate per data: un FeatureGroup per corsa ───────────────────
+    # ── Tracks sorted by date: one FeatureGroup per run ───────────────────────
     colors = ["#e63946", "#457b9d", "#2a9d8f", "#e9c46a", "#f4a261",
               "#264653", "#8ecae6", "#c77dff", "#ffb703", "#fb8500"]
 
-    sorted_tracks = sorted(tracks, key=lambda t: t[1])   # ordine cronologico
+    sorted_tracks = sorted(tracks, key=lambda t: t[1])   # chronological order
     for i, (name, date_s, pts) in enumerate(sorted_tracks):
         col   = colors[i % len(colors)]
         label = f"{date_s} · {name[:35]}" if name else date_s
@@ -1337,10 +1337,10 @@ def _open_group_map(group: list, storage_mgr):
                                 tooltip=folium.Tooltip(tip_html, sticky=True)).add_to(fg)
         fg.add_to(m)
 
-    # LayerControl con supporto HTML (per i colori inline)
+    # LayerControl with HTML support (for inline colors)
     folium.LayerControl(collapsed=False, position="topright").add_to(m)
 
-    # ── Checkbox "Seleziona tutti / Deseleziona tutti" ────────────────────────
+    # ── "Select all / Deselect all" checkbox ─────────────────────────────────
     master_toggle_js = """
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -1387,12 +1387,12 @@ document.addEventListener('DOMContentLoaded', function () {
             refreshLabel();
         });
 
-        // Aggiorna master se l'utente clicca le singole checkbox
+        // Update the master table if the user clicks the individual checkboxes
         overlaysDiv.addEventListener('change', function (e) {
             if (e.target === masterChk || isBulkToggling) return;
             var boxes   = overlaysDiv.querySelectorAll('input[type=checkbox]');
             var checked = Array.from(boxes).filter(function(b){ return b !== masterChk && b.checked; }).length;
-            var total   = boxes.length - 1; // escludi master
+            var total   = boxes.length - 1; // exclude master
             masterChk.indeterminate = (checked > 0 && checked < total);
             masterChk.checked = (checked === total);
             refreshLabel();
@@ -1463,7 +1463,7 @@ def _avg_km_per_week(summaries):
     return f"{total_km / weeks:.1f}"
 
 
-# ── Sezione obiettivo annuale ──────────────────────────────────────────────────
+# ── Annual goal section ───────────────────────────────────────────────────────
 
 def _render_annual_goal(body, all_summaries):
     section_label(body, t("section_annual_goal"))
@@ -1510,14 +1510,14 @@ def _render_annual_goal(body, all_summaries):
               bg=C["accent"], fg="white", bd=0, padx=8, pady=3,
               cursor="hand2", command=_save).pack(side="left", padx=10)
 
-    # Testo riepilogo
+    # Summary text
     col_txt = C["green"] if pct >= 1.0 else C["accent"]
     tk.Label(row_f,
              text=f"{year_km:.0f} / {target_km:.0f} km  ({pct * 100:.1f}%)",
              font=("Courier", 10, "bold"), fg=col_txt,
              bg=C["surface2"]).pack(side="right", padx=8)
 
-    # Barra di avanzamento (Canvas)
+    # Progress bar (Canvas)
     bar_frame = tk.Frame(outer, bg=C["surface2"])
     bar_frame.pack(fill="x", padx=16, pady=(0, 12))
 
@@ -1541,10 +1541,10 @@ def _render_annual_goal(body, all_summaries):
     body.after(120, _draw)
 
 
-# ── Sezione statistiche mensili ────────────────────────────────────────────────
+# ── Monthly statistics section ────────────────────────────────────────────────
 
 def _render_monthly_stats(body, all_summaries):
-    """Tabella + grafico degli ultimi 12 mesi."""
+    """Table + chart of the last 12 months."""
     from collections import defaultdict
     by_month = defaultdict(lambda: {
         "count": 0, "dist_km": 0.0, "time_sec": 0,
@@ -1566,9 +1566,9 @@ def _render_monthly_stats(body, all_summaries):
     if not by_month:
         return
 
-    # Calcola avg_speed per mese
-    months_sorted = sorted(by_month.keys(), reverse=True)[:12]  # ultimi 12 mesi
-    months_sorted.sort()  # ora in ordine cronologico
+    # Calculate avg_speed per month
+    months_sorted = sorted(by_month.keys(), reverse=True)[:12]  # last 12 months
+    months_sorted.sort()  # now in chronological order
 
     section_label(body, t("section_monthly"))
     tbl = tk.Frame(body, bg=C["surface2"],
@@ -1605,7 +1605,7 @@ def _render_monthly_stats(body, all_summaries):
             tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
                      width=w, anchor="center", pady=7).pack(side="left", padx=3)
 
-    # Grafico km per mese
+    # km per month chart
     if HAS_MPL and len(months_sorted) > 1:
         cf = tk.Frame(body, bg=C["bg"])
         cf.pack(fill="x", padx=20, pady=(0, 20))
@@ -1647,22 +1647,22 @@ def _render_monthly_stats(body, all_summaries):
         cnv.get_tk_widget().pack(fill="x")
 
 
-# ── Sezione carico di allenamento (ATL / CTL / TSB) ───────────────────────────
+# ── Training load section (ATL / CTL / TSB) ───────────────────────────────────
 
 def _trimp(s: dict) -> float:
-    """TRIMP semplificato per una sessione."""
+    """Simplified TRIMP for a session."""
     t_min = s.get("moving_time", 0) / 60.0
     hr    = s.get("avg_hr")
     if hr and hr > 0:
-        # Banister TRIMP con hrRest=60, hrMax=190
+        # Banister TRIMP with hrRest=60, hrMax=190
         hr_ratio = max(0.0, min(1.0, (hr - 60) / (190 - 60)))
         return t_min * hr_ratio * 0.64 * math.exp(1.92 * hr_ratio)
-    # Fallback senza FC: distanza in km come proxy
+    # Fallback without HR: distance in km as proxy
     return s.get("distance", 0) / 1000.0
 
 
 def _compute_training_load(summaries):
-    """Ritorna (dates, atl_list, ctl_list, tsb_list) per l'ultimo anno."""
+    """Returns (dates, atl_list, ctl_list, tsb_list) for the last year."""
     from collections import defaultdict
     daily = defaultdict(float)
     for s in summaries:
@@ -1679,7 +1679,7 @@ def _compute_training_load(summaries):
     k_atl = math.exp(-1 / 7)
     k_ctl = math.exp(-1 / 42)
 
-    # Inizializza ATL/CTL sullo storico precedente (tutto il database)
+    # Initialize ATL/CTL on prior history (entire database)
     all_dates = sorted(daily.keys())
     atl = ctl = 0.0
     if all_dates and all_dates[0] < d_start.isoformat():
@@ -1712,7 +1712,7 @@ def _render_training_load(body, all_summaries):
 
     section_label(body, t("section_training_load"))
 
-    # Legenda testuale + bottone info
+    # Text legend + info button
     leg_f = tk.Frame(body, bg=C["bg"])
     leg_f.pack(fill="x", padx=20, pady=(0, 4))
     for txt, col in [
@@ -1754,127 +1754,7 @@ def _render_training_load(body, all_summaries):
     cnv.draw()
     cnv.get_tk_widget().pack(fill="x")
 
-
-# ── Testo informativo — VDOT ──────────────────────────────────────────────────
-
-_INFO_VDOT = """
-## VDOT — Indice di Forma di Jack Daniels
-
-Il VDOT è un numero che riassume la tua capacità aerobica ricavato
-direttamente dai tuoi risultati di gara reali, senza test in laboratorio.
-
-─────────────────────────────────────────────
-COME VIENE CALCOLATO
-─────────────────────────────────────────────
-La formula di Daniels stima la percentuale del VO₂max che un corridore
-riesce a sostenere in gara in funzione della durata della prestazione:
-
-  • Velocità di gara → consumo di O₂ stimato (VO₂)
-  • Durata della gara → % del VO₂max sostenibile (%VO₂max)
-  • VDOT = VO₂ / %VO₂max
-
-Un VDOT più alto indica una forma fisica migliore.
-Valori di riferimento orientativi:
-  < 35  →  principiante
-  35–45 →  runner amatoriale
-  45–55 →  runner evoluto
-  55–65 →  agonista avanzato
-  > 65  →  élite
-
-─────────────────────────────────────────────
-GRAFICO EVOLUZIONE VDOT
-─────────────────────────────────────────────
-Mostra come il tuo VDOT è cambiato nel tempo gara dopo gara.
-La linea tratteggiata verde segna il tuo VDOT migliore storico.
-Un trend crescente indica miglioramento della forma fisica.
-
-─────────────────────────────────────────────
-TABELLA PREVISIONI
-─────────────────────────────────────────────
-Partendo dal tuo VDOT più recente (ultima gara registrata), la formula
-inversa calcola il tempo che potresti correre su distanze standard
-(1K, 5K, 10K, mezza, maratona) in condizioni ottimali.
-
-Attenzione: le previsioni assumono allenamento specifico per quella
-distanza. Una maratona richiede un lavoro di fondo che un test sui 5K
-non garantisce automaticamente.
-
-─────────────────────────────────────────────
-FONTE
-─────────────────────────────────────────────
-Jack Daniels, "Daniels' Running Formula" (Human Kinetics).
-Solo le attività classificate come "Gara" su Strava
-(workout_type = 1) vengono incluse nell'analisi.
-"""
-
-
-# ── Testo informativo — Carico di allenamento ─────────────────────────────────
-
-_INFO_TRAINING_LOAD = """
-## IL MODELLO PMC — Performance Management Chart
-
-Questo grafico usa il modello di Banister (1991), adottato da TrainingPeaks, Garmin, WKO e dai coach professionisti di tutto il mondo. Si basa sul calcolo del TRIMP (TRaining IMPulse) di ogni sessione, una misura che combina durata e intensità cardiaca.
-
-# COME VIENE CALCOLATO IL TRIMP
-
-Per ogni corsa:  TRIMP = durata (min) × (FC_media − FC_riposo) / (FC_max − FC_riposo) × fattore
-
-Il fattore esponenziale (Banister) amplifica le sessioni ad alta FC: correre 30 minuti a frequenza cardiaca elevata vale più del doppio rispetto a correre 30 minuti a FC bassa. Quando la FC non è disponibile, viene usata la distanza in km come stima approssimativa.
-
----
-
-# LE TRE LINEE DEL GRAFICO
-
-# CTL — FITNESS (linea blu continua)
-
-Chronic Training Load: media ponderata esponenziale degli ultimi 42 giorni. Rappresenta la tua forma fisica di base, il livello di adattamento accumulato nel tempo con la costanza negli allenamenti.
-
-• Sale lentamente: servono settimane di lavoro regolare per alzarla.
-• Scende lentamente: non crolla subito con qualche giorno di riposo.
-• Un CTL alto significa che il tuo corpo è adattato a reggere grandi volumi.
-
-# ATL — FATICA (linea rossa tratteggiata)
-
-Acute Training Load: media ponderata esponenziale degli ultimi 7 giorni. Rappresenta la fatica accumulata di recente.
-
-• Reagisce rapidamente: sale dopo sessioni intense, scende in pochi giorni di riposo.
-• Dopo una settimana di allenamento intenso, ATL supera CTL: sei stanco ma stai costruendo.
-• Dopo un tapering, ATL scende sotto CTL: sei fresco e pronto.
-
-# TSB — FORMA (linea verde punteggiata)
-
-Training Stress Balance = CTL − ATL. È l'indicatore chiave della tua prontezza a gareggiare o a dare il meglio.
-
-• TSB positivo → sei riposato. Il corpo ha recuperato e puoi esprimere il potenziale accumulato.
-• TSB negativo → stai accumulando fatica. Normale durante un blocco di allenamento intenso.
-• TSB molto negativo (< −20) → rischio di sovrallenamento. Inserisci giorni di recupero.
-• TSB molto positivo (> +20) → sei "de-allenato": se rimani fermo troppo a lungo perdi forma.
-
----
-
-# COME USARLO IN PRATICA
-
-# Prima di una gara importante
-
-Pianifica un tapering di 10–14 giorni: riduci il volume del 30–40% mantenendo qualche stimolo di qualità. Vedrai ATL scendere e TSB salire progressivamente in territorio positivo.
-
-Il "sweet spot" per gareggiare è TSB tra +5 e +15: abbastanza riposato da esprimersi al meglio, abbastanza allenato da avere CTL alto.
-
-# Durante un blocco di carico
-
-È normale avere TSB molto negativo. L'obiettivo è spingere CTL verso l'alto. Poi, con un breve recupero, ATL scende e TSB torna positivo: questo è il momento in cui si "raccoglie" il miglioramento.
-
-# Per monitorare i progressi
-
-Un CTL crescente nel tempo = stai migliorando la tua capacità di sopportare il lavoro. Un CTL stagnante o in calo = stai correndo troppo poco, troppo lento, o stai recuperando male.
-
----
-
-NOTA DEL COACH: i valori assoluti di CTL, ATL e TSB dipendono dalla tua storia di allenamento e contano meno del trend. Non confrontare i tuoi numeri con quelli degli altri: confronta i tuoi numeri di oggi con quelli di 3, 6, 12 mesi fa. Se CTL è più alto della stessa settimana dell'anno scorso, stai progredendo.
-"""
-
-
-# ── Sezione analisi pendenza (Grade Analysis) ──────────────────────────────────
+# ── Grade Analysis section ────────────────────────────────────────────────────
 
 _GRADE_BINS = [
     ("< −8%",    -1e9, -8,  "#4477cc"),
@@ -1998,65 +1878,7 @@ def _redraw_grade(chart_f, storage_mgr, races_only: bool, days_back: int = 0):
     cnv.draw()
     cnv.get_tk_widget().pack(fill="x")
 
-
-_INFO_GRADE = """
-## ANALISI PENDENZA — PACE vs GRADIENTE
-
-Questo grafico mostra il tuo passo mediano (min/km) suddiviso per fasce di pendenza, calcolato automaticamente dai tuoi split di 1 km. È uno strumento potente per capire come reagisce il tuo corpo alle variazioni di quota, e viene anche usato internamente dal grafico "Previsione Prestazioni" per stimare la tua correzione personale di dislivello.
-
----
-
-# FILTRI DISPONIBILI
-
-# Ultimi giorni
-Limita l'analisi ai split delle attività degli ultimi N giorni. Usa un valore basso (90–180) per vedere la tua risposta attuale alla pendenza, utile se hai cambiato tipo di allenamento o terreno di recente. Usa 0 per includere tutto lo storico e avere più dati nelle fasce estreme (salita ripida, discesa ripida), che tendono ad avere meno split.
-
-# Solo gare
-Mostra solo i split provenienti da attività classificate come gara. Utile per vedere come gestisci le pendenze sotto pressione agonistica, spesso diverso dall'allenamento.
-
----
-
-# COME SI CALCOLA
-
-Per ogni split di 1 km, Strava registra la differenza di quota (elevation_difference) e la velocità media. La pendenza percentuale è: (Δquota / distanza) × 100. I valori sono raggruppati in 6 fasce e per ogni fascia viene mostrato il passo mediano (non la media, che è più sensibile agli outlier). Il conteggio (n=) indica quanti split cadono in quella fascia.
-
----
-
-# COME LEGGERE LE BARRE
-
-# Discesa ripida (< −8%) — blu scuro
-Terreno tecnico o molto inclinato in discesa. Il passo accelera, ma le gambe assorbono impatti forti. Attenzione: spingere troppo qui aumenta il rischio di infortuni al quadricipite e alle ginocchia.
-
-# Discesa media (−8 a −3%) — blu chiaro
-Zona "confortevole" di discesa. Qui la maggior parte dei runner recupera energia. Se il tuo passo in questa fascia è sorprendentemente lento, potresti avere problemi di tecnica in discesa o scarsa forza eccentrica.
-
-# Leggera discesa / piano (−3 a 0%) — verde
-Il tuo terreno ideale. Il passo qui rappresenta il tuo "passo da gara su asfalto". Confronta questa barra con il tuo passo obiettivo nelle gare pianeggianti.
-
-# Piano / leggera salita (0 a 3%) — giallo
-La fascia più comune nelle corse su strada. Un degrado di passo eccessivo rispetto alla fascia precedente indica carenza di forza muscolare o capacità aerobica.
-
-# Salita media (3 a 8%) — arancione
-Richiede sforzo aerobico significativo. I runner da montagna tendono ad avere questa barra più "bassa" (passo migliore) rispetto ai runner da pianura. Un allenamento mirato di hill repeats migliora questa fascia.
-
-# Salita ripida (> 8%) — rosso
-Terreno di trail o cronoscalate. A queste pendenze molti runner camminano: è fisiologicamente più efficiente! Se corri sempre su questo terreno, considera workout di powerhiking e forza.
-
----
-
-# COME USARLO IN PRATICA
-
-• Confronta la barra "piano" con la barra "salita 3–8%": il differenziale di passo ti dice quanto perdi per ogni % di pendenza. Questo valore viene usato automaticamente dalla Previsione Prestazioni quando inserisci un dislivello.
-
-• Se la barra "discesa media" è più lenta della barra "piano": stai frenando in discesa — lavora su tecnica e fiducia, c'è tempo da recuperare senza sforzo aggiuntivo.
-
-• Usa questo grafico prima di una gara con dislivello: se il tuo passo in salita è molto lento, considera allenamenti specifici di hill run nelle 8–12 settimane precedenti.
-
-NOTA DEL COACH: i dati di questo grafico alimentano direttamente la correzione dislivello della Previsione Prestazioni. Più split hai (specialmente su pendenze variabili), più accurata sarà la stima personalizzata.
-"""
-
-
-# ── Sezione curva di performance ───────────────────────────────────────────────
+# ── Performance curve section ─────────────────────────────────────────────────
 
 def _render_performance_curve(body, storage_mgr):
     section_label(body, t("section_perf_curve"))
@@ -2120,7 +1942,7 @@ def _redraw_perf_curve(chart_f, storage_mgr, races_only: bool, days_back: int = 
                  font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
         return
 
-    # Migliore tempo per ogni canonical distance
+    # Best time for each canonical distance
     best: dict[str, float] = {}
     for e in efforts:
         c = e["canonical"]
@@ -2148,7 +1970,7 @@ def _redraw_perf_curve(chart_f, storage_mgr, races_only: bool, days_back: int = 
     b, a  = np.polyfit(log_x, log_y, 1)   # slope, intercept
     A     = np.exp(a)
 
-    # Curva continua
+    # Continuous curve
     x_fit  = np.logspace(np.log10(xs.min() * 0.9), np.log10(xs.max() * 1.1), 200)
     y_fit  = A * x_fit ** b
 
@@ -2160,7 +1982,7 @@ def _redraw_perf_curve(chart_f, storage_mgr, races_only: bool, days_back: int = 
               linestyle="--", label=f"fit: t = {A:.1f}·d^{b:.2f}")
     ax.scatter(xs, ys, color=C["blue"], s=60, zorder=5, label="Best effort effettivo")
 
-    # Etichette punti
+    # Point labels
     dist_labels = {v: k for k, v in _EFFORT_DISTANCES.items()}
     nice = {"400m": "400m", "half_mile": "½ mile", "1k": "1K",
             "1_mile": "1 mi", "2_mile": "2 mi", "5k": "5K",
@@ -2190,7 +2012,7 @@ def _redraw_perf_curve(chart_f, storage_mgr, races_only: bool, days_back: int = 
     ax.legend(fontsize=7, facecolor=C["surface2"], edgecolor=C["border"],
               labelcolor=C["text"])
 
-    # Mostra esponente b sotto il titolo
+    # Show exponent b below the title
     txt = (f"Esponente b = {b:.3f}  "
            f"({'resistenza ↑' if b > 1.06 else 'velocità ↑' if b < 1.03 else 'bilanciato'})")
     ax.text(0.5, 0.97, txt, ha="center", va="top",
@@ -2202,78 +2024,7 @@ def _redraw_perf_curve(chart_f, storage_mgr, races_only: bool, days_back: int = 
     cnv.draw()
     cnv.get_tk_widget().pack(fill="x")
 
-
-_INFO_PERF_CURVE = """
-## CURVA DI PERFORMANCE — LEGGE POTENZA
-
-Questo grafico mostra i tuoi migliori tempi su distanze standard (da 400m alla maratona) in un piano log-log, dove viene fittata una curva della forma t = A × d^b (legge di potenza). È ispirato al modello di Peter Riegel (1977) e alimenta direttamente il grafico "Previsione Prestazioni".
-
----
-
-# FILTRI DISPONIBILI
-
-# Ultimi giorni
-Limita il fit ai best effort delle attività degli ultimi N giorni. Usa un valore basso (90–180) per rispecchiare la forma attuale; usa 0 per includere tutto lo storico e avere più punti nel fit. Se il filtro lascia meno di 2 distanze disponibili, il grafico non viene mostrato: allarga la finestra temporale.
-
-# Solo gare
-Considera solo i best effort registrati durante attività classificate come gara. Produce un fit più rappresentativo dello sforzo massimale, ma richiede che le gare siano state correttamente etichettate come tali su Strava.
-
-NOTA: i best effort vengono misurati in base al tempo di movimento (moving_time), escludendo le pause — questo li rende più comparabili tra attività diverse.
-
----
-
-# IL MODELLO MATEMATICO
-
-Riegel scoprì che il tempo di performance su diverse distanze segue la legge: T = A × D^b
-
-• T = tempo in secondi
-• D = distanza in metri
-• A = costante individuale (dipende dalla tua velocità di base)
-• b = esponente di fatica (tipicamente tra 1.03 e 1.15)
-
-In scala logaritmica diventa una retta: log(T) = log(A) + b × log(D). Il fit viene calcolato su tutti i punti disponibili con regressione ai minimi quadrati in spazio log-log.
-
----
-
-# L'ESPONENTE b — IL TUO PROFILO ATLETICO
-
-L'esponente b è la chiave interpretativa. Riegel trovò b ≈ 1.06 per i runner élite.
-
-# b < 1.03 — Profilo velocista
-Più forte sulle distanze brevi. Buona capacità anaerobica e lattacida. Eccelle nei 5K.
-
-# b ≈ 1.03–1.06 — Profilo bilanciato
-Profilo completo, simile ai corridori élite. Competitivo su un ampio spettro di distanze.
-
-# b > 1.06 — Profilo resistente (fondista)
-Più forte sulle lunghe distanze. Ottima efficienza aerobica. Eccelle sulla maratona.
-
----
-
-# COME USARLO IN PRATICA
-
-# Scelta della gara obiettivo
-Se i tuoi punti reali stanno sopra la curva su una distanza, quella non è il tuo punto di forza. Se stanno sotto, sei relativamente più forte lì.
-
-# Predire tempi su distanze non ancora corse
-La curva fittata stima il tempo atteso su qualsiasi distanza. Usa il grafico "Previsione Prestazioni" per il calcolo interattivo con incertezza.
-
-# Monitorare i progressi
-Ricontrolla ogni 2–3 mesi. Se A diminuisce (curva si abbassa) stai migliorando. Se b si avvicina a 1.06 stai diventando più completo.
-
----
-
-# LIMITAZIONI
-
-• Funziona meglio con best effort su almeno 3–4 distanze diverse.
-• Il modello assume condizioni simili tra le distanze (pianura, buona condizione fisica). Gare con molto dislivello o sforzi subottimali distorcono il fit.
-• Non considera lo stato di forma attuale: usa il grafico CTL/ATL per quello.
-
-NOTA DEL COACH: confronta il fit con quello di 6 mesi fa. Se b è sceso avvicinandosi a 1.06 hai migliorato la versatilità. Se A è sceso mantenendo b costante, sei più veloce su tutte le distanze — il miglior scenario possibile.
-"""
-
-
-# ── Sezione previsione prestazioni ────────────────────────────────────────────
+# ── Race prediction section ───────────────────────────────────────────────────
 
 _PREDICT_DISTS = {
     "1 km":           1000.0,
@@ -2293,14 +2044,14 @@ def _render_race_prediction(body, storage_mgr):
     info_btn(ctrl_f, t("info_race_pred_title"),
              _INFO_RACE_PRED).pack(side="right", padx=4)
 
-    # Pannello parametri (2 righe)
+    # Parameters panel (2 rows)
     param_f = tk.Frame(body, bg=C["surface2"],
                        highlightthickness=1, highlightbackground=C["border"])
     param_f.pack(fill="x", padx=20, pady=(0, 6))
     pf = tk.Frame(param_f, bg=C["surface2"])
     pf.pack(fill="x", padx=16, pady=10)
 
-    # ── Riga 1: Distanza + km personalizzati (condizionale) + Dislivello ──────
+    # ── Row 1: Distance + custom km (conditional) + Elevation ────────────────
     r1 = tk.Frame(pf, bg=C["surface2"])
     r1.pack(fill="x", pady=(0, 6))
 
@@ -2313,7 +2064,7 @@ def _render_race_prediction(body, storage_mgr):
     dist_combo["menu"].config(font=("Courier", 9), bg=C["surface"], fg=C["text"])
     dist_combo.pack(side="left", padx=(4, 16))
 
-    # Distanza personalizzata — visibile solo con "Personalizzata"
+    # Custom distance — visible only with "Personalizzata"
     custom_lbl = tk.Label(r1, text="km personalizzati:", font=("Courier", 9),
                           fg=C["text_dim"], bg=C["surface2"])
     custom_var = tk.StringVar(value="15")
@@ -2331,7 +2082,7 @@ def _render_race_prediction(body, storage_mgr):
             custom_entry.pack_forget()
 
     dist_var.trace_add("write", _on_dist_change)
-    _on_dist_change()  # stato iniziale
+    _on_dist_change()  # initial state
 
     tk.Label(r1, text="Dislivello +  (m):", font=("Courier", 9),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
@@ -2342,7 +2093,7 @@ def _render_race_prediction(body, storage_mgr):
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 16))
 
-    # ── Riga 2: Filtri temporali / lunghezza + Solo gare + CALCOLA ───────────
+    # ── Row 2: Time/length filters + Races only + CALCULATE ──────────────────
     r2 = tk.Frame(pf, bg=C["surface2"])
     r2.pack(fill="x")
 
@@ -2382,14 +2133,14 @@ def _render_race_prediction(body, storage_mgr):
                    selectcolor=C["surface"], activebackground=C["surface2"]
                    ).pack(side="left", padx=8)
 
-    # Bottone calcola
+    # Calculate button
     chart_f = tk.Frame(body, bg=C["bg"])
     chart_f.pack(fill="x", padx=20, pady=(0, 20))
 
     def _calc():
         d_key = dist_var.get()
         dist_m = _PREDICT_DISTS[d_key]
-        if dist_m < 0:   # personalizzata
+        if dist_m < 0:   # custom
             try:
                 dist_m = float(custom_var.get().replace(",", ".")) * 1000.0
             except Exception:
@@ -2422,9 +2173,9 @@ def _render_race_prediction(body, storage_mgr):
 def _personal_grade_correction(storage_mgr, races_only: bool,
                                avg_grade: float) -> tuple[float, str]:
     """
-    Stima la correzione personale del runner in sec/km per 1% di pendenza media,
-    usando regressione lineare sui grade splits reali.
-    Ritorna (sec_per_km_correction_totale, label_fonte).
+    Estimates the personal gradient correction in sec/km per 1% of average grade,
+    using linear regression on real grade splits.
+    Returns (total_sec_per_km_correction, source_label).
     """
     if avg_grade <= 0:
         return 0.0, ""
@@ -2432,7 +2183,7 @@ def _personal_grade_correction(storage_mgr, races_only: bool,
     try:
         import numpy as np
         splits = storage_mgr.get_grade_splits(races_only=races_only)
-        # Filtra split con pendenza e velocità plausibili (esclude outlier e camminata)
+        # Filter splits with plausible gradient and speed (excludes outliers and walking)
         pts = [
             (s["grade_pct"], 1000.0 / s["pace_ms"])   # (grade%, sec/km)
             for s in splits
@@ -2443,13 +2194,13 @@ def _personal_grade_correction(storage_mgr, races_only: bool,
             grades = np.array([p[0] for p in pts])
             paces  = np.array([p[1] for p in pts])
             slope, _ = np.polyfit(grades, paces, 1)
-            # slope = sec/km per 1% di grade; cap in range ragionevole
+            # slope = sec/km per 1% of grade; cap in reasonable range
             slope = float(np.clip(slope, 2.0, 15.0))
             return slope * avg_grade, f"regressione personale {slope:.1f}s/km per 1%"
     except Exception:
         pass
 
-    # Fallback al modello empirico di Minetti
+    # Fallback to Minetti empirical model
     return avg_grade * 6.0, "modello empirico 6s/km per 1%"
 
 
@@ -2471,12 +2222,12 @@ def _redraw_race_pred(chart_f, storage_mgr,
     from datetime import date, timedelta
     efforts = storage_mgr.get_all_best_efforts(races_only=races_only)
 
-    # Filtra per finestra temporale
+    # Filter by time window
     if days_back > 0:
         cutoff = (date.today() - timedelta(days=days_back)).isoformat()
         efforts = [e for e in efforts if (e.get("date") or "") >= cutoff]
 
-    # Filtra per lunghezza dell'attività
+    # Filter by activity length
     if km_min > 0:
         efforts = [e for e in efforts if e.get("activity_dist_km", 0) >= km_min]
     if km_max > 0:
@@ -2509,24 +2260,24 @@ def _redraw_race_pred(chart_f, storage_mgr,
     b, a  = np.polyfit(log_x, log_y, 1)
     A     = np.exp(a)
 
-    # Residui → deviazione standard per il Monte Carlo
+    # Residuals → standard deviation for Monte Carlo
     y_pred_log = a + b * log_x
     residuals  = log_y - y_pred_log
     sigma_log  = float(np.std(residuals)) if len(residuals) > 2 else 0.04
 
-    # Tempo base alla distanza target
+    # Base time at target distance
     t_base = A * (dist_m ** b)
     dist_km = dist_m / 1000.0
 
-    # Correzione gradiente personalizzata: regressione lineare sui grade splits del runner
-    # avg_grade in % = (dislivello_m / distanza_m) × 100
+    # Custom gradient correction: linear regression on runner's grade splits
+    # avg_grade in % = (elevation_m / distance_m) × 100
     avg_grade = (elev_gain / dist_m * 100.0) if dist_m > 0 else 0.0
     sec_per_km_correction, grade_correction_source = _personal_grade_correction(
         storage_mgr, races_only, avg_grade
     )
     t_adjusted = t_base + sec_per_km_correction * dist_km
 
-    # Monte Carlo: 5000 campioni
+    # Monte Carlo: 5000 samples
     np.random.seed(42)
     noise     = np.random.normal(0, sigma_log, 5000)
     samples   = t_adjusted * np.exp(noise)
@@ -2578,7 +2329,7 @@ def _redraw_race_pred(chart_f, storage_mgr,
     cnv.draw()
     cnv.get_tk_widget().pack(fill="x")
 
-    # Riepilogo testuale
+    # Text summary
     summary_f = tk.Frame(chart_f, bg=C["surface2"],
                          highlightthickness=1, highlightbackground=C["border"])
     summary_f.pack(fill="x", pady=(6, 0))
@@ -2603,7 +2354,7 @@ def _redraw_race_pred(chart_f, storage_mgr,
                  font=("Courier", 7), fg=C["text_dim"],
                  bg=C["surface2"]).pack(anchor="w")
 
-    # Pannello diagnostico: dati usati nel fit
+    # Diagnostic panel: data used in the fit
     tk.Frame(sf, bg=C["border"], height=1).pack(fill="x", pady=(8, 4))
     tk.Label(sf, text=f"  Fit: t = {A:.2f} · d^{b:.3f}   (Riegel teorico: b=1.060)   "
                       f"base {_fmt(t_base)} su {dist_km:.1f} km",

@@ -15,10 +15,10 @@ except ImportError:
 
 def export_pdf(activity, path: str):
     if not HAS_MPL:
-        raise RuntimeError("matplotlib non disponibile.")
+        raise RuntimeError("matplotlib not available.")
     a = activity
     with PdfPages(path) as pdf:
-        # Pagina 1 — Riepilogo testuale
+        # Page 1 — Text summary
         fig1 = plt.Figure(figsize=(11.69, 8.27), facecolor=C["bg"])
         ax   = fig1.add_axes([0, 0, 1, 1])
         ax.set_facecolor(C["bg"])
@@ -89,7 +89,7 @@ def export_pdf(activity, path: str):
         pdf.savefig(fig1, bbox_inches="tight", facecolor=C["bg"])
         plt.close(fig1)
 
-        # Pagina 2 — Grafici
+        # Page 2 — Graphs
         if a.splits:
             from ui.tab_charts import _build_export_fig
             fig2 = _build_export_fig(a)

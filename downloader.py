@@ -1,6 +1,6 @@
 # ── downloader.py ─────────────────────────────────────────────────────────────
 """
-Autenticazione OAuth2 Strava e download attività di corsa.
+Strava OAuth2 authentication and running activity download.
 """
 
 import os, json, time, webbrowser, urllib.parse, threading
@@ -44,7 +44,7 @@ class _OAuthHandler(BaseHTTPRequestHandler):
 
 
 def _get_auth_code(client_id: str, progress_cb=None) -> str:
-    """Avvia il server OAuth in un thread separato e apre il browser."""
+    """Starts the OAuth server in a separate thread and opens the browser."""
     global _auth_code, _auth_event
     _auth_code  = None
     _auth_event = threading.Event()
@@ -58,7 +58,7 @@ def _get_auth_code(client_id: str, progress_cb=None) -> str:
     }
     url = STRAVA_AUTH_URL + "?" + urllib.parse.urlencode(params)
 
-    # Server HTTP in thread daemon — non blocca la UI
+    # HTTP server in daemon thread — does not block the UI
     server = HTTPServer(("localhost", 8765), _OAuthHandler)
     server.timeout = 1
 
@@ -75,7 +75,7 @@ def _get_auth_code(client_id: str, progress_cb=None) -> str:
         progress_cb("   Accedi e autorizza l'app, poi torna qui.")
     webbrowser.open(url)
 
-    # Attendi il callback (max 3 minuti)
+    # Wait for callback (max 3 minutes)
     _auth_event.wait(timeout=180)
 
     if not _auth_code:
@@ -100,7 +100,7 @@ def get_access_token(client_id: str, client_secret: str, progress_cb=None) -> st
 
     token = load_token()
 
-    # Token valido
+    # Valid token
     if token and token.get("expires_at", 0) > time.time() + 60:
         if progress_cb:
             progress_cb("✅ Token esistente ancora valido, nessun login necessario.")
@@ -123,7 +123,7 @@ def get_access_token(client_id: str, client_secret: str, progress_cb=None) -> st
             progress_cb("✅ Token rinnovato.")
         return token["access_token"]
 
-    # Primo accesso — OAuth via browser
+    # First login — OAuth via browser
     code = _get_auth_code(client_id, progress_cb)
     if progress_cb:
         progress_cb("🔑 Scambio codice OAuth con token di accesso…")
@@ -142,10 +142,10 @@ def get_access_token(client_id: str, client_secret: str, progress_cb=None) -> st
     return token["access_token"]
 
 
-# ── Download attività ──────────────────────────────────────────────────────────
+# ── Download activities ────────────────────────────────────────────────────────
 
 def fetch_activity_list(access_token: str, progress_cb=None) -> list[dict]:
-    """Scarica l'elenco di tutte le attività di corsa (summary)."""
+    """Downloads the list of all running activities (summary)."""
     headers  = {"Authorization": f"Bearer {access_token}"}
     all_runs = []
     page     = 1

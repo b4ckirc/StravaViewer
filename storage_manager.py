@@ -1,8 +1,8 @@
 # ── storage_manager.py ────────────────────────────────────────────────────────
 """
-StorageManager: facade unificata su JSONStorage + MongoStorage.
-Espone list_all(), load_activity(), delete(), exists() indipendentemente
-da quale/quali backend sono attivi.
+StorageManager: unified facade over JSONStorage + MongoStorage.
+Exposes list_all(), load_activity(), delete(), exists() regardless
+of which backend(s) are active.
 """
 
 import os
@@ -27,9 +27,9 @@ class StorageManager:
 
     def connect_mongo(self, auto_start: bool = False) -> tuple[bool, str]:
         """
-        Tenta di connettersi a MongoDB.
-        Se auto_start=True e fallisce, avvia il container Docker e riprova.
-        Ritorna (success, message).
+        Attempts to connect to MongoDB.
+        If auto_start=True and it fails, starts the Docker container and retries.
+        Returns (success, message).
         """
         try:
             self.mongo_storage = MongoStorage(MONGO_HOST, MONGO_PORT)
@@ -41,13 +41,13 @@ class StorageManager:
                 self.mongo_ok = False
                 return False, str(first_err)
 
-        # Avvia il container Docker
+        # Start the Docker container
         ok, msg = start_mongo_container(DOCKER_COMPOSE)
         if not ok:
             self.mongo_ok = False
             return False, f"Impossibile avviare MongoDB: {msg}"
 
-        # Attendi e riprova (max 15s)
+        # Wait and retry (max 15s)
         import time
         for _ in range(5):
             time.sleep(3)
@@ -74,13 +74,13 @@ class StorageManager:
 
     def list_all(self, filters: dict = None) -> list[dict]:
         """
-        Lista sommari da tutti i backend attivi, deduplicata per strava_id.
-        I record MongoDB hanno priorità su quelli JSON in caso di duplicati.
+        List summaries from all active backends, deduplicated by strava_id.
+        MongoDB records take priority over JSON ones in case of duplicates.
         """
         seen_ids = set()
         results  = []
 
-        # MongoDB prima (più completo)
+        # MongoDB first (more complete)
         if self.mongo_ok and self.mongo_storage:
             try:
                 for s in self.mongo_storage.list_all(filters):
@@ -91,19 +91,19 @@ class StorageManager:
             except Exception:
                 pass
 
-        # JSON (solo se non già presenti in Mongo)
+        # JSON (only if not already present in Mongo)
         for s in self.json_storage.list_all(filters):
             sid = s.get("strava_id")
             if sid and sid in seen_ids:
                 continue
             results.append(s)
 
-        # Ordina per data decrescente
+        # Sort by descending date
         results.sort(key=lambda x: x.get("start_date", ""), reverse=True)
         return results
 
     def load_activity(self, summary: dict) -> ActivityData | None:
-        """Carica l'attività completa dal backend corretto."""
+        """Loads the complete activity from the correct backend."""
         try:
             if summary["source"] == "mongo" and self.mongo_ok:
                 data = self.mongo_storage.load(summary["ref"])
@@ -122,7 +122,7 @@ class StorageManager:
             self.json_storage.delete(summary["ref"])
 
     def exists(self, strava_id) -> bool:
-        """Controlla se l'attività esiste in almeno un backend."""
+        """Checks if the activity exists in at least one backend."""
         if self.json_storage.exists(strava_id):
             return True
         if self.mongo_ok and self.mongo_storage:
@@ -130,7 +130,7 @@ class StorageManager:
         return False
 
     def global_stats(self) -> dict | None:
-        """Statistiche aggregate (solo se MongoDB disponibile)."""
+        """Aggregate statistics (only if MongoDB is available)."""
         if self.mongo_ok and self.mongo_storage:
             return self.mongo_storage.global_stats()
         return None
@@ -141,7 +141,7 @@ class StorageManager:
         return []
 
     def get_personal_records(self) -> dict:
-        """Miglior tempo per le principali distanze su tutto il database."""
+        """Best time for the main distances across the entire database."""
         if self.mongo_ok and self.mongo_storage:
             try:
                 return self.mongo_storage.get_best_efforts_records()
@@ -179,7 +179,7 @@ class StorageManager:
     _GEOCODE_COLL = "geocode_cache"
 
     def get_geocode(self, lat: float, lon: float) -> str | None:
-        """Ritorna la città geocodificata per le coordinate, o None se non in cache."""
+        """Returns the geocoded city for the coordinates, or None if not in cache."""
         key = f"{lat:.3f},{lon:.3f}"
         if self.mongo_ok and self.mongo_storage:
             try:
@@ -225,12 +225,12 @@ class StorageManager:
     def get_route_groups(self, min_runs: int = 3) -> list[list[dict]]:
         """
         Raggruppa le attività per percorso ricorrente.
-        Criterio: stessa zona di partenza (~300 m) + distanza simile (±1 km).
-        Ritorna lista di gruppi ordinata per numero di corse (decrescente).
+        Criterion: same starting zone (~300 m) + similar distance (±1 km).
+        Returns list of groups sorted by number of runs (descending).
         """
         from collections import defaultdict
         _RUN_TYPES = {"Run", "Trail Run", "VirtualRun", "Hike", "Walk"}
-        GRID = 0.003          # ~300 m per grado
+        GRID = 0.003          # ~300 m per degree
         summaries = self.list_all()
         groups: dict = defaultdict(list)
         for s in summaries:
@@ -255,8 +255,8 @@ class StorageManager:
 
     def get_group_polylines(self, group: list) -> list:
         """
-        Ritorna [(name, date_str, [(lat,lon),...])] per le attività del gruppo.
-        Su MongoDB usa una singola query $in; su JSON carica i file uno per uno.
+        Returns [(name, date_str, [(lat,lon),...])] for the activities in the group.
+        On MongoDB uses a single $in query; on JSON loads the files one by one.
         """
         from models import decode_polyline
         result = []

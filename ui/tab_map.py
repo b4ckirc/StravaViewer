@@ -1,13 +1,13 @@
 # ── ui/tab_map.py ─────────────────────────────────────────────────────────────
 """
-Tab mappa: genera HTML folium interattivo e lo apre nel browser.
-Funzionalità:
-  A – Layer switcher: Dark / OpenStreetMap / Satellite (Esri) / Chiaro
-  B – Tracciato colorato per passo al km (verde=veloce → rosso=lento)
-  C – Marker chilometrici cliccabili con popup (passo, FC, dislivello)
-  D – Pulsante FullScreen
-  E – MiniMap nell'angolo
-  F – Popup ricco su Start/End + overlay statistiche in cima alla mappa
+Tab map: generates interactive Folium HTML and opens it in the browser.
+Features:
+A – Layer switcher: Dark / OpenStreetMap / Satellite (Esri) / Light
+B – Track colored by pace per km (green=fast → red=slow)
+C – Clickable kilometer markers with popup (pace, HR, elevation)
+D – FullScreen button
+E – MiniMap in the corner
+F – Rich Start/End popup + overlay statistics at top of map
 """
 
 import colorsys
@@ -32,7 +32,7 @@ except ImportError:
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 def _val_to_color(t: float) -> str:
-    """t: 0.0 (veloce/ottimo) → 1.0 (lento/peggio) → colore verde→giallo→rosso."""
+    """t: 0.0 (fast/excellent) → 1.0 (slow/poor) → green→yellow→red."""
     hue = (1.0 - max(0.0, min(1.0, t))) * 0.333
     r, g, b = colorsys.hls_to_rgb(hue, 0.45, 1.0)
     return f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}"
@@ -40,9 +40,9 @@ def _val_to_color(t: float) -> str:
 
 def _distribute_pts(pts: list, splits: list) -> list[list]:
     """
-    Distribuisce i punti GPS tra gli split proporzionalmente alla distanza.
-    Ritorna lista di segmenti (ognuno è una lista di punti GPS).
-    I segmenti si sovrappongono di 1 punto per eliminare i gap visuali.
+    Distributes the GPS points among the splits proportionally to the distance.
+    Returns a list of segments (each is a list of GPS points).
+    The segments overlap by 1 point to eliminate visual gaps.
     """
     if not splits:
         return [pts]
@@ -59,12 +59,12 @@ def _distribute_pts(pts: list, splits: list) -> list[list]:
         seg = pts[prev_idx: end_idx + 1]
         if len(seg) >= 2:
             segments.append(seg)
-        prev_idx = end_idx  # overlap di 1 punto → nessun gap tra segmenti
+        prev_idx = end_idx  # overlap of 1 point → no gap between segments
     return segments if segments else [pts]
 
 
 def _gps_pos_at_dist(pts: list, target_m: float, total_dist: float):
-    """Ritorna il punto GPS alla distanza target_m lungo la route."""
+    """Returns the GPS coordinate at the target_m distance along the route."""
     if target_m >= total_dist or total_dist <= 0:
         return None
     idx = min(round(target_m / total_dist * len(pts)), len(pts) - 1)
@@ -118,7 +118,7 @@ def render(tab, activity):
             pts    = a.gps_points
             center = pts[len(pts) // 2]
 
-            # ── Mappa base (tiles=None → aggiungiamo i layer manualmente) ─────
+            # ── Base map (tiles=None → adding layers manually) ─────
             m = folium.Map(location=center, zoom_start=14, tiles=None)
 
             # ── A: Layer switcher ─────────────────────────────────────────────
@@ -141,7 +141,7 @@ def render(tab, activity):
                 name=t("map_light_tile"), overlay=False, control=True
             ).add_to(m)
 
-            # ── B: Tracciato colorato per passo ───────────────────────────────
+            # ── B: Colored track by pace ──────────────────────────────────────
             splits = a.splits or []
             if splits:
                 paces = [speed_to_pace(s.get("average_speed", 0))
@@ -173,11 +173,11 @@ def render(tab, activity):
                         folium.PolyLine(seg, color=color, weight=5.5,
                                         opacity=0.95, tooltip=tooltip).add_to(m)
             else:
-                # Fallback: polyline singola colore Strava
+                # Fallback: polyline single color Strava
                 folium.PolyLine(pts, color="#fc4c02", weight=5.0,
                                 opacity=0.9, tooltip=a.name).add_to(m)
 
-            # ── C: Marker chilometrici ─────────────────────────────────────────
+            # ── C: Km Markers ─────────────────────────────────────────
             for i, split in enumerate(splits):
                 km_num   = i + 1
                 spd      = split.get("average_speed") or 0
@@ -217,7 +217,7 @@ def render(tab, activity):
                     )
                 ).add_to(m)
 
-            # ── F: Marker Start/End con popup ricco ───────────────────────────
+            # ── F: Marker Start/End ───────────────────────────
             start_rows = [
                 f"<b style='color:#2a9d5c;font-size:14px'>{t('map_start')}</b>",
                 f"📅 {a.date_str}",
@@ -257,7 +257,7 @@ def render(tab, activity):
             folium.Marker(pts[-1], popup=_popup(end_rows),   tooltip=t("map_finish"),
                           icon=folium.Icon(color="red",   icon="stop")).add_to(m)
 
-            # ── F: Overlay statistiche (barra in cima) ────────────────────────
+            # ── F: Statistics overlay (bar at top) ────────────────────────────
             hr_part  = f"&nbsp;|&nbsp; ❤️ {a.avg_hr:.0f} bpm" if a.avg_hr else ""
             cal_part = f"&nbsp;|&nbsp; 🔥 {a.calories} kcal" if a.calories else ""
             overlay_html = (
@@ -294,10 +294,10 @@ def render(tab, activity):
                 width=150, height=150,
             ).add_to(m)
 
-            # ── Layer control (dopo D/E per posizione corretta) ───────────────
+            # ── Layer control (after D/E for correct position) ────────────────
             folium.LayerControl(collapsed=False, position="topright").add_to(m)
 
-            # ── Salva e apri nel browser ──────────────────────────────────────
+            # ── Save and open in the browser ──────────────────────────────────────
             tmp = tempfile.NamedTemporaryFile(
                 suffix=".html", prefix="strava_map_", delete=False)
             map_path = tmp.name

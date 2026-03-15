@@ -25,7 +25,7 @@ import ui.tab_raw        as tab_raw
 from ui.downloader_ui    import open_download_window
 from ui.widgets          import topbar_btn, clear
 
-# Definizione tab: (attributo, icona, chiave_i18n, gruppo)
+# Tab definition: (attribute, icon, i18n_key, group)
 _TAB_DEFS = [
     ("tab_dash",     "⬡",  "tab_dashboard", "activity"),
     ("tab_chart",    "▤",  "tab_charts",    "activity"),
@@ -57,15 +57,15 @@ class StravaApp(tk.Tk):
         self.geometry("1500x940")
         self.minsize(1200, 720)
 
-        self.activity   = None        # attività principale analizzata
-        self.cmp_list   = []          # lista ActivityData per confronto (max 4 extra)
+        self.activity   = None        # main activity being analyzed
+        self.cmp_list   = []          # ActivityData list for compare (max 4 extra)
         self.storage    = StorageManager()
 
         self._build_ui()
         self._show_welcome()
         self._try_connect_mongo()
 
-    # ── Connessione MongoDB (background) ──────────────────────────────────────
+    # ── MongoDB connection (background) ──────────────────────────────────────
 
     def _try_connect_mongo(self):
         import threading
@@ -86,7 +86,7 @@ class StravaApp(tk.Tk):
     # ── Layout ────────────────────────────────────────────────────────────────
 
     def _build_ui(self):
-        self._tab_frames   = {}   # attr → tk.Frame (contenuto)
+        self._tab_frames   = {}   # attr → tk.Frame (content)
         self._tab_buttons  = {}   # attr → (container, strip, icon_lbl, text_lbl)
         self._active_tab   = None
 
@@ -99,7 +99,7 @@ class StravaApp(tk.Tk):
                  font=("Courier", 12, "bold"), fg=C["accent"],
                  bg=C["surface"]).pack(side="left", padx=20, pady=14)
 
-        # Status MongoDB (destra)
+        # Status MongoDB (right)
         self._mongo_status_var = tk.StringVar(value="MongoDB: …")
         self._mongo_status_lbl = tk.Label(
             topbar, textvariable=self._mongo_status_var,
@@ -108,7 +108,7 @@ class StravaApp(tk.Tk):
         self._mongo_status_lbl.pack(side="right", padx=16)
         self._mongo_status_lbl.bind("<Button-1>", lambda e: self._toggle_mongo())
 
-        # Separatore verticale
+        # Vertical separator
         tk.Frame(topbar, bg=C["border"], width=1).pack(
             side="right", fill="y", pady=12)
 
@@ -128,11 +128,11 @@ class StravaApp(tk.Tk):
         lang_menu.pack(side="left", padx=(4, 0))
         lang_menu.bind("<<ComboboxSelected>>", self._on_language_change)
 
-        # Separatore
+        # Separator
         tk.Frame(topbar, bg=C["border"], width=1).pack(
             side="right", fill="y", pady=12)
 
-        # Bottoni destra → sinistra
+        # Buttons right → left
         topbar_btn(topbar, t("btn_open_file"),
                    self._open_file,
                    tooltip=t("tooltip_open_file")
@@ -150,14 +150,14 @@ class StravaApp(tk.Tk):
                    tooltip=t("tooltip_database")
                    ).pack(side="right", padx=4, pady=10)
 
-        # Toggle tema
+        # Toggle theme
         theme_lbl = t("btn_theme_dark") if _cfg._current_theme[0] == "light" else t("btn_theme_light")
         topbar_btn(topbar, theme_lbl,
                    self._toggle_theme,
                    tooltip=t("tooltip_theme")
                    ).pack(side="right", padx=4, pady=10)
 
-        # ── Separatore topbar / body ──────────────────────────────────────────
+        # ── Separator topbar / body ──────────────────────────────────────────
         tk.Frame(self, bg=C["border"], height=1).pack(fill="x")
 
         # ── Body: sidebar + content ───────────────────────────────────────────
@@ -178,7 +178,7 @@ class StravaApp(tk.Tk):
         tk.Frame(sidebar, bg=C["border"], height=1).pack(
             fill="x", padx=16, pady=(10, 6))
 
-        # Gruppi tab
+        # Groups tab
         def _section(text):
             tk.Label(sidebar, text=text.upper(),
                      font=("Courier", 7, "bold"), fg=C["text_dim"],
@@ -197,29 +197,29 @@ class StravaApp(tk.Tk):
         for attr, icon, label_key, _ in global_tabs:
             self._make_nav_item(sidebar, attr, icon, t(label_key))
 
-        # Separatore sidebar / content
+        # Separator sidebar / content
         tk.Frame(body, bg=C["border"], width=1).pack(side="left", fill="y")
 
-        # ── Area contenuto ────────────────────────────────────────────────────
+        # ── Content area ────────────────────────────────────────────────────
         content = tk.Frame(body, bg=C["bg"])
         content.pack(side="left", fill="both", expand=True)
         self._content = content
 
-        # Crea tutti i frame dei tab nell'area contenuto
+        # Create all frames of tab in content area
         for attr, icon, label, _ in _TAB_DEFS:
             frame = tk.Frame(content, bg=C["bg"])
             setattr(self, attr, frame)
             self._tab_frames[attr] = frame
 
-        # Mostra il primo tab
+        # Show the first tab
         self._show_tab("tab_dash")
 
     def _make_nav_item(self, parent, attr, icon, label):
-        """Crea un elemento di navigazione nella sidebar e salva i riferimenti."""
+        """Create a navigation item in the sidebar and save the links."""
         container = tk.Frame(parent, bg=C["surface"], cursor="hand2")
         container.pack(fill="x", pady=1)
 
-        # Strip colorata sinistra (indicatore attivo)
+        # Left color strip (active indicator)
         strip = tk.Frame(container, bg=C["surface"], width=3)
         strip.pack(side="left", fill="y")
 
@@ -231,7 +231,7 @@ class StravaApp(tk.Tk):
                             bg=C["surface"], fg=C["text_dim"], anchor="w")
         text_lbl.pack(side="left", pady=8)
 
-        # Click e hover
+        # Click and hover
         def _click(e=None, a=attr):
             self._show_tab(a)
 
@@ -253,8 +253,8 @@ class StravaApp(tk.Tk):
         self._tab_buttons[attr] = (container, strip, icon_lbl, text_lbl)
 
     def _show_tab(self, attr):
-        """Mostra il frame del tab selezionato e aggiorna la sidebar."""
-        # Deseleziona tab precedente
+        """Display the frame of the selected tab and refresh the sidebar."""
+        # Deselect previous tab
         if self._active_tab and self._active_tab in self._tab_buttons:
             prev = self._active_tab
             container, strip, icon_lbl, text_lbl = self._tab_buttons[prev]
@@ -267,7 +267,7 @@ class StravaApp(tk.Tk):
 
         self._active_tab = attr
 
-        # Attiva nuovo tab nella sidebar
+        # Active new tab in the sidebar
         if attr in self._tab_buttons:
             container, strip, icon_lbl, text_lbl = self._tab_buttons[attr]
             container.config(bg=C["surface"])
@@ -275,11 +275,11 @@ class StravaApp(tk.Tk):
             icon_lbl.config(fg=C["accent"], bg=C["surface"])
             text_lbl.config(fg=C["accent"], bg=C["surface"])
 
-        # Mostra il frame
+        # Show the frame
         if attr in self._tab_frames:
             self._tab_frames[attr].pack(fill="both", expand=True)
 
-        # Render lazy per tab che ne hanno bisogno
+        # Render lazy for tabs that needs it
         self._on_tab_show(attr)
 
     def _on_tab_show(self, attr):
@@ -304,7 +304,7 @@ class StravaApp(tk.Tk):
         self._show_tab("tab_dash")
         self._render_library()
 
-    # ── Tema chiaro/scuro ─────────────────────────────────────────────────────
+    # ── Light/dark theme ─────────────────────────────────────────────────────
 
     def _toggle_theme(self):
         if _cfg._current_theme[0] == "dark":
@@ -332,7 +332,7 @@ class StravaApp(tk.Tk):
         else:
             self._show_welcome()
 
-    # ── Apertura file JSON singolo ────────────────────────────────────────────
+    # ── Open single JSON file ────────────────────────────────────────────
 
     def _open_file(self):
         path = filedialog.askopenfilename(
@@ -360,13 +360,13 @@ class StravaApp(tk.Tk):
         tab_raw.render(self.tab_raw,          act)
         self._show_tab("tab_dash")
 
-    # ── Downloader Strava ─────────────────────────────────────────────────────
+    # ── Strava Downloader ─────────────────────────────────────────────────────
 
     def _open_downloader(self):
         open_download_window(self, self.storage,
                              on_done_cb=self._render_library)
 
-    # ── Libreria ──────────────────────────────────────────────────────────────
+    # ── Library ──────────────────────────────────────────────────────────────
 
     def _render_library(self):
         tab_library.render(
@@ -385,7 +385,7 @@ class StravaApp(tk.Tk):
             return
         self._load_activity(act)
 
-    # ── Confronto ─────────────────────────────────────────────────────────────
+    # ── Compare ─────────────────────────────────────────────────────────────
 
     def _compare_add(self, act: ActivityData):
         if len(self.cmp_list) >= MAX_COMPARE - 1:
@@ -445,7 +445,7 @@ class StravaApp(tk.Tk):
                 pass
             messagebox.showinfo(t("msg_language_changed"), t("msg_language_restart"))
 
-    # ── Export attività corrente ───────────────────────────────────────────────
+    # ── Export current activity ────────────────────────────────────────────────
 
     def _export_menu(self):
         win = tk.Toplevel(self)
@@ -653,7 +653,7 @@ class StravaApp(tk.Tk):
         except Exception as e:
             messagebox.showerror(t("msg_gpx_error"), str(e))
 
-    # ── Export statistiche CSV ────────────────────────────────────────────────
+    # ── Export CSV statistics ────────────────────────────────────────────────
 
     def _export_stats_csv(self):
         import csv
@@ -708,10 +708,10 @@ class StravaApp(tk.Tk):
         threading.Thread(target=_worker, daemon=True).start()
 
 
-# ── Helpers modulo ────────────────────────────────────────────────────────────
+# ── Helpers module ────────────────────────────────────────────────────────────
 
 def _write_gpx(act, path: str):
-    """Genera un file GPX dal tracciato GPS dell'attività."""
+    """Generates a GPX file from the activity's GPS track."""
     import xml.etree.ElementTree as ET
     gpx = ET.Element("gpx", {
         "version": "1.1",
@@ -738,7 +738,7 @@ def _write_gpx(act, path: str):
 
 
 def _build_and_open(polys: list, progress_win):
-    """Costruisce la heatmap Folium con tutte le polyline e la apre nel browser."""
+    """It generates the Folium heatmap with all the polylines and opens it in the browser."""
     import tempfile, webbrowser
     progress_win.destroy()
 
@@ -754,7 +754,7 @@ def _build_and_open(polys: list, progress_win):
         messagebox.showerror("Heatmap", t("msg_folium_missing"))
         return
 
-    # Centro mappa = media di tutti i punti
+    # Map center = average of all points
     all_pts  = [pt for _, _, pts in polys for pt in pts]
     avg_lat  = sum(p[0] for p in all_pts) / len(all_pts)
     avg_lon  = sum(p[1] for p in all_pts) / len(all_pts)
@@ -771,7 +771,7 @@ def _build_and_open(polys: list, progress_win):
             tooltip=f"{date_str}  {name}",
         ).add_to(m)
 
-    # Salva in file temporaneo e apri nel browser
+    # Save temporary file and open it in the browser
     tmp = tempfile.NamedTemporaryFile(suffix=".html", delete=False)
     m.save(tmp.name)
     webbrowser.open(f"file:///{tmp.name.replace(chr(92), '/')}")

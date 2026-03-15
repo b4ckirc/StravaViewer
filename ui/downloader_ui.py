@@ -14,10 +14,10 @@ _STRAVA_API_URL  = "https://www.strava.com/settings/api"
 _CREDS_DOC_ID    = "strava_credentials"
 _CONFIG_COLL     = "app_config"
 
-# ── Cifratura ─────────────────────────────────────────────────────────────────
+# ── Encryption ─────────────────────────────────────────────────────────────────
 
 def _fernet_key() -> bytes:
-    """Chiave Fernet derivata deterministicamente dall'identità della macchina."""
+    """Fernet key deterministically derived from the machine identity."""
     try:
         user = os.getlogin()
     except Exception:
@@ -32,7 +32,7 @@ def _encrypt(plaintext: str) -> str:
         from cryptography.fernet import Fernet
         return Fernet(_fernet_key()).encrypt(plaintext.encode()).decode()
     except ImportError:
-        return plaintext          # fallback: testo in chiaro se lib non installata
+        return plaintext          # fallback: light text if library is not installed
 
 
 def _decrypt(ciphertext: str) -> str:
@@ -40,9 +40,9 @@ def _decrypt(ciphertext: str) -> str:
         from cryptography.fernet import Fernet
         return Fernet(_fernet_key()).decrypt(ciphertext.encode()).decode()
     except (ImportError, Exception):
-        return ciphertext         # fallback: restituisce così com'è
+        return ciphertext         # fallback: returns as-is
 
-# ── Persistenza credenziali ───────────────────────────────────────────────────
+# ── Save credentials ───────────────────────────────────────────────────
 
 def _load_creds(storage_mgr) -> tuple[str, str]:
     if storage_mgr.mongo_ok and storage_mgr.mongo_storage:
@@ -84,7 +84,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
              font=("Courier", 13, "bold"), fg=C["accent"],
              bg=C["surface"], pady=14).pack(fill="x")
 
-    # ── Credenziali ───────────────────────────────────────────────────────────
+    # ── Credentials ───────────────────────────────────────────────────────────
     cred_f = tk.Frame(win, bg=C["bg"], pady=8)
     cred_f.pack(fill="x", padx=24)
 
@@ -138,7 +138,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     if _saved_csc:
         csc_var.set(_saved_csc)
 
-    # ── Destinazione ──────────────────────────────────────────────────────────
+    # ── Destination ──────────────────────────────────────────────────────────
     dst_f = tk.Frame(win, bg=C["surface2"],
                      highlightthickness=1, highlightbackground=C["border"])
     dst_f.pack(fill="x", padx=24, pady=(4, 0))
@@ -160,7 +160,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
         tk.Label(dst_f, text=t("downloader_mongo_off"), font=("Courier", 7),
                  fg=C["red"], bg=C["surface2"]).pack(side="left")
 
-    # ── Contatori ─────────────────────────────────────────────────────────────
+    # ── Counters ─────────────────────────────────────────────────────────────
     stat_f = tk.Frame(win, bg=C["surface2"])
     stat_f.pack(fill="x", padx=24, pady=(6, 0))
     new_var  = tk.StringVar(value=t("downloader_new").format(n=0))
@@ -170,8 +170,8 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
         tk.Label(stat_f, textvariable=var, font=("Courier", 9, "bold"),
                  fg=col, bg=C["surface2"], padx=16, pady=5).pack(side="left")
 
-    # ── Pulsanti ──────────────────────────────────────────────────────────────
-    # IMPORTANTE: pack PRIMA del log (expand=True), altrimenti viene schiacciato
+    # ── Buttons ──────────────────────────────────────────────────────────────
+    # IMPORTANT: pack BEFORE the log (expand=True), otherwise it gets crushed
     btn_f = tk.Frame(win, bg=C["bg"], pady=10)
     btn_f.pack(fill="x", padx=24)
 
@@ -185,7 +185,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
             pass
 
     def _run():
-        log("🟠 Avvio richiesto…")
+        log("🟠 Start request…")
         win.update_idletasks()
 
         cid = cid_var.get().strip()
@@ -217,15 +217,15 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
             try:
                 from downloader import get_access_token, fetch_activity_list, fetch_activity_detail
 
-                win.after(0, log, "🔑 Avvio autenticazione OAuth…")
-                win.after(0, log, "   Il browser si aprirà a breve.")
+                win.after(0, log, "🔑 Start OAuth authentication…")
+                win.after(0, log, "   Your browser will open shortly.")
                 token = get_access_token(cid, csc,
                                          progress_cb=lambda m: win.after(0, log, m))
 
-                win.after(0, log, "📋 Recupero lista corse da Strava…")
+                win.after(0, log, "📋 Importing run list from Strava…")
                 runs = fetch_activity_list(token,
                                            progress_cb=lambda m: win.after(0, log, m))
-                win.after(0, log, f"✅ {len(runs)} corse trovate su Strava.")
+                win.after(0, log, f"✅ {len(runs)} run found on Strava.")
 
                 for i, run in enumerate(runs, 1):
                     sid = run.get("id")
@@ -247,14 +247,14 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
                     win.after(0, upd)
 
                 win.after(0, log,
-                          f"\n🏁 Completato: {counters['new']} nuove, "
-                          f"{counters['skip']} già presenti, {counters['err']} errori.")
+                          f"\n🏁 Completed: {counters['new']} new, "
+                          f"{counters['skip']} alredy present, {counters['err']} errors.")
                 if on_done_cb:
                     win.after(0, on_done_cb)
 
             except Exception as e:
                 import traceback
-                win.after(0, log, f"❌ Errore critico: {e}")
+                win.after(0, log, f"❌ Critical error: {e}")
                 win.after(0, log, traceback.format_exc())
             finally:
                 win.after(0, pbar.stop)
@@ -287,7 +287,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     pbar = ttk.Progressbar(win, mode="indeterminate")
     pbar.pack(fill="x", padx=24, pady=(0, 4))
 
-    # ── Log (expand=True per ultimo, prende lo spazio rimanente) ──────────────
+    # ── Log (expand=True finally, it takes up the remaining space) ──────────────
     log_outer = tk.Frame(win, bg=C["bg"])
     log_outer.pack(fill="both", expand=True, padx=24, pady=(0, 8))
 

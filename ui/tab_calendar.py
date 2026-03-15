@@ -1,6 +1,6 @@
 # ── ui/tab_calendar.py ────────────────────────────────────────────────────────
 """
-Tab Calendario: vista mensile delle corse con navigazione mese per mese.
+Calendar Tab: monthly view of runs with month-by-month navigation.
 """
 
 import tkinter as tk
@@ -17,7 +17,7 @@ CELL_H = 90
 
 
 def _blend_color(c1: str, c2: str, t: float) -> str:
-    """Interpola tra due colori hex. t=0 → c1, t=1 → c2."""
+    """Interpolate between two hex colors. t=0 → c1, t=1 → c2."""
     def h2rgb(h): return int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
     r1, g1, b1 = h2rgb(c1)
     r2, g2, b2 = h2rgb(c2)
@@ -30,7 +30,7 @@ def _blend_color(c1: str, c2: str, t: float) -> str:
 def render(tab, storage_mgr, on_open):
     clear(tab)
 
-    # ── Carica e indicizza tutti i summary per data ────────────────────────────
+    # ── Load and index all summaries by date ──────────────────────────────────
     try:
         all_summaries = storage_mgr.list_all()
     except Exception:
@@ -46,7 +46,7 @@ def render(tab, storage_mgr, on_open):
     today = date.today()
     state = {"year": today.year, "month": today.month}
 
-    # ── Topbar con navigazione ─────────────────────────────────────────────────
+    # ── Topbar with navigation ─────────────────────────────────────────────────
     nav = tk.Frame(tab, bg=C["surface"], pady=10)
     nav.pack(fill="x")
 
@@ -55,7 +55,7 @@ def render(tab, storage_mgr, on_open):
              font=("Courier", 13, "bold"), fg=C["accent"],
              bg=C["surface"]).pack(side="left", padx=20)
 
-    # Totali mese
+    # Month totals
     month_total_var = tk.StringVar()
     tk.Label(nav, textvariable=month_total_var,
              font=("Courier", 9), fg=C["text_dim"],
@@ -74,7 +74,7 @@ def render(tab, storage_mgr, on_open):
               cursor="hand2",
               command=lambda: _go_today()).pack(side="right", padx=8)
 
-    # ── Intestazione giorni ────────────────────────────────────────────────────
+    # ── Days header ────────────────────────────────────────────────────
     hdr = tk.Frame(tab, bg=C["surface"])
     hdr.pack(fill="x", padx=4)
     for i, day_name in enumerate(t("days_long")):
@@ -85,7 +85,7 @@ def render(tab, storage_mgr, on_open):
             row=0, column=i, padx=2, sticky="ew")
         hdr.columnconfigure(i, weight=1)
 
-    # ── Area scrollabile per la griglia ───────────────────────────────────────
+    # ── Scrollable area for the grid ──────────────────────────────────────────
     sc = tk.Canvas(tab, bg=C["bg"], bd=0, highlightthickness=0)
     sb = ttk.Scrollbar(tab, orient="vertical", command=sc.yview)
     sc.configure(yscrollcommand=sb.set)
@@ -100,7 +100,7 @@ def render(tab, storage_mgr, on_open):
     sc.bind_all("<MouseWheel>",
                 lambda e: sc.yview_scroll(int(-1 * (e.delta / 120)), "units"))
 
-    # ── Logica navigazione ─────────────────────────────────────────────────────
+    # ── Navigation logic ─────────────────────────────────────────────────────
 
     def _go_month(delta):
         m = state["month"] + delta
@@ -116,7 +116,7 @@ def render(tab, storage_mgr, on_open):
         state["month"] = today.month
         _render_month()
 
-    # ── Rendering griglia mensile ──────────────────────────────────────────────
+    # ── monthly schedule rendering ──────────────────────────────────────────────
 
     def _render_month():
         for w in cal_frame.winfo_children():
@@ -127,10 +127,10 @@ def render(tab, storage_mgr, on_open):
 
         weeks = calendar.monthcalendar(y, m)
 
-        # Statistiche totali del mese + massimo km per heatmap
+        # Month totals + max km for heatmap
         month_km   = 0.0
         month_runs = 0
-        day_km     = {}   # d_str → km totali quel giorno
+        day_km     = {}   # d_str → total km that day
         for day_num in range(1, calendar.monthrange(y, m)[1] + 1):
             d_str = f"{y:04d}-{m:02d}-{day_num:02d}"
             km_day = sum(s.get("distance", 0) / 1000 for s in by_date.get(d_str, []))
@@ -169,10 +169,10 @@ def render(tab, storage_mgr, on_open):
         is_weekend = col >= 5
 
         if runs:
-            # Heatmap: intensità proporzionale ai km del giorno vs massimo mese
+            # Heatmap: intensity proportional to km of day vs month maximum
             km     = day_km.get(d_str, 0.0)
             ratio  = min(km / max_km, 1.0) if max_km > 0 else 0.0
-            # Blend da surface verso accent con intensità [15%–55%]
+            # Blend from surface to accent with intensity [15%–55%]
             t_scaled   = 0.15 + ratio * 0.40
             bg_cell    = _blend_color(C["surface"], C["accent"], t_scaled)
             border_col = C["accent"]
@@ -190,7 +190,7 @@ def render(tab, storage_mgr, on_open):
         cell.grid(row=row, column=col, padx=2, pady=2, sticky="nsew")
         cell.grid_propagate(False)
 
-        # Riga superiore: numero giorno + contatore (se più corse)
+        # Top row: day number + counter (if multiple runs)
         day_col = (C["blue"]   if is_today   else
                    C["red"]    if is_weekend  else
                    C["text_dim"])
@@ -203,7 +203,7 @@ def render(tab, storage_mgr, on_open):
         if not runs:
             return
 
-        idx = [0]  # indice corrente (mutabile in closure)
+        idx = [0]  # current indicator (mutabile in closure)
         n   = len(runs)
 
         counter_var = tk.StringVar(value=f"1/{n}" if n > 1 else "")
@@ -216,7 +216,7 @@ def render(tab, storage_mgr, on_open):
                  font=("Courier", 9), fg=C["yellow"],
                  bg=bg_cell).pack(side="right", padx=(0, 2))
 
-        # Etichette contenuto (aggiornate dalla navigazione)
+        # Content tags (updated by navigation)
         dist_var = tk.StringVar()
         pace_var = tk.StringVar()
         hr_var   = tk.StringVar()
@@ -253,7 +253,7 @@ def render(tab, storage_mgr, on_open):
 
         _refresh()
 
-        # Frecce di navigazione (solo se più corse)
+        # Navigation arrows (only if multiple runs)
         if n > 1:
             nav_f = tk.Frame(cell, bg=bg_cell)
             nav_f.pack(side="bottom", fill="x", padx=4, pady=(0, 3))

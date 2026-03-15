@@ -1,9 +1,9 @@
 # ── storage.py ────────────────────────────────────────────────────────────────
 """
-Gestione storage corse:
-  - JSONStorage   → cartella locale di file .json
-  - MongoStorage  → collection MongoDB (via pymongo)
-Entrambe espongono la stessa interfaccia.
+Run storage management:
+  - JSONStorage   → local folder of .json files
+  - MongoStorage  → MongoDB collection (via pymongo)
+Both expose the same interface.
 """
 
 import os, json, subprocess, re
@@ -27,7 +27,7 @@ class JSONStorage:
         os.makedirs(directory, exist_ok=True)
 
     def save(self, data: dict) -> str:
-        """Salva l'attività come file JSON. Ritorna il path del file."""
+        """Saves the activity as a JSON file. Returns the file path."""
         act_id   = data.get("id", "unknown")
         date_str = (data.get("start_date_local", "")[:10]) or "nodate"
         name     = _sanitize_filename(data.get("name", "activity"))
@@ -39,7 +39,7 @@ class JSONStorage:
 
     def list_all(self, filters: dict = None) -> list[dict]:
         """
-        Ritorna lista di dizionari-sommario di tutte le attività.
+        Returns a list of summary dicts for all activities.
         filters: {
           "date_from": datetime,  "date_to": datetime,
           "dist_min":  float(km), "dist_max": float(km),
@@ -62,7 +62,7 @@ class JSONStorage:
         return results
 
     def load(self, ref: str) -> dict:
-        """Carica un'attività completa dal path file."""
+        """Loads a complete activity from the file path."""
         with open(ref, encoding="utf-8") as f:
             return json.load(f)
 
@@ -78,7 +78,7 @@ class JSONStorage:
         return False
 
     def scan_effort_names(self) -> set:
-        """Ritorna tutti i nomi di best effort univoci trovati nei file (diagnostica)."""
+        """Returns all unique best effort names found in files (diagnostics)."""
         names = set()
         for fname in sorted(os.listdir(self.directory)):
             if not fname.endswith(".json"):
@@ -96,7 +96,7 @@ class JSONStorage:
         return names
 
     def get_best_efforts_records(self) -> dict:
-        """Scansiona tutti i file e ritorna il miglior tempo per le distanze principali."""
+        """Scans all files and returns the best time for the main distances."""
         target = _build_effort_target()
         records = {}
         for fname in sorted(os.listdir(self.directory)):
@@ -129,7 +129,7 @@ class JSONStorage:
         return records
 
     def get_grade_splits(self, races_only: bool = False) -> list[dict]:
-        """Ritorna lista di {grade_pct, pace_ms, date} da tutti i split delle attività."""
+        """Returns list of {grade_pct, pace_ms, date} from all activity splits."""
         results = []
         for fname in sorted(os.listdir(self.directory)):
             if not fname.endswith(".json"):
@@ -156,7 +156,7 @@ class JSONStorage:
         return results
 
     def get_all_best_efforts(self, races_only: bool = False) -> list[dict]:
-        """Ritorna tutti i best effort (tutte le distanze canonical) per la curva di performance."""
+        """Returns all best efforts (all canonical distances) for the performance curve."""
         target = _build_effort_target()
         results = []
         for fname in sorted(os.listdir(self.directory)):
@@ -198,15 +198,15 @@ class MongoStorage:
     def __init__(self, host=MONGO_HOST, port=MONGO_PORT,
                  db=MONGO_DB, coll=MONGO_COLL):
         if not HAS_MONGO:
-            raise RuntimeError("pymongo non installato: pip install pymongo")
+            raise RuntimeError("pymongo not installed: pip install pymongo")
         self._client = pymongo.MongoClient(host, port, serverSelectionTimeoutMS=3000)
-        # Test connessione
+        # Test connection
         self._client.server_info()
         self._coll = self._client[db][coll]
         self._coll.create_index("id", unique=True, sparse=True)
 
     def save(self, data: dict) -> str:
-        """Upsert dell'attività. Ritorna l'_id MongoDB come stringa."""
+        """Activity upsert. Returns the MongoDB _id as a string."""
         doc = dict(data)
         sid = doc.get("id")
         if sid:
@@ -235,7 +235,7 @@ class MongoStorage:
         return results
 
     def load(self, ref: str) -> dict:
-        """Carica attività completa per _id MongoDB."""
+        """Loads complete activity by MongoDB _id."""
         from bson import ObjectId
         doc = self._coll.find_one({"_id": ObjectId(ref)})
         if doc:
@@ -252,7 +252,7 @@ class MongoStorage:
         return self._coll.count_documents({"id": strava_id}, limit=1) > 0
 
     def global_stats(self) -> dict:
-        """Statistiche aggregate su tutte le corse."""
+        """Aggregate statistics on all runs."""
         pipeline = [
             {"$group": {
                 "_id": None,
@@ -285,7 +285,7 @@ class MongoStorage:
         self._client.close()
 
     def scan_effort_names(self) -> set:
-        """Ritorna tutti i nomi di best effort univoci nel database (diagnostica)."""
+        """Returns all unique best effort names in the database (diagnostics)."""
         pipeline = [
             {"$unwind": "$best_efforts"},
             {"$group": {"_id": "$best_efforts.name"}},
@@ -293,7 +293,7 @@ class MongoStorage:
         return {doc["_id"] for doc in self._coll.aggregate(pipeline) if doc.get("_id")}
 
     def get_grade_splits(self, races_only: bool = False) -> list[dict]:
-        """Ritorna lista di {grade_pct, pace_ms, date} da tutti i split via MongoDB aggregation."""
+        """Returns list of {grade_pct, pace_ms, date} from all splits via MongoDB aggregation."""
         match_q: dict = {}
         if races_only:
             match_q["workout_type"] = 1
@@ -325,7 +325,7 @@ class MongoStorage:
         ]
 
     def get_all_best_efforts(self, races_only: bool = False) -> list[dict]:
-        """Ritorna tutti i best effort per la curva di performance via MongoDB."""
+        """Returns all best efforts for the performance curve via MongoDB."""
         target_map    = _build_effort_target()
         all_raw_names = list(target_map.keys())
         match_q: dict = {"best_efforts.name": {"$in": all_raw_names}}
@@ -364,7 +364,7 @@ class MongoStorage:
         return results
 
     def get_best_efforts_records(self) -> dict:
-        """Ritorna il miglior tempo per le distanze principali via aggregazione MongoDB."""
+        """Returns the best time for the main distances via MongoDB aggregation."""
         target_map = _build_effort_target()
         all_raw_names = list(target_map.keys())
         pipeline = [
@@ -427,7 +427,7 @@ def ensure_docker_compose(path: str):
             f.write(COMPOSE_CONTENT)
 
 def start_mongo_container(compose_path: str) -> tuple[bool, str]:
-    """Avvia il container MongoDB. Ritorna (success, message)."""
+    """Starts the MongoDB container. Returns (success, message)."""
     ensure_docker_compose(compose_path)
     try:
         result = subprocess.run(
@@ -469,8 +469,8 @@ def stop_mongo_container(compose_path: str) -> tuple[bool, str]:
 #  HELPERS INTERNI
 # ══════════════════════════════════════════════════════════════════════════════
 
-# Mappa raw_name → canonical_key per i best effort Strava.
-# Copre le varianti note dell'API (inglese, formati alternativi).
+# Map raw_name → canonical_key for Strava best efforts.
+# Covers known API variants (English, alternative formats).
 _EFFORT_ALIASES: dict[str, str] = {
     # 400m
     "400m":          "400m",
@@ -479,7 +479,7 @@ _EFFORT_ALIASES: dict[str, str] = {
     "1/2 mile":      "half_mile",
     "Half Mile":     "half_mile",
     "half mile":     "half_mile",
-    # 1 km — Strava API usa "1K" (uppercase K)
+    # 1 km — Strava API uses "1K" (uppercase K)
     "1K":            "1k",
     "1k":            "1k",
     "1 km":          "1k",
@@ -493,30 +493,30 @@ _EFFORT_ALIASES: dict[str, str] = {
     "2 mile":        "2_mile",
     "2 miles":       "2_mile",
     "2 Mile":        "2_mile",
-    # 5 km — Strava API usa "5K"
+    # 5 km — Strava API uses "5K"
     "5K":            "5k",
     "5k":            "5k",
     "5 km":          "5k",
     "5 kilometers":  "5k",
     "5 Kilometers":  "5k",
-    # 10 km — Strava API usa "10K"
+    # 10 km — Strava API uses "10K"
     "10K":           "10k",
     "10k":           "10k",
     "10 km":         "10k",
     "10 kilometers": "10k",
     "10 Kilometers": "10k",
-    # mezza maratona — Strava API usa "Half-Marathon"
+    # half marathon — Strava API uses "Half-Marathon"
     "Half-Marathon": "Half-Marathon",
     "Half Marathon": "Half-Marathon",
     "half-marathon": "Half-Marathon",
     "half marathon": "Half-Marathon",
     "1/2 Marathon":  "Half-Marathon",
-    # maratona — Strava API usa "Marathon"
+    # marathon — Strava API uses "Marathon"
     "Marathon":      "Marathon",
     "marathon":      "Marathon",
 }
 
-# Distanza in metri per ogni canonical key (usata per fit curva performance).
+# Distance in meters for each canonical key (used for performance curve fit).
 _EFFORT_DISTANCES: dict[str, float] = {
     "400m":          400.0,
     "half_mile":     804.67,
@@ -530,16 +530,16 @@ _EFFORT_DISTANCES: dict[str, float] = {
 }
 
 def _build_effort_target() -> dict[str, str]:
-    """Ritorna la mappa raw_name → canonical (es. '1k' → '1k')."""
+    """Returns the raw_name → canonical map (e.g. '1k' → '1k')."""
     return dict(_EFFORT_ALIASES)
 
 def _sanitize_filename(name: str, maxlen: int = 40) -> str:
-    """Rimuove caratteri non validi per nomi file (Windows/Unix) e tronca."""
-    # Caratteri vietati su Windows: < > : " / \ | ? * e caratteri di controllo
+    """Removes invalid characters for file names (Windows/Unix) and truncates."""
+    # Forbidden characters on Windows: < > : " / \ | ? * and control characters
     name = re.sub(r'[<>:"/\\|?*\x00-\x1f\x7f]', '-', name)
-    # Virgolette tipografiche e altri caratteri Unicode problematici
+    # Typographic quotes and other problematic Unicode characters
     name = re.sub(r'[\u201c\u201d\u2018\u2019\u00ab\u00bb]', '-', name)
-    # Collassa trattini/spazi multipli e rimuovi bordi
+    # Collapse multiple dashes/spaces and trim edges
     name = re.sub(r'[-\s]{2,}', ' ', name).strip('-').strip()
     return name[:maxlen]
 
@@ -582,7 +582,7 @@ def _passes(summary: dict, filters: dict) -> bool:
     date_str = summary.get("start_date", "")
     try:
         dt = datetime.fromisoformat(date_str.replace("Z", ""))
-        # Confronto per data (non ora): gli estremi sono inclusi
+        # Date comparison (not time): extremes are included
         if date_from and dt.date() < date_from.date():
             return False
         if date_to   and dt.date() > date_to.date():
@@ -622,7 +622,7 @@ def _mongo_query(filters: dict) -> dict:
         if date_from:
             q["start_date_local"]["$gte"] = date_from.date().isoformat()
         if date_to:
-            # Estremo superiore inclusivo: include tutto il giorno selezionato
+            # Inclusive upper bound: includes the entire selected day
             from datetime import timedelta
             q["start_date_local"]["$lt"] = (date_to + timedelta(days=1)).date().isoformat()
     if filters.get("races_only"):

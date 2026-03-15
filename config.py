@@ -1,11 +1,11 @@
 # ── config.py ─────────────────────────────────────────────────────────────────
-# Costanti globali dell'applicazione
+# Global application constants
 
 APP_NAME    = "Strava Activity Viewer"
 APP_VERSION = "3.0"
-MAX_COMPARE = 5   # attività massime nel confronto
+MAX_COMPARE = 5   # maximum activities in comparison
 
-# Palette colori UI (tema scuro Strava-inspired)
+# UI color palette (dark Strava-inspired theme)
 C = {
     "bg":       "#0d1117",
     "surface":  "#161b22",
@@ -23,10 +23,10 @@ C = {
     "orange":   "#f0883e",
 }
 
-# Copia immutabile del tema scuro (usata per ripristino)
+# Immutable copy of dark theme (used for restore)
 C_DARK = dict(C)
 
-# Tema chiaro
+# Light theme palette (for future theme switching)
 C_LIGHT = {
     "bg":       "#f0f2f5",
     "surface":  "#ffffff",
@@ -44,10 +44,10 @@ C_LIGHT = {
     "orange":   "#953800",
 }
 
-# Stato corrente del tema ("dark" o "light") — lista mutabile per reference condivisa
+# Current theme state ("dark" or "light") — mutable list for shared reference
 _current_theme = ["dark"]
 
-# Colori per confronto multiplo
+# Colors for multiple comparison
 COMPARE_COLORS  = ["#58a6ff", "#fc4c02", "#3fb950", "#bc8cff", "#d29922"]
 COMPARE_MARKERS = ["o", "s", "^", "D", "P"]
 COMPARE_EMOJIS  = ["🔵", "🟠", "🟢", "🟣", "🟡"]

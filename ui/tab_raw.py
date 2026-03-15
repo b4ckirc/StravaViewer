@@ -33,5 +33,5 @@ def render(tab, activity):
         txt.insert("1.0", raw)
         txt.config(state="disabled")
 
-    # Ritarda l'inserimento fino a dopo il primo render del widget
+    # Delay insertion until after the widget's first render to avoid UI freezes on large activities.
     tab.after(100, _insert)

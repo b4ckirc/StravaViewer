@@ -64,7 +64,7 @@ def _draw(a, hr_max_var, holder):
     gs  = gridspec.GridSpec(1, 2, figure=fig,
                             left=0.07, right=0.97, top=0.88, bottom=0.12, wspace=0.35)
 
-    # Distribuzione zone
+    # Zone distribution
     ax1 = fig.add_subplot(gs[0, 0])
     zone_secs  = a.hr_zone_seconds(hr_max)
     total_secs = sum(zone_secs.values()) or 1
@@ -87,7 +87,7 @@ def _draw(a, hr_max_var, holder):
              transform=ax1.transAxes, ha="right", va="bottom",
              fontsize=7, color=C["text_dim"], fontfamily="monospace")
 
-    # Scatter HR vs Passo
+    # Scatter HR vs Pace
     ax2 = fig.add_subplot(gs[0, 1])
     valid = [(h, p) for h, p in zip(hrs, paces) if h and p]
     if valid:
@@ -130,66 +130,3 @@ def _draw(a, hr_max_var, holder):
     fig.suptitle(t("chart_hr_analysis").format(name=a.name),
                  color=C["text"], fontsize=10, fontweight="bold", fontfamily="monospace")
     embed_mpl(holder, fig)
-
-
-# ── Testo informativo ─────────────────────────────────────────────────────────
-
-_INFO_HR = """
-## GRAFICO 1 — DISTRIBUZIONE ZONE CARDIACHE
-
-Le zone cardiache dividono l'intensità dello sforzo in 5 fasce, calcolate come percentuale della tua FC massima.
-
-# Z1 — RECUPERO  (< 60% FCmax)
-
-Sforzo leggerissimo. È la zona del riscaldamento, del defaticamento e della corsa di recupero attivo. Il corpo brucia prevalentemente grassi a questo ritmo. Non affatica, non costruisce resistenza specifica, ma favorisce il recupero tra sessioni intense.
-
-# Z2 — AEROBICA  (60–70% FCmax)
-
-La zona d'oro. È qui che si costruisce la resistenza di base: il cuore diventa più efficiente, i muscoli imparano a ossidare i grassi come carburante principale, i capillari si moltiplicano. Le corse lunghe "lente" appartengono a questa zona. I runner amatori la sottovalutano perché sembra "troppo facile" — ma è la zona più produttiva per migliorare nel lungo periodo.
-
-NOTA DEL COACH: se non riesci a mantenere una conversazione normale mentre corri in Z2, stai andando troppo forte.
-
-# Z3 — SOGLIA  (70–80% FCmax)
-
-La zona "comfortably hard". Migliora la soglia anaerobica, ma è anche la zona più insidiosa: abbastanza faticosa da accumulare stanchezza sistemica, ma non abbastanza intensa da dare i grandi adattamenti della Z4. I runner amatori ci passano spesso troppo tempo per colpa del ritmo "medio" tipico della corsa di gruppo.
-
-# Z4 — ANAEROBICA  (80–90% FCmax)
-
-Lavoro di qualità. Intervalli, ripetute veloci, ritmo gara su distanze brevi (5K–10K). Migliora la capacità anaerobica, la velocità di soglia e la resistenza alla fatica ad alta intensità. Richiede recupero adeguato (24–48 ore) tra le sessioni.
-
-# Z5 — MASSIMALE  (> 90% FCmax)
-
-Sforzo massimo, sostenibile solo per pochi secondi o minuti. Sprint, scatti finali in gara, salite brevi al massimo. Sviluppa la potenza neuromuscolare e la VO2max. Non va usata con frequenza elevata: richiede recupero lungo.
-
----
-
-# COME LEGGERE LA TORTA DELLE ZONE
-
-• Una distribuzione sana per un runner di resistenza è circa 75–80% in Z1–Z2 e il restante 20–25% in Z3–Z5. Questo è il cosiddetto metodo "polarizzato".
-
-• Molta Z3 e poca Z4–Z5 = stai correndo "nel mezzo": troppo veloce per costruire base aerobica, troppo lento per sviluppare velocità. Tipico errore del runner amatore.
-
-• Tanta Z1–Z2 e poca Z3–Z4 = allenamento aerobico sano. Aggiungi sessioni di qualità (ripetute, fartlek) per completare il quadro.
-
----
-
-## GRAFICO 2 — SCATTER FC vs PASSO
-
-Ogni punto rappresenta un chilometro della corsa. L'asse orizzontale è la frequenza cardiaca (bpm), quello verticale il passo (min/km, invertito: più in alto = più lento). I colori dei punti corrispondono alla zona cardiaca del km.
-
-# COSA CERCARE
-
-• Linea di tendenza inclinata verso destra-in-basso: la FC aumenta al diminuire del passo (= più vai veloce, più batte il cuore). È la relazione corretta e attesa.
-
-• Nuvola di punti stretta e allineata: ritmo costante, percorso pianeggiante, corsa uniforme.
-
-• Nuvola larga e dispersa: variabilità alta, tipica di percorsi con dislivello, cambi di ritmo o condizioni meteo difficili.
-
-• Punti finali con FC più alta dello stesso passo dei punti iniziali: è il fenomeno del "cardiac drift". A passo costante, la FC sale nel tempo per il calo di idratazione e l'accumulo di calore corporeo. Un drift > 5% indica che hai corso a un'intensità superiore alla tua soglia aerobica.
-
-# IL DECOUPLING FC/PASSO
-
-Se durante una corsa lunga a passo costante la FC sale progressivamente, il tuo aerobic decoupling è elevato. Migliorare la base aerobica (più Z2) riduce questo fenomeno: con il tempo la stessa FC corrisponde a un passo migliore.
-
-NOTA DEL COACH: il grafico scatter è uno dei migliori strumenti per valutare l'efficienza aerobica nel tempo. Confronta le stesse distanze percorse a mesi di distanza: se la nuvola si sposta verso sinistra (stessa FC, passo migliore) stai progredendo.
-"""

@@ -14,10 +14,10 @@ try:
 except ImportError:
     HAS_MPL = False
 
-# Colori passo — ben distinguibili tra loro
-PACE_FAST   = "#3fb950"   # verde  → più veloce della media
-PACE_AVG    = "#58a6ff"   # blu    → in media  (era arancione, troppo simile al rosso)
-PACE_SLOW   = "#f85149"   # rosso  → più lento della media
+# Pace colors — well distinguishable from each other
+PACE_FAST   = "#3fb950"   # green  → faster than average
+PACE_AVG    = "#58a6ff"   # blue   → on average  (was orange, too similar to red)
+PACE_SLOW   = "#f85149"   # red    → slower than average
 
 
 def render(tab, activity):
@@ -49,7 +49,7 @@ def render(tab, activity):
 
     avg_pace = speed_to_pace(a.avg_speed)
 
-    # ── Passo per km ──────────────────────────────────────────────────────────
+    # ── Pace per km ───────────────────────────────────────────────────────────
     ax1 = fig.add_subplot(gs[0, :])
     bar_colors = [
         PACE_FAST if p and avg_pace and p < avg_pace * 0.97 else
@@ -80,7 +80,7 @@ def render(tab, activity):
     ax1.legend(handles=patches, fontsize=6.5, facecolor=C["surface2"],
                edgecolor=C["border"], labelcolor=C["text"], loc="upper right")
 
-    # ── Velocità ──────────────────────────────────────────────────────────────
+    # ── Speed ─────────────────────────────────────────────────────────────────
     ax2 = fig.add_subplot(gs[1, 0])
     spd = [s * 3.6 for s in speeds]
     ax2.plot(kms, spd, color=C["blue"], lw=2, marker="o", ms=3, alpha=0.9)
@@ -89,7 +89,7 @@ def render(tab, activity):
     ax2.set_xlabel("Km", fontsize=7)
     style_ax(ax2, t("chart_speed"))
 
-    # ── Dislivello ────────────────────────────────────────────────────────────
+    # ── Elevation ─────────────────────────────────────────────────────────────
     ax3 = fig.add_subplot(gs[1, 1])
     ax3.bar(kms, elevs,
             color=[C["green"] if e >= 0 else C["red"] for e in elevs],
@@ -114,7 +114,7 @@ def render(tab, activity):
             ax4.legend(fontsize=7, facecolor=C["surface2"],
                        edgecolor=C["border"], labelcolor=C["text"])
 
-    # ── Cadenza ───────────────────────────────────────────────────────────────
+    # ── Cadence ───────────────────────────────────────────────────────────────
     if has_cad and has_extra:
         ax5 = fig.add_subplot(gs[2, 1])
         cv = [c * 2 if c else 0 for c in cadences]
@@ -129,10 +129,10 @@ def render(tab, activity):
     embed_mpl(tab, fig)
 
 
-# ── Export helper (usato da export_pdf.py e app._export_png) ──────────────────
+# ── Export helper (used by export_pdf.py and app._export_png) ─────────────────
 
 def _build_export_fig(a):
-    """Figura matplotlib standalone (non embedded in tk) per PNG/PDF export."""
+    """Standalone matplotlib figure (not embedded in tk) for PNG/PDF export."""
     if not a.splits:
         fig = plt.Figure(figsize=(12, 8), facecolor=C["bg"])
         return fig

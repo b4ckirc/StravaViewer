@@ -39,7 +39,7 @@ def render(tab, activities: list):
 
     _, body = make_scrollable(tab)
 
-    # ── Tabella comparative ────────────────────────────────────────────────────
+    # ── Compare table ────────────────────────────────────────────────────
     section_label(body, t("section_cmp_stats"))
     col_w = max(12, min(20, 76 // n))
 
@@ -106,7 +106,7 @@ def render(tab, activities: list):
     if not HAS_MPL:
         return
 
-    # ── Grafico passo ─────────────────────────────────────────────────────────
+    # ── Pace chart ────────────────────────────────────────────────────────────
     acts_with_splits = [a for a in activities if a.splits]
     if acts_with_splits:
         section_label(body, t("section_pace_compare"))
@@ -141,7 +141,7 @@ def render(tab, activities: list):
         cnv1.draw()
         cnv1.get_tk_widget().pack(fill="x")
 
-    # ── Grafico HR ────────────────────────────────────────────────────────────
+    # ── HR chart ──────────────────────────────────────────────────────────────
     acts_with_hr = [a for a in activities
                     if any(s.get("average_heartrate") for s in (a.splits or []))]
     if acts_with_hr:
