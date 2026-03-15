@@ -15,7 +15,7 @@ def render(tab, activity):
         return
 
     tk.Label(tab, text=t("splits_title"),
-             font=("Courier", 11, "bold"), fg=C["accent"],
+             font=("Segoe UI", 11, "bold"), fg=C["accent"],
              bg=C["surface"], pady=12).pack(fill="x")
 
     cols   = [t("col_km"), t("col_distance_label"), t("col_time"), t("col_pace"), t("col_speed"), t("col_hr"), t("col_elevation"), t("col_cadence")]
@@ -27,7 +27,7 @@ def render(tab, activity):
     hdr = tk.Frame(outer, bg=C["surface2"])
     hdr.pack(fill="x")
     for col, w in zip(cols, widths):
-        tk.Label(hdr, text=col, font=("Courier", 8, "bold"),
+        tk.Label(hdr, text=col, font=("Segoe UI", 8, "bold"),
                  fg=C["text_dim"], bg=C["surface2"],
                  width=w, anchor="center", pady=8).pack(side="left", padx=2)
 
@@ -65,7 +65,7 @@ def render(tab, activity):
             (f"{elev:+.1f}m",                    C["green"] if elev >= 0 else C["red"]),
             (f"{cad*2:.0f}" if cad else "–",     C["purple"]),
         ], widths):
-            tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
+            tk.Label(row, text=v, font=("Segoe UI", 9), fg=col, bg=bg,
                      width=w, anchor="center", pady=6).pack(side="left", padx=2)
 
     tot = tk.Frame(inner, bg=C["surface"])
@@ -80,5 +80,5 @@ def render(tab, activity):
         (f"{a.elev_gain:+.0f}m",   C["yellow"]),
         ("",                        C["text"]),
     ], widths):
-        tk.Label(tot, text=v, font=("Courier", 9, "bold"), fg=col,
+        tk.Label(tot, text=v, font=("Segoe UI", 9, "bold"), fg=col,
                  bg=C["surface"], width=w, anchor="center", pady=8).pack(side="left", padx=2)

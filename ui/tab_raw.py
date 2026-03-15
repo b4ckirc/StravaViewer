@@ -9,14 +9,14 @@ from i18n import t
 def render(tab, activity):
     clear(tab)
     tk.Label(tab, text=t("raw_title"),
-             font=("Courier", 10, "bold"), fg=C["accent"],
+             font=("Segoe UI", 10, "bold"), fg=C["accent"],
              bg=C["surface"], pady=11).pack(fill="x")
 
     frame = tk.Frame(tab, bg=C["bg"])
     frame.pack(fill="both", expand=True, padx=14, pady=(10, 0))
 
     txt  = tk.Text(frame, bg=C["surface"], fg=C["text"],
-                   font=("Courier", 9), bd=0, relief="flat",
+                   font=("Courier", 9), bd=0, relief="flat",  # monospace for JSON alignment
                    insertbackground=C["text"], wrap="none", undo=False)
     sb_v = ttk.Scrollbar(frame, orient="vertical",   command=txt.yview)
     sb_h = ttk.Scrollbar(tab,   orient="horizontal", command=txt.xview)

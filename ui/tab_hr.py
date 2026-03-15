@@ -28,22 +28,22 @@ def render(tab, activity):
 
     ctrl = tk.Frame(tab, bg=C["surface"], pady=10)
     ctrl.pack(fill="x")
-    tk.Label(ctrl, text=t("hr_max_label"), font=("Courier", 9, "bold"),
+    tk.Label(ctrl, text=t("hr_max_label"), font=("Segoe UI", 9, "bold"),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left", padx=20)
     hr_max_var = tk.StringVar(value=str(int(a.max_hr) if a.max_hr else 190))
-    tk.Entry(ctrl, textvariable=hr_max_var, font=("Courier", 10),
+    tk.Entry(ctrl, textvariable=hr_max_var, font=("Segoe UI", 10),
              bg=C["surface2"], fg=C["text"], width=6, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=8)
     holder = tk.Frame(tab, bg=C["bg"])
     holder.pack(fill="both", expand=True)
-    tk.Button(ctrl, text=t("btn_update"), font=("Courier", 8, "bold"),
+    tk.Button(ctrl, text=t("btn_update"), font=("Segoe UI", 8, "bold"),
               bg=C["accent"], fg="white", bd=0, padx=10, pady=4, cursor="hand2",
               command=lambda: _draw(a, hr_max_var, holder)
               ).pack(side="left", padx=8)
     tk.Label(ctrl, text=t("hr_hint"),
-             font=("Courier", 8), fg=C["text_dim"], bg=C["surface"]).pack(side="left")
+             font=("Segoe UI", 8), fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     info_btn(ctrl, t("hr_info_title"), t("info_hr")).pack(
         side="right", padx=16)
     _draw(a, hr_max_var, holder)

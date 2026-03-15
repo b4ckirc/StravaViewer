@@ -5,16 +5,18 @@ APP_NAME    = "Strava Activity Viewer"
 APP_VERSION = "3.0"
 MAX_COMPARE = 5   # maximum activities in comparison
 
-# UI color palette (dark Strava-inspired theme)
+# UI color palette (dark Strava-inspired theme).
+# The three background levels are intentionally spaced further apart than before
+# to create a clear visual hierarchy: canvas → panel → elevated surface.
 C = {
-    "bg":       "#0d1117",
-    "surface":  "#161b22",
-    "surface2": "#21262d",
-    "border":   "#30363d",
-    "accent":   "#fc4c02",
-    "accent2":  "#ff8c69",
-    "text":     "#e6edf3",
-    "text_dim": "#8b949e",
+    "bg":       "#060a0f",   # deep canvas (was #0d1117) — maximum contrast base
+    "surface":  "#0d1117",   # primary panels / sidebar (was #161b22)
+    "surface2": "#161b22",   # elevated cards / inputs (was #21262d)
+    "border":   "#2d333b",   # subtle dividers (slightly warmer than before)
+    "accent":   "#fc4c02",   # Strava orange — unchanged
+    "accent2":  "#ff8c69",   # light orange for hover — unchanged
+    "text":     "#e6edf3",   # primary text — unchanged
+    "text_dim": "#8b949e",   # secondary / muted text — unchanged
     "green":    "#3fb950",
     "blue":     "#58a6ff",
     "purple":   "#bc8cff",
@@ -23,14 +25,14 @@ C = {
     "orange":   "#f0883e",
 }
 
-# Immutable copy of dark theme (used for restore)
+# Immutable copy of dark theme (used for restore after light-theme toggle)
 C_DARK = dict(C)
 
-# Light theme palette (for future theme switching)
+# Light theme palette — background levels spaced analogously to the dark theme.
 C_LIGHT = {
-    "bg":       "#f0f2f5",
-    "surface":  "#ffffff",
-    "surface2": "#e2e8f0",
+    "bg":       "#eaecf0",   # slightly darker canvas for more depth (was #f0f2f5)
+    "surface":  "#f6f8fa",   # primary panels (was #ffffff)
+    "surface2": "#ffffff",   # elevated cards / inputs (was #e2e8f0)
     "border":   "#c4cdd6",
     "accent":   "#fc4c02",
     "accent2":  "#d43d00",

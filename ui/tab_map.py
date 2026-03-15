@@ -79,14 +79,14 @@ def render(tab, activity):
     if not HAS_FOLIUM:
         tk.Label(tab,
                  text=t("map_no_folium"),
-                 font=("Courier", 11), fg=C["yellow"], bg=C["bg"],
+                 font=("Segoe UI", 11), fg=C["yellow"], bg=C["bg"],
                  justify="center").place(relx=0.5, rely=0.5, anchor="center")
         return
 
     if not activity or not activity.gps_points:
         tk.Label(tab,
                  text=t("map_no_gps"),
-                 font=("Courier", 11), fg=C["text_dim"], bg=C["bg"],
+                 font=("Segoe UI", 11), fg=C["text_dim"], bg=C["bg"],
                  justify="center").place(relx=0.5, rely=0.5, anchor="center")
         return
 
@@ -94,7 +94,7 @@ def render(tab, activity):
 
     tk.Label(tab,
              text=f"🗺  {a.name}",
-             font=("Courier", 14, "bold"), fg=C["text"], bg=C["bg"]
+             font=("Segoe UI", 14, "bold"), fg=C["text"], bg=C["bg"]
              ).place(relx=0.5, rely=0.30, anchor="center")
 
     tk.Label(tab,
@@ -103,12 +103,12 @@ def render(tab, activity):
                    f"👟 {a.avg_pace_str} /km    "
                    f"⛰ +{a.elev_gain:.0f} m    "
                    f"📍 {len(a.gps_points)} {t('map_gps_points')}"),
-             font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]
+             font=("Segoe UI", 9), fg=C["text_dim"], bg=C["bg"]
              ).place(relx=0.5, rely=0.38, anchor="center")
 
     status_var = tk.StringVar(value="")
     tk.Label(tab, textvariable=status_var,
-             font=("Courier", 9), fg=C["text_dim"], bg=C["bg"],
+             font=("Segoe UI", 9), fg=C["text_dim"], bg=C["bg"],
              justify="center").place(relx=0.5, rely=0.62, anchor="center")
 
     def _open_map():
@@ -313,7 +313,7 @@ def render(tab, activity):
     btn = tk.Button(
         tab,
         text=t("map_open_browser"),
-        font=("Courier", 12, "bold"),
+        font=("Segoe UI", 12, "bold"),
         bg=C["accent"], fg="white",
         activebackground="#d43d00", activeforeground="white",
         bd=0, padx=28, pady=14,
@@ -324,5 +324,5 @@ def render(tab, activity):
 
     tk.Label(tab,
              text=t("map_hint"),
-             font=("Courier", 8), fg=C["text_dim"], bg=C["bg"]
+             font=("Segoe UI", 8), fg=C["text_dim"], bg=C["bg"]
              ).place(relx=0.5, rely=0.70, anchor="center")

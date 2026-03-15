@@ -61,9 +61,44 @@ class StravaApp(tk.Tk):
         self.cmp_list   = []          # ActivityData list for compare (max 4 extra)
         self.storage    = StorageManager()
 
+        self._apply_scrollbar_style()
         self._build_ui()
         self._show_welcome()
         self._try_connect_mongo()
+
+    # ── Scrollbar style ───────────────────────────────────────────────────────
+
+    def _apply_scrollbar_style(self):
+        """Override the default ttk scrollbar to match the app's color theme.
+
+        Applied once at startup; affects all ttk Scrollbar instances globally.
+        Re-called after theme toggles so the colors stay in sync.
+        """
+        style = ttk.Style(self)
+        style.theme_use("default")
+        style.configure(
+            "Vertical.TScrollbar",
+            background=C["surface2"],
+            troughcolor=C["bg"],
+            bordercolor=C["bg"],
+            arrowcolor=C["border"],
+            relief="flat",
+            arrowsize=12,
+        )
+        style.configure(
+            "Horizontal.TScrollbar",
+            background=C["surface2"],
+            troughcolor=C["bg"],
+            bordercolor=C["bg"],
+            arrowcolor=C["border"],
+            relief="flat",
+            arrowsize=12,
+        )
+        # Hover state: slightly lighter thumb
+        style.map("Vertical.TScrollbar",
+                  background=[("active", C["border"])])
+        style.map("Horizontal.TScrollbar",
+                  background=[("active", C["border"])])
 
     # ── MongoDB connection (background) ──────────────────────────────────────
 
@@ -369,6 +404,7 @@ class StravaApp(tk.Tk):
         for w in self.winfo_children():
             w.destroy()
         self.configure(bg=C["bg"])
+        self._apply_scrollbar_style()   # re-apply scrollbar colors for the new theme
         self._build_ui()
         self.cmp_list = cmp
         if act:

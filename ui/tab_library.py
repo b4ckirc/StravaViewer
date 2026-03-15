@@ -39,89 +39,89 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     fbar = tk.Frame(tab, bg=C["surface"], pady=10)
     fbar.pack(fill="x")
 
-    tk.Label(fbar, text=t("filter_label"), font=("Courier", 9, "bold"),
+    tk.Label(fbar, text=t("filter_label"), font=("Segoe UI", 9, "bold"),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left", padx=(16, 8))
 
-    tk.Label(fbar, text=t("filter_name"), font=("Courier", 8),
+    tk.Label(fbar, text=t("filter_name"), font=("Segoe UI", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     name_var = tk.StringVar()
-    tk.Entry(fbar, textvariable=name_var, font=("Courier", 9),
+    tk.Entry(fbar, textvariable=name_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=18, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 14))
 
-    tk.Label(fbar, text=t("filter_dist_km"), font=("Courier", 8),
+    tk.Label(fbar, text=t("filter_dist_km"), font=("Segoe UI", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     dist_min_var = tk.StringVar()
     dist_max_var = tk.StringVar()
-    tk.Entry(fbar, textvariable=dist_min_var, font=("Courier", 9),
+    tk.Entry(fbar, textvariable=dist_min_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=6, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 2))
     tk.Label(fbar, text="–", fg=C["text_dim"], bg=C["surface"],
-             font=("Courier", 9)).pack(side="left")
-    tk.Entry(fbar, textvariable=dist_max_var, font=("Courier", 9),
+             font=("Segoe UI", 9)).pack(side="left")
+    tk.Entry(fbar, textvariable=dist_max_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=6, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(2, 14))
 
-    tk.Label(fbar, text=t("filter_elev_m"), font=("Courier", 8),
+    tk.Label(fbar, text=t("filter_elev_m"), font=("Segoe UI", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     elev_min_var = tk.StringVar()
     elev_max_var = tk.StringVar()
-    tk.Entry(fbar, textvariable=elev_min_var, font=("Courier", 9),
+    tk.Entry(fbar, textvariable=elev_min_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=6, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 2))
     tk.Label(fbar, text="–", fg=C["text_dim"], bg=C["surface"],
-             font=("Courier", 9)).pack(side="left")
-    tk.Entry(fbar, textvariable=elev_max_var, font=("Courier", 9),
+             font=("Segoe UI", 9)).pack(side="left")
+    tk.Entry(fbar, textvariable=elev_max_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=6, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(2, 14))
 
-    tk.Label(fbar, text=t("filter_date_from"), font=("Courier", 8),
+    tk.Label(fbar, text=t("filter_date_from"), font=("Segoe UI", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     date_from_var = tk.StringVar()
     date_to_var   = tk.StringVar()
-    tk.Entry(fbar, textvariable=date_from_var, font=("Courier", 9),
+    tk.Entry(fbar, textvariable=date_from_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=11, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 2))
     tk.Label(fbar, text=t("filter_date_to"), fg=C["text_dim"], bg=C["surface"],
-             font=("Courier", 8)).pack(side="left", padx=(6, 0))
-    tk.Entry(fbar, textvariable=date_to_var, font=("Courier", 9),
+             font=("Segoe UI", 8)).pack(side="left", padx=(6, 0))
+    tk.Entry(fbar, textvariable=date_to_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=11, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 2))
-    tk.Label(fbar, text="(YYYY-MM-DD)", font=("Courier", 7),
+    tk.Label(fbar, text="(YYYY-MM-DD)", font=("Segoe UI", 7),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left", padx=(4, 12))
 
     races_var = tk.BooleanVar(value=False)
     tk.Checkbutton(
         fbar, text=t("filter_races_only"), variable=races_var,
-        font=("Courier", 8), fg=C["text"], bg=C["surface"],
+        font=("Segoe UI", 8), fg=C["text"], bg=C["surface"],
         selectcolor=C["surface2"], activebackground=C["surface"],
         activeforeground=C["text"],
     ).pack(side="left", padx=(4, 8))
 
     count_var = tk.StringVar(value="")
-    tk.Label(fbar, textvariable=count_var, font=("Courier", 8),
+    tk.Label(fbar, textvariable=count_var, font=("Segoe UI", 8),
              fg=C["green"], bg=C["surface"]).pack(side="right", padx=12)
 
     src_text = "● MongoDB" if (storage_mgr.mongo_ok and storage_mgr.mongo_storage) else "○ File JSON"
     src_col  = C["green"] if (storage_mgr.mongo_ok and storage_mgr.mongo_storage) else C["yellow"]
-    tk.Label(fbar, text=src_text, font=("Courier", 7, "bold"),
+    tk.Label(fbar, text=src_text, font=("Segoe UI", 7, "bold"),
              fg=src_col, bg=C["surface"]).pack(side="right", padx=8)
 
-    tk.Button(fbar, text="🔍", font=("Courier", 10), bg=C["accent"],
+    tk.Button(fbar, text="🔍", font=("Segoe UI", 10), bg=C["accent"],
               fg="white", bd=0, padx=10, pady=4, cursor="hand2",
               command=lambda: _search()).pack(side="left", padx=4)
 
@@ -129,7 +129,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     cbar = tk.Frame(tab, bg=C["surface2"], pady=8)
     cbar.pack(fill="x")
     cmp_label = tk.Label(cbar, text=t("compare_none"),
-                         font=("Courier", 9), fg=C["text_dim"], bg=C["surface2"])
+                         font=("Segoe UI", 9), fg=C["text_dim"], bg=C["surface2"])
     cmp_label.pack(side="left", padx=16)
 
     def refresh_cmp_label():
@@ -141,11 +141,11 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
                               for i in range(n))
             cmp_label.config(text=f"{t('compare_count').format(n=n)} {names}", fg=C["accent"])
 
-    tk.Button(cbar, text=t("btn_clear_compare"), font=("Courier", 8, "bold"),
+    tk.Button(cbar, text=t("btn_clear_compare"), font=("Segoe UI", 8, "bold"),
               bg=C["surface2"], fg=C["text_dim"], bd=0, padx=10, cursor="hand2",
               command=lambda: [on_compare_clear(), refresh_cmp_label(), _render_page()]
               ).pack(side="right", padx=8)
-    tk.Button(cbar, text=t("btn_run_compare"), font=("Courier", 8, "bold"),
+    tk.Button(cbar, text=t("btn_run_compare"), font=("Segoe UI", 8, "bold"),
               bg=C["accent"], fg="white", bd=0, padx=10, cursor="hand2",
               command=lambda: app_ref._run_compare()
               ).pack(side="right", padx=4)
@@ -157,7 +157,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     hdr_f = tk.Frame(tab, bg=C["surface"])
     hdr_f.pack(fill="x")
     for col, w in zip(cols, widths):
-        tk.Label(hdr_f, text=col, font=("Courier", 10, "bold"),
+        tk.Label(hdr_f, text=col, font=("Segoe UI", 10, "bold"),
                  fg=C["text_dim"], bg=C["surface"],
                  width=w, anchor="w" if col == "NOME" else "center",
                  pady=8, padx=4).pack(side="left")
@@ -179,15 +179,15 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     pag_f.pack(fill="x", side="bottom")
 
     page_var = tk.StringVar(value="")
-    tk.Label(pag_f, textvariable=page_var, font=("Courier", 9),
+    tk.Label(pag_f, textvariable=page_var, font=("Segoe UI", 9),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left", padx=16)
 
-    btn_next = tk.Button(pag_f, text=t("page_next"), font=("Courier", 9, "bold"),
+    btn_next = tk.Button(pag_f, text=t("page_next"), font=("Segoe UI", 9, "bold"),
                          bg=C["surface2"], fg=C["text"], bd=0, padx=12, pady=4,
                          cursor="hand2", command=lambda: _go_page(state["page"] + 1))
     btn_next.pack(side="right", padx=8)
 
-    btn_prev = tk.Button(pag_f, text=t("page_prev"), font=("Courier", 9, "bold"),
+    btn_prev = tk.Button(pag_f, text=t("page_prev"), font=("Segoe UI", 9, "bold"),
                          bg=C["surface2"], fg=C["text"], bd=0, padx=12, pady=4,
                          cursor="hand2", command=lambda: _go_page(state["page"] - 1))
     btn_prev.pack(side="right", padx=4)
@@ -259,7 +259,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
         if not summaries:
             tk.Label(list_frame,
                      text=t("library_empty"),
-                     font=("Courier", 11), fg=C["text_dim"], bg=C["bg"],
+                     font=("Segoe UI", 11), fg=C["text_dim"], bg=C["bg"],
                      pady=40, justify="center").pack()
             return
 
@@ -291,7 +291,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
                 (hr_s,   C["red"],       6, "center"),
                 (elev_s, C["yellow"],    8, "center"),
             ]:
-                lbl = tk.Label(row, text=v, font=("Courier", 10), fg=col, bg=bg,
+                lbl = tk.Label(row, text=v, font=("Segoe UI", 10), fg=col, bg=bg,
                                width=w, anchor=anc, pady=7, padx=4)
                 lbl.pack(side="left")
                 cells.append(lbl)
@@ -301,24 +301,24 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
             cells.append(act_f)
             summary = s
 
-            btn_open = tk.Button(act_f, text=t("btn_open"), font=("Courier", 8, "bold"),
+            btn_open = tk.Button(act_f, text=t("btn_open"), font=("Segoe UI", 8, "bold"),
                       bg=C["surface"], fg=C["text"], bd=0, padx=6, pady=2,
                       cursor="hand2",
                       command=lambda s=summary: on_open(s))
             btn_open.pack(side="left", padx=2)
-            btn_cmp = tk.Button(act_f, text=t("btn_compare_add"), font=("Courier", 8, "bold"),
+            btn_cmp = tk.Button(act_f, text=t("btn_compare_add"), font=("Segoe UI", 8, "bold"),
                       bg=C["surface"], fg=C["accent"], bd=0, padx=6, pady=2,
                       cursor="hand2",
                       command=lambda s=summary: _add_to_compare(s))
             btn_cmp.pack(side="left", padx=2)
             if summary.get("strava_id"):
-                tk.Button(act_f, text=t("btn_open_strava"), font=("Courier", 8, "bold"),
+                tk.Button(act_f, text=t("btn_open_strava"), font=("Segoe UI", 8, "bold"),
                           bg=C["surface"], fg="#FC4C02", bd=0, padx=6, pady=2,
                           cursor="hand2",
                           command=lambda sid=summary["strava_id"]:
                               webbrowser.open(f"https://www.strava.com/activities/{sid}")
                           ).pack(side="left", padx=2)
-            btn_del = tk.Button(act_f, text=t("btn_delete"), font=("Courier", 8, "bold"),
+            btn_del = tk.Button(act_f, text=t("btn_delete"), font=("Segoe UI", 8, "bold"),
                       bg=C["surface"], fg=C["red"], bd=0, padx=6, pady=2,
                       cursor="hand2",
                       command=lambda s=summary: _delete(s))

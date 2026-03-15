@@ -42,7 +42,7 @@ def render(tab, storage_mgr, on_open=None):
     clear(tab)
 
     tk.Label(tab, text=t("stats_global_title"),
-             font=("Courier", 12, "bold"), fg=C["accent"],
+             font=("Segoe UI", 12, "bold"), fg=C["accent"],
              bg=C["surface"], pady=12).pack(fill="x")
 
     # Load all summaries
@@ -125,7 +125,7 @@ def render(tab, storage_mgr, on_open=None):
         hrow = tk.Frame(tbl, bg=C["surface"])
         hrow.pack(fill="x")
         for col, w in zip(yr_cols, yr_widths):
-            tk.Label(hrow, text=col, font=("Courier", 8, "bold"),
+            tk.Label(hrow, text=col, font=("Segoe UI", 8, "bold"),
                      fg=C["text_dim"], bg=C["surface"],
                      width=w, anchor="center", pady=8).pack(side="left", padx=3)
         for i, (year, data) in enumerate(sorted(by_year.items(), reverse=True)):
@@ -141,7 +141,7 @@ def render(tab, storage_mgr, on_open=None):
                 (f"{data['elev_gain']:.0f} m",        C["yellow"]),
             ]
             for (v, col), w in zip(yr_vals, yr_widths):
-                tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
+                tk.Label(row, text=v, font=("Segoe UI", 9), fg=col, bg=bg,
                          width=w, anchor="center", pady=7).pack(side="left", padx=3)
 
         # ── km per year chart ─────────────────────────────────────────────────
@@ -258,7 +258,7 @@ def render(tab, storage_mgr, on_open=None):
     hrow = tk.Frame(rec_outer, bg=C["surface"])
     hrow.pack(fill="x")
     for col_text, w in [(t("col_distance_label"), 18), (t("col_time_label"), 10), (t("col_activity"), 34), (t("col_date_label"), 14)]:
-        tk.Label(hrow, text=col_text, font=("Courier", 8, "bold"),
+        tk.Label(hrow, text=col_text, font=("Segoe UI", 8, "bold"),
                  fg=C["text_dim"], bg=C["surface"],
                  width=w, anchor="center", pady=8).pack(side="left", padx=3)
 
@@ -301,7 +301,7 @@ def render(tab, storage_mgr, on_open=None):
             (act_name,  C["text"],     34, "w"),
             (date_str,  C["text_dim"], 14, "center"),
         ]:
-            lbl = tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
+            lbl = tk.Label(row, text=v, font=("Segoe UI", 9), fg=col, bg=bg,
                            width=w, anchor=anc, pady=7, padx=4)
             lbl.pack(side="left")
             widgets.append(lbl)
@@ -330,7 +330,7 @@ def render(tab, storage_mgr, on_open=None):
         else:
             hint = t("hint_no_efforts")
         tk.Label(rec_outer, text=hint,
-                 font=("Courier", 8), fg=C["text_dim"], bg=C["surface2"],
+                 font=("Segoe UI", 8), fg=C["text_dim"], bg=C["surface2"],
                  pady=10, wraplength=760, justify="left").pack(anchor="w", padx=16)
 
     # ── Race analysis and VDOT ────────────────────────────────────────────────
@@ -572,7 +572,7 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
     leg.grid(row=0, column=1, sticky="nsew", padx=(12, 0))
 
     tk.Label(leg, text=t("radar_how_calculated"),
-             font=("Courier", 8, "bold"), fg=C["text_dim"],
+             font=("Segoe UI", 8, "bold"), fg=C["text_dim"],
              bg=C["surface"], pady=8).pack(fill="x")
 
     DESCRIPTIONS = [
@@ -590,11 +590,11 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
         score_val = scores[i]
         bar_w = max(2, int(score_val / 100 * 18))
         bar_str = "█" * bar_w + "░" * (18 - bar_w)
-        tk.Label(row, text=f"  {name:<13}", font=("Courier", 8, "bold"),
+        tk.Label(row, text=f"  {name:<13}", font=("Segoe UI", 8, "bold"),
                  fg=col, bg=bg, anchor="w", pady=6).pack(side="left")
-        tk.Label(row, text=f"{score_val:5.0f}  ", font=("Courier", 8),
+        tk.Label(row, text=f"{score_val:5.0f}  ", font=("Segoe UI", 8),
                  fg=C["text"], bg=bg).pack(side="left")
-        tk.Label(row, text=bar_str, font=("Courier", 7),
+        tk.Label(row, text=bar_str, font=("Courier", 7),  # monospace for █░ block-char alignment
                  fg=col, bg=bg).pack(side="left")
 
     # Extended descriptions
@@ -602,7 +602,7 @@ def _render_athlete_radar(body: tk.Frame, all_summaries: list):
     detail.pack(fill="x", padx=8, pady=(4, 8))
     for name, col, desc in DESCRIPTIONS:
         tk.Label(detail, text=f"▸ {name}: {desc}",
-                 font=("Courier", 7), fg=C["text_dim"], bg=C["surface2"],
+                 font=("Segoe UI", 7), fg=C["text_dim"], bg=C["surface2"],
                  anchor="w", justify="left", wraplength=380).pack(
                      fill="x", pady=1)
 
@@ -722,7 +722,7 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
     hrow = tk.Frame(tbl_outer, bg=C["surface"])
     hrow.pack(fill="x")
     for col_text, w in [(t("col_date_label"), 12), ("KM", 9), (t("col_time_label"), 10), ("VDOT", 7), (t("col_race"), 22)]:
-        tk.Label(hrow, text=col_text, font=("Courier", 8, "bold"),
+        tk.Label(hrow, text=col_text, font=("Segoe UI", 8, "bold"),
                  fg=C["text_dim"], bg=C["surface"],
                  width=w, anchor="center", pady=6).pack(side="left", padx=2)
 
@@ -733,14 +733,14 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
     # Pagination bar at the bottom
     nav = tk.Frame(tbl_outer, bg=C["surface"])
     nav.pack(fill="x")
-    lbl_page = tk.Label(nav, text="", font=("Courier", 8), fg=C["text_dim"],
+    lbl_page = tk.Label(nav, text="", font=("Segoe UI", 8), fg=C["text_dim"],
                         bg=C["surface"])
     lbl_page.pack(side="left", padx=8)
-    btn_next = tk.Button(nav, text="▶", font=("Courier", 8),
+    btn_next = tk.Button(nav, text="▶", font=("Segoe UI", 8),
                          fg=C["text"], bg=C["surface2"], relief="flat",
                          bd=0, padx=6, pady=3)
     btn_next.pack(side="right", padx=4)
-    btn_prev = tk.Button(nav, text="◀", font=("Courier", 8),
+    btn_prev = tk.Button(nav, text="◀", font=("Segoe UI", 8),
                          fg=C["text"], bg=C["surface2"], relief="flat",
                          bd=0, padx=6, pady=3)
     btn_prev.pack(side="right", padx=2)
@@ -762,7 +762,7 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
                 (str(r["vdot"]),             C["green"],     7, "center"),
                 ((r["name"] or "–")[:22],    C["text"],     22, "w"),
             ]:
-                tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
+                tk.Label(row, text=v, font=("Segoe UI", 9), fg=col, bg=bg,
                          width=w, anchor=anc, pady=5, padx=2).pack(side="left")
             if on_open:
                 def _open(e, s=r):
@@ -794,10 +794,10 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
     prd.grid(row=0, column=1, sticky="nsew")
 
     tk.Label(prd, text=f"{t('vdot_predictions')}  (VDOT {pred_vdot:.1f})",
-             font=("Courier", 8, "bold"), fg=C["text_dim"], bg=C["surface"],
+             font=("Segoe UI", 8, "bold"), fg=C["text_dim"], bg=C["surface"],
              pady=6).pack(fill="x")
     tk.Label(prd, text=f"  {t('vdot_from')} {latest['name'][:30]}",
-             font=("Courier", 7), fg=C["text_dim"], bg=C["surface"],
+             font=("Segoe UI", 7), fg=C["text_dim"], bg=C["surface"],
              pady=2).pack(fill="x")
 
     PRED_DIST = [
@@ -813,11 +813,11 @@ def _render_vdot_analysis(body: tk.Frame, all_summaries: list, on_open=None):
         ms = dist / pred_t if pred_t > 0 else 0
         row = tk.Frame(prd, bg=bg)
         row.pack(fill="x", padx=4)
-        tk.Label(row, text=label, font=("Courier", 9), fg=C["accent"],
+        tk.Label(row, text=label, font=("Segoe UI", 9), fg=C["accent"],
                  bg=bg, width=10, anchor="w", pady=5, padx=4).pack(side="left")
-        tk.Label(row, text=fmt_time(pred_t), font=("Courier", 9, "bold"),
+        tk.Label(row, text=fmt_time(pred_t), font=("Segoe UI", 9, "bold"),
                  fg=C["green"], bg=bg, width=9, anchor="center").pack(side="left")
-        tk.Label(row, text=f"{fmt_pace(ms)}/km", font=("Courier", 8),
+        tk.Label(row, text=f"{fmt_pace(ms)}/km", font=("Segoe UI", 8),
                  fg=C["text_dim"], bg=bg, anchor="w").pack(side="left")
 
 
@@ -909,7 +909,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
 
     if not groups:
         tk.Label(body, text=t("recurring_none"),
-                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"],
+                 font=("Segoe UI", 9), fg=C["text_dim"], bg=C["bg"],
                  pady=12).pack(anchor="w", padx=20)
         return
 
@@ -924,7 +924,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
     list_panel.pack_propagate(False)
 
     tk.Label(list_panel, text=f"  {t('recurring_routes_count').format(n=len(groups))}",
-             font=("Courier", 8), fg=C["text_dim"], bg=C["surface2"],
+             font=("Segoe UI", 8), fg=C["text_dim"], bg=C["surface2"],
              pady=6, anchor="w").pack(fill="x")
     tk.Frame(list_panel, bg=C["border"], height=1).pack(fill="x")
 
@@ -950,7 +950,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
 
     tk.Label(chart_panel,
              text=t("recurring_select_hint"),
-             font=("Courier", 10), fg=C["text_dim"], bg=C["surface2"],
+             font=("Segoe UI", 10), fg=C["text_dim"], bg=C["surface2"],
              pady=60).pack(expand=True)
 
     # ── tkinter-safe queue for thread updates ─────────────────────────────────
@@ -1001,7 +1001,7 @@ def _render_route_analysis(body, storage_mgr, on_open):
         label    = f"🔁 {top_name[:24]}\n   {dist_km:.1f} km · {n} {t('unit_runs')}\n   {span}{loc_line}"
 
         bg = C["surface"] if i % 2 == 0 else C["surface2"]
-        btn = tk.Button(list_inner, text=label, font=("Courier", 8),
+        btn = tk.Button(list_inner, text=label, font=("Segoe UI", 8),
                         bg=bg, fg=C["text"], bd=0, padx=8, pady=6,
                         anchor="w", justify="left", cursor="hand2",
                         wraplength=200)
@@ -1060,7 +1060,7 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
 
     if not dates or not HAS_MPL:
         tk.Label(frame, text=t("insufficient_data"),
-                 font=("Courier", 9), fg=C["text_dim"], bg=C["surface2"]).pack(pady=20)
+                 font=("Segoe UI", 9), fg=C["text_dim"], bg=C["surface2"]).pack(pady=20)
         return
 
     # ── Stats header ──────────────────────────────────────────────────────────
@@ -1091,12 +1091,12 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
          f"{t('avg_pace_label')} {_fmt_p(avg_pace)}/km    {trend_txt}  ",
          trend_col, "right"),
     ]:
-        tk.Label(hdr, text=txt, font=("Courier", 9), fg=col,
+        tk.Label(hdr, text=txt, font=("Segoe UI", 9), fg=col,
                  bg=C["surface"], pady=6).pack(side=side, padx=12)
 
     if storage_mgr:
         map_btn = tk.Button(
-            hdr, text=t("btn_map"), font=("Courier", 10),
+            hdr, text=t("btn_map"), font=("Segoe UI", 10),
             fg=C["accent"], bg=C["surface"], relief="flat",
             cursor="hand2", bd=0,
             command=lambda g=group, sm=storage_mgr: _open_group_map(g, sm),
@@ -1232,7 +1232,7 @@ def _draw_route_chart(frame, group, on_open, storage_mgr=None):
         hr_s   = f"  ❤ {s['avg_hr']:.0f}" if s.get("avg_hr") else ""
         line   = f"{date_s}   {dist_s}   {_fmt_p(pace)}/km{hr_s}   {s.get('name','')[:35]}"
         fg_col = C["green"] if pace == best_pace else C["text_dim"]
-        lbl = tk.Label(sub, text=line, font=("Courier", 8), fg=fg_col,
+        lbl = tk.Label(sub, text=line, font=("Segoe UI", 8), fg=fg_col,
                        bg=C["surface2"], anchor="w", cursor="hand2" if on_open else "")
         lbl.pack(fill="x", padx=12, pady=1)
         if on_open:
@@ -1486,16 +1486,16 @@ def _render_annual_goal(body, all_summaries):
     row_f.pack(fill="x", padx=16, pady=10)
 
     tk.Label(row_f, text=f"{t('annual_goal_label')} {current_year}:",
-             font=("Courier", 9), fg=C["text_dim"],
+             font=("Segoe UI", 9), fg=C["text_dim"],
              bg=C["surface2"]).pack(side="left")
 
     goal_var = tk.StringVar(value=str(int(target_km)))
-    tk.Entry(row_f, textvariable=goal_var, font=("Courier", 10),
+    tk.Entry(row_f, textvariable=goal_var, font=("Segoe UI", 10),
              bg=C["surface"], fg=C["text"], width=7, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=6)
-    tk.Label(row_f, text="km", font=("Courier", 9), fg=C["text_dim"],
+    tk.Label(row_f, text="km", font=("Segoe UI", 9), fg=C["text_dim"],
              bg=C["surface2"]).pack(side="left")
 
     def _save():
@@ -1506,7 +1506,7 @@ def _render_annual_goal(body, all_summaries):
         except Exception:
             pass
 
-    tk.Button(row_f, text=t("btn_save"), font=("Courier", 8, "bold"),
+    tk.Button(row_f, text=t("btn_save"), font=("Segoe UI", 8, "bold"),
               bg=C["accent"], fg="white", bd=0, padx=8, pady=3,
               cursor="hand2", command=_save).pack(side="left", padx=10)
 
@@ -1514,7 +1514,7 @@ def _render_annual_goal(body, all_summaries):
     col_txt = C["green"] if pct >= 1.0 else C["accent"]
     tk.Label(row_f,
              text=f"{year_km:.0f} / {target_km:.0f} km  ({pct * 100:.1f}%)",
-             font=("Courier", 10, "bold"), fg=col_txt,
+             font=("Segoe UI", 10, "bold"), fg=col_txt,
              bg=C["surface2"]).pack(side="right", padx=8)
 
     # Progress bar (Canvas)
@@ -1581,7 +1581,7 @@ def _render_monthly_stats(body, all_summaries):
     hrow = tk.Frame(tbl, bg=C["surface"])
     hrow.pack(fill="x")
     for col, w in zip(mo_cols, mo_widths):
-        tk.Label(hrow, text=col, font=("Courier", 8, "bold"),
+        tk.Label(hrow, text=col, font=("Segoe UI", 8, "bold"),
                  fg=C["text_dim"], bg=C["surface"],
                  width=w, anchor="center", pady=8).pack(side="left", padx=3)
 
@@ -1602,7 +1602,7 @@ def _render_monthly_stats(body, all_summaries):
             (f"{d['elev_gain']:.0f} m",          C["yellow"]),
         ]
         for (v, col), w in zip(mo_vals, mo_widths):
-            tk.Label(row, text=v, font=("Courier", 9), fg=col, bg=bg,
+            tk.Label(row, text=v, font=("Segoe UI", 9), fg=col, bg=bg,
                      width=w, anchor="center", pady=7).pack(side="left", padx=3)
 
     # km per month chart
@@ -1720,7 +1720,7 @@ def _render_training_load(body, all_summaries):
         (f"■ {t('training_load_atl')}", C["red"]),
         (f"■ {t('training_load_tsb')}", C["green"]),
     ]:
-        tk.Label(leg_f, text=txt, font=("Courier", 8), fg=col,
+        tk.Label(leg_f, text=txt, font=("Segoe UI", 8), fg=col,
                  bg=C["bg"]).pack(side="left", padx=10)
     info_btn(leg_f, t("info_training_load_title"),
              t("info_training_load")).pack(side="right", padx=8)
@@ -1772,7 +1772,7 @@ def _render_grade_analysis(body, storage_mgr):
     ctrl_f = tk.Frame(body, bg=C["bg"])
     ctrl_f.pack(fill="x", padx=20, pady=(0, 4))
     for label, _, _, col in _GRADE_BINS:
-        tk.Label(ctrl_f, text=f"■ {label}", font=("Courier", 7),
+        tk.Label(ctrl_f, text=f"■ {label}", font=("Segoe UI", 7),
                  fg=col, bg=C["bg"]).pack(side="left", padx=6)
 
     def _refresh():
@@ -1785,20 +1785,20 @@ def _render_grade_analysis(body, storage_mgr):
     races_var = tk.BooleanVar(value=False)
     info_btn(ctrl_f, t("section_grade"),
              t("info_grade")).pack(side="right", padx=4)
-    tk.Checkbutton(ctrl_f, text=t("filter_races_only"), font=("Courier", 8),
+    tk.Checkbutton(ctrl_f, text=t("filter_races_only"), font=("Segoe UI", 8),
                    variable=races_var, fg=C["text"], bg=C["bg"],
                    selectcolor=C["surface2"], activebackground=C["bg"],
                    command=_refresh).pack(side="right", padx=8)
 
     days_var = tk.StringVar(value="365")
     tk.Entry(ctrl_f, textvariable=days_var, width=5,
-             font=("Courier", 8), bg=C["surface2"], fg=C["text"],
+             font=("Segoe UI", 8), bg=C["surface2"], fg=C["text"],
              insertbackground=C["text"], relief="flat",
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="right", padx=(0, 2))
-    tk.Label(ctrl_f, text="Ultimi giorni:", font=("Courier", 8),
+    tk.Label(ctrl_f, text="Ultimi giorni:", font=("Segoe UI", 8),
              fg=C["text_dim"], bg=C["bg"]).pack(side="right", padx=(8, 0))
-    tk.Button(ctrl_f, text="↻", font=("Courier", 9, "bold"),
+    tk.Button(ctrl_f, text="↻", font=("Segoe UI", 9, "bold"),
               bg=C["surface2"], fg=C["accent"], bd=0, padx=6, pady=2,
               cursor="hand2", command=_refresh).pack(side="right", padx=4)
 
@@ -1818,7 +1818,7 @@ def _redraw_grade(chart_f, storage_mgr, races_only: bool, days_back: int = 0):
         splits = [s for s in splits if (s.get("date") or "") >= cutoff]
     if not splits:
         tk.Label(chart_f, text="Nessun dato splits disponibile.",
-                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=20)
+                 font=("Segoe UI", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=20)
         return
 
     bin_paces: dict[str, list] = {b[0]: [] for b in _GRADE_BINS}
@@ -1837,7 +1837,7 @@ def _redraw_grade(chart_f, storage_mgr, races_only: bool, days_back: int = 0):
              for b in _GRADE_BINS if bin_paces[b[0]]]
     if not valid:
         tk.Label(chart_f, text="Dati insufficienti.",
-                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=20)
+                 font=("Segoe UI", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=20)
         return
 
     labels_v  = [v[0] for v in valid]
@@ -1886,7 +1886,7 @@ def _render_performance_curve(body, storage_mgr):
     ctrl_f = tk.Frame(body, bg=C["bg"])
     ctrl_f.pack(fill="x", padx=20, pady=(0, 4))
     tk.Label(ctrl_f, text=t("perf_curve_legend"),
-             font=("Courier", 8), fg=C["text_dim"], bg=C["bg"]).pack(side="left")
+             font=("Segoe UI", 8), fg=C["text_dim"], bg=C["bg"]).pack(side="left")
 
     def _refresh():
         try:
@@ -1898,20 +1898,20 @@ def _render_performance_curve(body, storage_mgr):
     races_var = tk.BooleanVar(value=False)
     info_btn(ctrl_f, t("section_perf_curve"),
              t("info_perf_curve")).pack(side="right", padx=4)
-    tk.Checkbutton(ctrl_f, text=t("filter_races_only"), font=("Courier", 8),
+    tk.Checkbutton(ctrl_f, text=t("filter_races_only"), font=("Segoe UI", 8),
                    variable=races_var, fg=C["text"], bg=C["bg"],
                    selectcolor=C["surface2"], activebackground=C["bg"],
                    command=_refresh).pack(side="right", padx=8)
 
     days_var = tk.StringVar(value="365")
     tk.Entry(ctrl_f, textvariable=days_var, width=5,
-             font=("Courier", 8), bg=C["surface2"], fg=C["text"],
+             font=("Segoe UI", 8), bg=C["surface2"], fg=C["text"],
              insertbackground=C["text"], relief="flat",
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="right", padx=(0, 2))
-    tk.Label(ctrl_f, text="Ultimi giorni:", font=("Courier", 8),
+    tk.Label(ctrl_f, text="Ultimi giorni:", font=("Segoe UI", 8),
              fg=C["text_dim"], bg=C["bg"]).pack(side="right", padx=(8, 0))
-    tk.Button(ctrl_f, text="↻", font=("Courier", 9, "bold"),
+    tk.Button(ctrl_f, text="↻", font=("Segoe UI", 9, "bold"),
               bg=C["surface2"], fg=C["accent"], bd=0, padx=6, pady=2,
               cursor="hand2", command=_refresh).pack(side="right", padx=4)
 
@@ -1928,7 +1928,7 @@ def _redraw_perf_curve(chart_f, storage_mgr, races_only: bool, days_back: int = 
         import numpy as np
     except ImportError:
         tk.Label(chart_f, text="numpy non installato (pip install numpy).",
-                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
+                 font=("Segoe UI", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
         return
 
     from storage import _EFFORT_DISTANCES
@@ -1939,7 +1939,7 @@ def _redraw_perf_curve(chart_f, storage_mgr, races_only: bool, days_back: int = 
         efforts = [e for e in efforts if (e.get("date") or "") >= cutoff]
     if not efforts:
         tk.Label(chart_f, text="Nessun best effort trovato nel database.",
-                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
+                 font=("Segoe UI", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
         return
 
     # Best time for each canonical distance
@@ -1956,7 +1956,7 @@ def _redraw_perf_curve(chart_f, storage_mgr, races_only: bool, days_back: int = 
     if len(pts) < 2:
         tk.Label(chart_f, text="Servono almeno 2 distanze per il fit. "
                                "Scarica attività con best_efforts.",
-                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"],
+                 font=("Segoe UI", 9), fg=C["text_dim"], bg=C["bg"],
                  wraplength=700).pack(pady=10)
         return
 
@@ -2055,20 +2055,20 @@ def _render_race_prediction(body, storage_mgr):
     r1 = tk.Frame(pf, bg=C["surface2"])
     r1.pack(fill="x", pady=(0, 6))
 
-    tk.Label(r1, text="Distanza:", font=("Courier", 9),
+    tk.Label(r1, text="Distanza:", font=("Segoe UI", 9),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
     dist_var = tk.StringVar(value="10 km")
     dist_combo = tk.OptionMenu(r1, dist_var, *_PREDICT_DISTS.keys())
-    dist_combo.config(font=("Courier", 9), bg=C["surface"], fg=C["text"],
+    dist_combo.config(font=("Segoe UI", 9), bg=C["surface"], fg=C["text"],
                       bd=0, highlightthickness=0, activebackground=C["surface2"])
-    dist_combo["menu"].config(font=("Courier", 9), bg=C["surface"], fg=C["text"])
+    dist_combo["menu"].config(font=("Segoe UI", 9), bg=C["surface"], fg=C["text"])
     dist_combo.pack(side="left", padx=(4, 16))
 
     # Custom distance — visible only with "Personalizzata"
-    custom_lbl = tk.Label(r1, text="km personalizzati:", font=("Courier", 9),
+    custom_lbl = tk.Label(r1, text="km personalizzati:", font=("Segoe UI", 9),
                           fg=C["text_dim"], bg=C["surface2"])
     custom_var = tk.StringVar(value="15")
-    custom_entry = tk.Entry(r1, textvariable=custom_var, font=("Courier", 9),
+    custom_entry = tk.Entry(r1, textvariable=custom_var, font=("Segoe UI", 9),
                             bg=C["surface"], fg=C["text"], width=5, bd=0,
                             insertbackground=C["text"],
                             highlightthickness=1, highlightbackground=C["border"])
@@ -2084,10 +2084,10 @@ def _render_race_prediction(body, storage_mgr):
     dist_var.trace_add("write", _on_dist_change)
     _on_dist_change()  # initial state
 
-    tk.Label(r1, text="Dislivello +  (m):", font=("Courier", 9),
+    tk.Label(r1, text="Dislivello +  (m):", font=("Segoe UI", 9),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
     elev_var = tk.StringVar(value="0")
-    tk.Entry(r1, textvariable=elev_var, font=("Courier", 9),
+    tk.Entry(r1, textvariable=elev_var, font=("Segoe UI", 9),
              bg=C["surface"], fg=C["text"], width=6, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
@@ -2097,38 +2097,38 @@ def _render_race_prediction(body, storage_mgr):
     r2 = tk.Frame(pf, bg=C["surface2"])
     r2.pack(fill="x")
 
-    tk.Label(r2, text="Ultimi giorni:", font=("Courier", 9),
+    tk.Label(r2, text="Ultimi giorni:", font=("Segoe UI", 9),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
     days_var = tk.StringVar(value="365")
-    tk.Entry(r2, textvariable=days_var, font=("Courier", 9),
+    tk.Entry(r2, textvariable=days_var, font=("Segoe UI", 9),
              bg=C["surface"], fg=C["text"], width=5, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 4))
-    tk.Label(r2, text="(0 = tutto)", font=("Courier", 7),
+    tk.Label(r2, text="(0 = tutto)", font=("Segoe UI", 7),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left", padx=(0, 12))
 
-    tk.Label(r2, text="km corsa min:", font=("Courier", 9),
+    tk.Label(r2, text="km corsa min:", font=("Segoe UI", 9),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
     km_min_var = tk.StringVar(value="0")
-    tk.Entry(r2, textvariable=km_min_var, font=("Courier", 9),
+    tk.Entry(r2, textvariable=km_min_var, font=("Segoe UI", 9),
              bg=C["surface"], fg=C["text"], width=5, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 8))
-    tk.Label(r2, text="max:", font=("Courier", 9),
+    tk.Label(r2, text="max:", font=("Segoe UI", 9),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left")
     km_max_var = tk.StringVar(value="0")
-    tk.Entry(r2, textvariable=km_max_var, font=("Courier", 9),
+    tk.Entry(r2, textvariable=km_max_var, font=("Segoe UI", 9),
              bg=C["surface"], fg=C["text"], width=5, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(4, 2))
-    tk.Label(r2, text="(0 = nessun limite)", font=("Courier", 7),
+    tk.Label(r2, text="(0 = nessun limite)", font=("Segoe UI", 7),
              fg=C["text_dim"], bg=C["surface2"]).pack(side="left", padx=(0, 12))
 
     races_var = tk.BooleanVar(value=False)
-    tk.Checkbutton(r2, text=t("filter_races_only"), font=("Courier", 8),
+    tk.Checkbutton(r2, text=t("filter_races_only"), font=("Segoe UI", 8),
                    variable=races_var, fg=C["text"], bg=C["surface2"],
                    selectcolor=C["surface"], activebackground=C["surface2"]
                    ).pack(side="left", padx=8)
@@ -2165,7 +2165,7 @@ def _render_race_prediction(body, storage_mgr):
                           dist_m, elev_gain, races_var.get(), days_back,
                           km_min, km_max)
 
-    tk.Button(r2, text=t("btn_calculate"), font=("Courier", 9, "bold"),
+    tk.Button(r2, text=t("btn_calculate"), font=("Segoe UI", 9, "bold"),
               bg=C["accent"], fg="white", bd=0, padx=12, pady=4,
               cursor="hand2", command=_calc).pack(side="left", padx=4)
 
@@ -2215,7 +2215,7 @@ def _redraw_race_pred(chart_f, storage_mgr,
         import numpy as np
     except ImportError:
         tk.Label(chart_f, text="numpy non installato.",
-                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
+                 font=("Segoe UI", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
         return
 
     from storage import _EFFORT_DISTANCES
@@ -2235,7 +2235,7 @@ def _redraw_race_pred(chart_f, storage_mgr,
 
     if not efforts:
         tk.Label(chart_f, text="Nessun best effort trovato.",
-                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
+                 font=("Segoe UI", 9), fg=C["text_dim"], bg=C["bg"]).pack(pady=10)
         return
 
     best: dict[str, float] = {}
@@ -2248,7 +2248,7 @@ def _redraw_race_pred(chart_f, storage_mgr,
     pts = [(dm, best[key]) for key, dm in _EFFORT_DISTANCES.items() if key in best]
     if len(pts) < 2:
         tk.Label(chart_f, text="Servono almeno 2 distanze per la previsione.",
-                 font=("Courier", 9), fg=C["text_dim"], bg=C["bg"],
+                 font=("Segoe UI", 9), fg=C["text_dim"], bg=C["bg"],
                  wraplength=700).pack(pady=10)
         return
 
@@ -2344,23 +2344,23 @@ def _redraw_race_pred(chart_f, storage_mgr,
     ]:
         r = tk.Frame(sf, bg=C["surface2"])
         r.pack(anchor="w")
-        tk.Label(r, text=lbl, font=("Courier", 8), fg=C["text_dim"],
+        tk.Label(r, text=lbl, font=("Segoe UI", 8), fg=C["text_dim"],
                  bg=C["surface2"], width=28, anchor="w").pack(side="left")
-        tk.Label(r, text=val, font=("Courier", 9, "bold"), fg=col,
+        tk.Label(r, text=val, font=("Segoe UI", 9, "bold"), fg=col,
                  bg=C["surface2"]).pack(side="left")
     if elev_gain > 0:
         corr_str = f"+{sec_per_km_correction * dist_km:.0f}s totali  [{grade_correction_source}]"
         tk.Label(sf, text=f"  (correzione dislivello: {corr_str})",
-                 font=("Courier", 7), fg=C["text_dim"],
+                 font=("Segoe UI", 7), fg=C["text_dim"],
                  bg=C["surface2"]).pack(anchor="w")
 
     # Diagnostic panel: data used in the fit
     tk.Frame(sf, bg=C["border"], height=1).pack(fill="x", pady=(8, 4))
     tk.Label(sf, text=f"  Fit: t = {A:.2f} · d^{b:.3f}   (Riegel teorico: b=1.060)   "
                       f"base {_fmt(t_base)} su {dist_km:.1f} km",
-             font=("Courier", 7), fg=C["text_dim"], bg=C["surface2"]).pack(anchor="w")
+             font=("Segoe UI", 7), fg=C["text_dim"], bg=C["surface2"]).pack(anchor="w")
     tk.Label(sf, text="  Dati usati nel fit:",
-             font=("Courier", 7, "bold"), fg=C["text_dim"], bg=C["surface2"]).pack(anchor="w")
+             font=("Segoe UI", 7, "bold"), fg=C["text_dim"], bg=C["surface2"]).pack(anchor="w")
     nice = {"400m": "400m", "half_mile": "½ mi", "1k": "1K", "1_mile": "1 mi",
             "2_mile": "2 mi", "5k": "5K", "10k": "10K",
             "Half-Marathon": "½ Mar", "Marathon": "Mar"}
@@ -2372,6 +2372,6 @@ def _redraw_race_pred(chart_f, storage_mgr,
         pace_str = f"{int(pace_sec // 60)}:{int(pace_sec % 60):02d}/km"
         tk.Label(sf,
                  text=f"    {nice.get(key, key):>6}  →  {_fmt(t_eff):>8}  ({pace_str})",
-                 font=("Courier", 7), fg=C["accent"], bg=C["surface2"]).pack(anchor="w")
+                 font=("Segoe UI", 7), fg=C["accent"], bg=C["surface2"]).pack(anchor="w")
 
 

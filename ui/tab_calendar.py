@@ -52,24 +52,24 @@ def render(tab, storage_mgr, on_open):
 
     month_var = tk.StringVar()
     tk.Label(nav, textvariable=month_var,
-             font=("Courier", 13, "bold"), fg=C["accent"],
+             font=("Segoe UI", 13, "bold"), fg=C["accent"],
              bg=C["surface"]).pack(side="left", padx=20)
 
     # Month totals
     month_total_var = tk.StringVar()
     tk.Label(nav, textvariable=month_total_var,
-             font=("Courier", 9), fg=C["text_dim"],
+             font=("Segoe UI", 9), fg=C["text_dim"],
              bg=C["surface"]).pack(side="left", padx=16)
 
-    tk.Button(nav, text="▶", font=("Courier", 11, "bold"),
+    tk.Button(nav, text="▶", font=("Segoe UI", 11, "bold"),
               bg=C["surface2"], fg=C["text"], bd=0, padx=14, pady=4,
               cursor="hand2",
               command=lambda: _go_month(1)).pack(side="right", padx=8)
-    tk.Button(nav, text="◀", font=("Courier", 11, "bold"),
+    tk.Button(nav, text="◀", font=("Segoe UI", 11, "bold"),
               bg=C["surface2"], fg=C["text"], bd=0, padx=14, pady=4,
               cursor="hand2",
               command=lambda: _go_month(-1)).pack(side="right", padx=4)
-    tk.Button(nav, text=t("calendar_today"), font=("Courier", 9, "bold"),
+    tk.Button(nav, text=t("calendar_today"), font=("Segoe UI", 9, "bold"),
               bg=C["accent"], fg="white", bd=0, padx=10, pady=4,
               cursor="hand2",
               command=lambda: _go_today()).pack(side="right", padx=8)
@@ -79,7 +79,7 @@ def render(tab, storage_mgr, on_open):
     hdr.pack(fill="x", padx=4)
     for i, day_name in enumerate(t("days_long")):
         col = C["red"] if i >= 5 else C["text_dim"]
-        tk.Label(hdr, text=day_name, font=("Courier", 8, "bold"),
+        tk.Label(hdr, text=day_name, font=("Segoe UI", 8, "bold"),
                  fg=col, bg=C["surface"],
                  width=17, anchor="center", pady=6).grid(
             row=0, column=i, padx=2, sticky="ew")
@@ -197,7 +197,7 @@ def render(tab, storage_mgr, on_open):
         top_f = tk.Frame(cell, bg=bg_cell)
         top_f.pack(fill="x", padx=5, pady=(3, 0))
         tk.Label(top_f, text=str(day_num),
-                 font=("Courier", 8, "bold"),
+                 font=("Segoe UI", 8, "bold"),
                  fg=day_col, bg=bg_cell).pack(side="left")
 
         if not runs:
@@ -210,10 +210,10 @@ def render(tab, storage_mgr, on_open):
         race_var    = tk.StringVar()
         if n > 1:
             tk.Label(top_f, textvariable=counter_var,
-                     font=("Courier", 7), fg=C["text_dim"],
+                     font=("Segoe UI", 7), fg=C["text_dim"],
                      bg=bg_cell).pack(side="right")
         tk.Label(top_f, textvariable=race_var,
-                 font=("Courier", 9), fg=C["yellow"],
+                 font=("Segoe UI", 9), fg=C["yellow"],
                  bg=bg_cell).pack(side="right", padx=(0, 2))
 
         # Content tags (updated by navigation)
@@ -222,15 +222,15 @@ def render(tab, storage_mgr, on_open):
         hr_var   = tk.StringVar()
 
         dist_lbl = tk.Label(cell, textvariable=dist_var,
-                            font=("Courier", 10, "bold"),
+                            font=("Segoe UI", 10, "bold"),
                             fg=C["text"], bg=bg_cell, anchor="w")
         dist_lbl.pack(anchor="w", padx=6, pady=(1, 0))
         pace_lbl = tk.Label(cell, textvariable=pace_var,
-                            font=("Courier", 8),
+                            font=("Segoe UI", 8),
                             fg=C["text_dim"], bg=bg_cell, anchor="w")
         pace_lbl.pack(anchor="w", padx=6)
         hr_lbl = tk.Label(cell, textvariable=hr_var,
-                          font=("Courier", 8),
+                          font=("Segoe UI", 8),
                           fg=C["text_dim"], bg=bg_cell, anchor="w")
         hr_lbl.pack(anchor="w", padx=6)
 
@@ -266,7 +266,7 @@ def render(tab, storage_mgr, on_open):
                 idx[0] = (idx[0] + 1) % n
                 _refresh()
 
-            btn_cfg = dict(font=("Courier", 8, "bold"), bg=C["surface2"],
+            btn_cfg = dict(font=("Segoe UI", 8, "bold"), bg=C["surface2"],
                            fg=C["text"], bd=0, padx=6, pady=1, cursor="hand2")
             tk.Button(nav_f, text="◀", command=_prev, **btn_cfg).pack(side="left")
             tk.Button(nav_f, text="▶", command=_next, **btn_cfg).pack(side="right")

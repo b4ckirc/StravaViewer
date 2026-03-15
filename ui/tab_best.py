@@ -13,7 +13,7 @@ def render(tab, activity):
         no_data(tab, t("no_best_efforts"))
         return
     tk.Label(tab, text=t("best_title"),
-             font=("Courier", 11, "bold"), fg=C["accent"],
+             font=("Segoe UI", 11, "bold"), fg=C["accent"],
              bg=C["surface"], pady=12).pack(fill="x")
     for i, be in enumerate(a.best_efforts):
         name    = be.get("name", "")
@@ -27,11 +27,11 @@ def render(tab, activity):
         bg  = C["surface2"] if i % 2 == 0 else C["surface"]
         row = tk.Frame(tab, bg=bg, padx=24, pady=10)
         row.pack(fill="x")
-        tk.Label(row, text=f"{name:<24}", font=("Courier", 10, "bold"),
+        tk.Label(row, text=f"{name:<24}", font=("Segoe UI", 10, "bold"),
                  fg=C["blue"], bg=bg).pack(side="left")
-        tk.Label(row, text=fmt_time(elapsed), font=("Courier", 10),
+        tk.Label(row, text=fmt_time(elapsed), font=("Segoe UI", 10),
                  fg=C["text"], bg=bg, width=10).pack(side="left")
-        tk.Label(row, text=f"{pace} /km", font=("Courier", 10),
+        tk.Label(row, text=f"{pace} /km", font=("Segoe UI", 10),
                  fg=C["green"], bg=bg, width=14).pack(side="left")
-        tk.Label(row, text=badge, font=("Courier", 9, "bold"),
+        tk.Label(row, text=badge, font=("Segoe UI", 9, "bold"),
                  fg=bc, bg=bg).pack(side="left")

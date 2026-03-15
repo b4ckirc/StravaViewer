@@ -29,12 +29,12 @@ def render(tab, activities: list):
     hdr = tk.Frame(tab, bg=C["surface"], pady=12)
     hdr.pack(fill="x")
     tk.Label(hdr, text=t("compare_title").format(n=n),
-             font=("Courier", 12, "bold"), fg=C["accent"],
+             font=("Segoe UI", 12, "bold"), fg=C["accent"],
              bg=C["surface"]).pack(anchor="w", padx=20)
     for i, (act, col, em) in enumerate(zip(activities, colors, emojis)):
         tk.Label(hdr,
                  text=f"  {em}  {t('compare_main') if i == 0 else ''}{act.name[:70]}",
-                 font=("Courier", 9, "bold" if i == 0 else "normal"),
+                 font=("Segoe UI", 9, "bold" if i == 0 else "normal"),
                  fg=col, bg=C["surface"]).pack(anchor="w", padx=20)
 
     _, body = make_scrollable(tab)
@@ -49,11 +49,11 @@ def render(tab, activities: list):
 
     hrow = tk.Frame(tbl, bg=C["surface"])
     hrow.pack(fill="x")
-    tk.Label(hrow, text=t("cmp_metric"), font=("Courier", 8, "bold"),
+    tk.Label(hrow, text=t("cmp_metric"), font=("Segoe UI", 8, "bold"),
              fg=C["text_dim"], bg=C["surface"],
              width=22, anchor="w", padx=12, pady=8).pack(side="left")
     for col, em in zip(colors, emojis):
-        tk.Label(hrow, text=em, font=("Courier", 8, "bold"),
+        tk.Label(hrow, text=em, font=("Segoe UI", 8, "bold"),
                  fg=col, bg=C["surface"],
                  width=col_w, anchor="center").pack(side="left")
 
@@ -61,7 +61,7 @@ def render(tab, activities: list):
         bg = C["surface2"] if idx % 2 == 0 else C["surface"]
         r  = tk.Frame(tbl, bg=bg)
         r.pack(fill="x")
-        tk.Label(r, text=label, font=("Courier", 9), fg=C["text_dim"],
+        tk.Label(r, text=label, font=("Segoe UI", 9), fg=C["text_dim"],
                  bg=bg, width=22, anchor="w", padx=12, pady=7).pack(side="left")
         nums = []
         for v in values:
@@ -73,7 +73,7 @@ def render(tab, activities: list):
         for v, col, num in zip(values, colors, nums):
             fg = C["green"] if num is not None and num == best  else \
                  C["red"]   if num is not None and num == worst else C["text"]
-            tk.Label(r, text=str(v), font=("Courier", 9, "bold"),
+            tk.Label(r, text=str(v), font=("Segoe UI", 9, "bold"),
                      fg=fg, bg=bg, width=col_w, anchor="center").pack(side="left")
 
     rows = [

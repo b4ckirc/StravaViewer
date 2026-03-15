@@ -81,7 +81,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
 
     # ── Header ────────────────────────────────────────────────────────────────
     tk.Label(win, text=t("downloader_title"),
-             font=("Courier", 13, "bold"), fg=C["accent"],
+             font=("Segoe UI", 13, "bold"), fg=C["accent"],
              bg=C["surface"], pady=14).pack(fill="x")
 
     # ── Credentials ───────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     hint_f = tk.Frame(cred_f, bg=C["bg"])
     hint_f.pack(anchor="w", pady=(0, 6))
     hint_lines = t("downloader_creds_hint").split("\n")
-    tk.Label(hint_f, text=hint_lines[0], font=("Courier", 8),
+    tk.Label(hint_f, text=hint_lines[0], font=("Segoe UI", 8),
              fg=C["text_dim"], bg=C["bg"], justify="left").pack(anchor="w")
     if len(hint_lines) > 1:
         row2 = tk.Frame(hint_f, bg=C["bg"])
@@ -100,29 +100,29 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
         if url_pos >= 0:
             prefix = hint_lines[1][:url_pos]
             if prefix:
-                tk.Label(row2, text=prefix, font=("Courier", 8),
+                tk.Label(row2, text=prefix, font=("Segoe UI", 8),
                          fg=C["text_dim"], bg=C["bg"]).pack(side="left")
             lnk = tk.Label(row2, text=_STRAVA_API_URL,
-                           font=("Courier", 8, "underline"),
+                           font=("Segoe UI", 8, "underline"),
                            fg=C["accent"], bg=C["bg"], cursor="hand2")
             lnk.pack(side="left")
             lnk.bind("<Button-1>", lambda e: webbrowser.open(_STRAVA_API_URL))
             suffix = hint_lines[1][url_pos + len(_STRAVA_API_URL):]
             if suffix:
-                tk.Label(row2, text=suffix, font=("Courier", 8),
+                tk.Label(row2, text=suffix, font=("Segoe UI", 8),
                          fg=C["text_dim"], bg=C["bg"]).pack(side="left")
         else:
-            tk.Label(row2, text=hint_lines[1], font=("Courier", 8),
+            tk.Label(row2, text=hint_lines[1], font=("Segoe UI", 8),
                      fg=C["text_dim"], bg=C["bg"]).pack(anchor="w")
 
     def entry_row(lbl_text, show=""):
         f = tk.Frame(cred_f, bg=C["bg"])
         f.pack(fill="x", pady=3)
-        tk.Label(f, text=lbl_text, font=("Courier", 9),
+        tk.Label(f, text=lbl_text, font=("Segoe UI", 9),
                  fg=C["text_dim"], bg=C["bg"], width=16,
                  anchor="w").pack(side="left")
         var = tk.StringVar()
-        tk.Entry(f, textvariable=var, font=("Courier", 10),
+        tk.Entry(f, textvariable=var, font=("Segoe UI", 10),
                  bg=C["surface2"], fg=C["text"], show=show, width=36,
                  bd=0, insertbackground=C["text"],
                  highlightthickness=1, highlightbackground=C["border"]
@@ -142,22 +142,22 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     dst_f = tk.Frame(win, bg=C["surface2"],
                      highlightthickness=1, highlightbackground=C["border"])
     dst_f.pack(fill="x", padx=24, pady=(4, 0))
-    tk.Label(dst_f, text=t("downloader_save_in"), font=("Courier", 8, "bold"),
+    tk.Label(dst_f, text=t("downloader_save_in"), font=("Segoe UI", 8, "bold"),
              fg=C["text_dim"], bg=C["surface2"], pady=8).pack(side="left", padx=12)
     save_json_var  = tk.BooleanVar(value=True)
     save_mongo_var = tk.BooleanVar(value=storage_mgr.mongo_ok)
     tk.Checkbutton(dst_f, text="File JSON", variable=save_json_var,
-                   font=("Courier", 9), fg=C["text"], bg=C["surface2"],
+                   font=("Segoe UI", 9), fg=C["text"], bg=C["surface2"],
                    selectcolor=C["surface"], activebackground=C["surface2"],
                    activeforeground=C["text"]).pack(side="left", padx=10)
     mongo_cb = tk.Checkbutton(dst_f, text="MongoDB", variable=save_mongo_var,
-                              font=("Courier", 9), fg=C["text"], bg=C["surface2"],
+                              font=("Segoe UI", 9), fg=C["text"], bg=C["surface2"],
                               selectcolor=C["surface"], activebackground=C["surface2"],
                               activeforeground=C["text"])
     mongo_cb.pack(side="left", padx=10)
     if not storage_mgr.mongo_ok:
         mongo_cb.config(state="disabled")
-        tk.Label(dst_f, text=t("downloader_mongo_off"), font=("Courier", 7),
+        tk.Label(dst_f, text=t("downloader_mongo_off"), font=("Segoe UI", 7),
                  fg=C["red"], bg=C["surface2"]).pack(side="left")
 
     # ── Counters ─────────────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     skip_var = tk.StringVar(value=t("downloader_skip").format(n=0))
     err_var  = tk.StringVar(value=t("downloader_errors").format(n=0))
     for var, col in [(new_var, C["green"]), (skip_var, C["text_dim"]), (err_var, C["red"])]:
-        tk.Label(stat_f, textvariable=var, font=("Courier", 9, "bold"),
+        tk.Label(stat_f, textvariable=var, font=("Segoe UI", 9, "bold"),
                  fg=col, bg=C["surface2"], padx=16, pady=5).pack(side="left")
 
     # ── Buttons ──────────────────────────────────────────────────────────────
@@ -266,7 +266,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     start_btn = tk.Button(
         btn_f,
         text=t("btn_start_download"),
-        font=("Courier", 11, "bold"),
+        font=("Segoe UI", 11, "bold"),
         bg=C["accent"], fg="white",
         activebackground="#d43d00", activeforeground="white",
         bd=0, padx=20, pady=10,
@@ -278,7 +278,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
 
     tk.Button(
         btn_f, text=t("btn_close"),
-        font=("Courier", 9), bg=C["surface2"],
+        font=("Segoe UI", 9), bg=C["surface2"],
         fg=C["text"], bd=0, padx=12, pady=10,
         cursor="hand2", command=win.destroy,
     ).pack(side="left", padx=12)
@@ -292,7 +292,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     log_outer.pack(fill="both", expand=True, padx=24, pady=(0, 8))
 
     log_txt = tk.Text(log_outer, bg=C["surface"], fg=C["text"],
-                      font=("Courier", 9), bd=0, relief="flat",
+                      font=("Segoe UI", 9), bd=0, relief="flat",
                       state="disabled", wrap="word")
     log_sb = ttk.Scrollbar(log_outer, orient="vertical", command=log_txt.yview)
     log_txt.configure(yscrollcommand=log_sb.set)
