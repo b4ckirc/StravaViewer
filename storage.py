@@ -575,6 +575,8 @@ def _passes(summary: dict, filters: dict) -> bool:
     date_to   = filters.get("date_to")
     dist_min  = filters.get("dist_min")
     dist_max  = filters.get("dist_max")
+    elev_min  = filters.get("elev_min")
+    elev_max  = filters.get("elev_max")
     name_q    = (filters.get("name") or "").lower().strip()
 
     date_str = summary.get("start_date", "")
@@ -588,10 +590,16 @@ def _passes(summary: dict, filters: dict) -> bool:
     except Exception:
         pass
 
-    dist_km = summary.get("distance", 0) / 1000
+    dist_km = (summary.get("distance") or 0) / 1000
     if dist_min is not None and dist_km < dist_min:
         return False
     if dist_max is not None and dist_km > dist_max:
+        return False
+
+    elev = summary.get("elev_gain", 0) or 0
+    if elev_min is not None and elev < elev_min:
+        return False
+    if elev_max is not None and elev > elev_max:
         return False
 
     if name_q:
@@ -619,4 +627,20 @@ def _mongo_query(filters: dict) -> dict:
             q["start_date_local"]["$lt"] = (date_to + timedelta(days=1)).date().isoformat()
     if filters.get("races_only"):
         q["workout_type"] = 1
+    dist_min = filters.get("dist_min")
+    dist_max = filters.get("dist_max")
+    if dist_min is not None or dist_max is not None:
+        q["distance"] = {}
+        if dist_min is not None:
+            q["distance"]["$gte"] = dist_min * 1000
+        if dist_max is not None:
+            q["distance"]["$lte"] = dist_max * 1000
+    elev_min = filters.get("elev_min")
+    elev_max = filters.get("elev_max")
+    if elev_min is not None or elev_max is not None:
+        q["total_elevation_gain"] = {}
+        if elev_min is not None:
+            q["total_elevation_gain"]["$gte"] = elev_min
+        if elev_max is not None:
+            q["total_elevation_gain"]["$lte"] = elev_max
     return q

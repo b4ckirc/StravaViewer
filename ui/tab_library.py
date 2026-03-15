@@ -67,6 +67,23 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
              highlightthickness=1, highlightbackground=C["border"]
              ).pack(side="left", padx=(2, 14))
 
+    tk.Label(fbar, text="Disl m:", font=("Courier", 8),
+             fg=C["text_dim"], bg=C["surface"]).pack(side="left")
+    elev_min_var = tk.StringVar()
+    elev_max_var = tk.StringVar()
+    tk.Entry(fbar, textvariable=elev_min_var, font=("Courier", 9),
+             bg=C["surface2"], fg=C["text"], width=6, bd=0,
+             insertbackground=C["text"],
+             highlightthickness=1, highlightbackground=C["border"]
+             ).pack(side="left", padx=(4, 2))
+    tk.Label(fbar, text="–", fg=C["text_dim"], bg=C["surface"],
+             font=("Courier", 9)).pack(side="left")
+    tk.Entry(fbar, textvariable=elev_max_var, font=("Courier", 9),
+             bg=C["surface2"], fg=C["text"], width=6, bd=0,
+             insertbackground=C["text"],
+             highlightthickness=1, highlightbackground=C["border"]
+             ).pack(side="left", padx=(2, 14))
+
     tk.Label(fbar, text="Dal:", font=("Courier", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     date_from_var = tk.StringVar()
@@ -181,9 +198,20 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
         filters = {}
         if name_var.get().strip():
             filters["name"] = name_var.get().strip()
+        def _to_float(s):
+            return float(s.strip().replace(",", ".")) if s.strip() else None
         try:
-            if dist_min_var.get(): filters["dist_min"] = float(dist_min_var.get())
-            if dist_max_var.get(): filters["dist_max"] = float(dist_max_var.get())
+            v = _to_float(dist_min_var.get())
+            if v is not None: filters["dist_min"] = v
+            v = _to_float(dist_max_var.get())
+            if v is not None: filters["dist_max"] = v
+        except ValueError:
+            pass
+        try:
+            v = _to_float(elev_min_var.get())
+            if v is not None: filters["elev_min"] = v
+            v = _to_float(elev_max_var.get())
+            if v is not None: filters["elev_max"] = v
         except ValueError:
             pass
         try:
