@@ -96,14 +96,14 @@ class StravaApp(tk.Tk):
         topbar.pack_propagate(False)
 
         tk.Label(topbar, text=f"⬡  STRAVA VIEWER",
-                 font=("Courier", 12, "bold"), fg=C["accent"],
+                 font=("Segoe UI", 12, "bold"), fg=C["accent"],
                  bg=C["surface"]).pack(side="left", padx=20, pady=14)
 
         # Status MongoDB (right)
         self._mongo_status_var = tk.StringVar(value="MongoDB: …")
         self._mongo_status_lbl = tk.Label(
             topbar, textvariable=self._mongo_status_var,
-            font=("Courier", 8), fg=C["text_dim"], bg=C["surface"],
+            font=("Segoe UI", 8), fg=C["text_dim"], bg=C["surface"],
             cursor="hand2")
         self._mongo_status_lbl.pack(side="right", padx=16)
         self._mongo_status_lbl.bind("<Button-1>", lambda e: self._toggle_mongo())
@@ -116,7 +116,7 @@ class StravaApp(tk.Tk):
         lang_frame = tk.Frame(topbar, bg=C["surface"])
         lang_frame.pack(side="right", padx=6, pady=10)
         tk.Label(lang_frame, text=t("language_label"),
-                 font=("Courier", 8), fg=C["text_dim"],
+                 font=("Segoe UI", 8), fg=C["text_dim"],
                  bg=C["surface"]).pack(side="left")
         lang_options = list(SUPPORTED_LANGUAGES.values())
         lang_keys    = list(SUPPORTED_LANGUAGES.keys())
@@ -124,7 +124,7 @@ class StravaApp(tk.Tk):
         self._lang_var = tk.StringVar(value=lang_options[cur_idx])
         lang_menu = ttk.Combobox(lang_frame, textvariable=self._lang_var,
                                   values=lang_options, state="readonly", width=14,
-                                  font=("Courier", 8))
+                                  font=("Segoe UI", 8))
         lang_menu.pack(side="left", padx=(4, 0))
         lang_menu.bind("<<ComboboxSelected>>", self._on_language_change)
 
@@ -176,7 +176,7 @@ class StravaApp(tk.Tk):
         tk.Label(sidebar, text="⬡", font=("Courier", 20, "bold"),
                  fg=C["accent"], bg=C["surface"]).pack(pady=(18, 2))
         tk.Label(sidebar, text=f"v{APP_VERSION}",
-                 font=("Courier", 7), fg=C["text_dim"],
+                 font=("Segoe UI", 7), fg=C["text_dim"],
                  bg=C["surface"]).pack()
         tk.Frame(sidebar, bg=C["border"], height=1).pack(
             fill="x", padx=16, pady=(10, 6))
@@ -184,7 +184,7 @@ class StravaApp(tk.Tk):
         # Groups tab
         def _section(text):
             tk.Label(sidebar, text=text.upper(),
-                     font=("Courier", 7, "bold"), fg=C["text_dim"],
+                     font=("Segoe UI", 7, "bold"), fg=C["text_dim"],
                      bg=C["surface"]).pack(anchor="w", padx=16, pady=(8, 2))
 
         _section(t("sidebar_analysis"))
@@ -230,7 +230,7 @@ class StravaApp(tk.Tk):
                             bg=C["surface"], fg=C["text_dim"], width=3)
         icon_lbl.pack(side="left", padx=(8, 4), pady=8)
 
-        text_lbl = tk.Label(container, text=label, font=("Courier", 9, "bold"),
+        text_lbl = tk.Label(container, text=label, font=("Segoe UI", 9, "bold"),
                             bg=C["surface"], fg=C["text_dim"], anchor="w")
         text_lbl.pack(side="left", pady=8)
 
@@ -270,13 +270,13 @@ class StravaApp(tk.Tk):
         btn_frame.pack(fill="x", padx=10, pady=2)
 
         lbl_main = tk.Label(btn_frame, text=t("donate_label"),
-                            font=("Courier", 8, "bold"),
+                            font=("Segoe UI", 8, "bold"),
                             fg=C["accent"], bg=C["surface2"],
                             cursor="hand2")
         lbl_main.pack(pady=(6, 1))
 
         lbl_sub = tk.Label(btn_frame, text=t("donate_sub"),
-                           font=("Courier", 7),
+                           font=("Segoe UI", 7),
                            fg=C["text_dim"], bg=C["surface2"],
                            cursor="hand2")
         lbl_sub.pack(pady=(0, 6))
@@ -345,7 +345,7 @@ class StravaApp(tk.Tk):
             clear(getattr(self, attr))
         tk.Label(self.tab_dash,
                  text=t("welcome_text"),
-                 font=("Courier", 12), fg=C["text_dim"], bg=C["bg"],
+                 font=("Segoe UI", 12), fg=C["text_dim"], bg=C["bg"],
                  justify="center").pack(expand=True)
         self._show_tab("tab_dash")
         self._render_library()
@@ -500,12 +500,12 @@ class StravaApp(tk.Tk):
         win.geometry("340x370")
         win.resizable(False, False)
         tk.Label(win, text=t("export_choose_format"),
-                 font=("Courier", 10, "bold"), fg=C["accent"],
+                 font=("Segoe UI", 10, "bold"), fg=C["accent"],
                  bg=C["bg"]).pack(pady=(20, 4))
         tk.Label(win, text=t("export_current"),
-                 font=("Courier", 8), fg=C["text_dim"],
+                 font=("Segoe UI", 8), fg=C["text_dim"],
                  bg=C["bg"]).pack(pady=(0, 8))
-        b = dict(font=("Courier", 10, "bold"), bd=0, pady=10,
+        b = dict(font=("Segoe UI", 10, "bold"), bd=0, pady=10,
                  cursor="hand2", relief="flat", width=28)
         act_cmds = [
             (t("export_png"),        self._export_png),
@@ -523,7 +523,7 @@ class StravaApp(tk.Tk):
                       **b).pack(pady=3)
 
         tk.Label(win, text=t("export_database"),
-                 font=("Courier", 8), fg=C["text_dim"],
+                 font=("Segoe UI", 8), fg=C["text_dim"],
                  bg=C["bg"]).pack(pady=(10, 4))
         tk.Button(win, text=t("export_csv_stats"),
                   bg=C["surface2"], fg=C["text"],
@@ -541,9 +541,9 @@ class StravaApp(tk.Tk):
         win.geometry("340x280")
         win.resizable(False, False)
         tk.Label(win, text=t("db_manage"),
-                 font=("Courier", 10, "bold"), fg=C["accent"],
+                 font=("Segoe UI", 10, "bold"), fg=C["accent"],
                  bg=C["bg"]).pack(pady=(20, 12))
-        b = dict(font=("Courier", 10, "bold"), bd=0, pady=10,
+        b = dict(font=("Segoe UI", 10, "bold"), bd=0, pady=10,
                  cursor="hand2", relief="flat", width=28)
         tk.Button(win, text=t("db_export_zip"),  bg=C["surface2"], fg=C["text"],
                   command=lambda: [win.destroy(), self._export_zip()], **b).pack(pady=4)
@@ -739,7 +739,7 @@ class StravaApp(tk.Tk):
         win.configure(bg=C["bg"])
         win.geometry("320x120")
         lbl = tk.Label(win, text=t("msg_heatmap_loading"),
-                       font=("Courier", 10), fg=C["text_dim"],
+                       font=("Segoe UI", 10), fg=C["text_dim"],
                        bg=C["bg"])
         lbl.pack(expand=True)
 
