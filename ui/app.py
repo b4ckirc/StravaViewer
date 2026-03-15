@@ -23,7 +23,7 @@ import ui.tab_stats      as tab_stats
 import ui.tab_calendar   as tab_calendar
 import ui.tab_raw        as tab_raw
 from ui.downloader_ui    import open_download_window
-from ui.widgets          import topbar_btn, clear
+from ui.widgets          import topbar_btn, clear, Tooltip
 
 # Tab definition: (attribute, icon, i18n_key, group)
 _TAB_DEFS = [
@@ -169,6 +169,9 @@ class StravaApp(tk.Tk):
         sidebar.pack(side="left", fill="y")
         sidebar.pack_propagate(False)
 
+        # ── Donation button (packed bottom-first so it stays at the bottom) ──
+        self._build_donate_widget(sidebar)
+
         # Logo sidebar
         tk.Label(sidebar, text="⬡", font=("Courier", 20, "bold"),
                  fg=C["accent"], bg=C["surface"]).pack(pady=(18, 2))
@@ -251,6 +254,49 @@ class StravaApp(tk.Tk):
             w.bind("<Leave>",    _leave)
 
         self._tab_buttons[attr] = (container, strip, icon_lbl, text_lbl)
+
+    def _build_donate_widget(self, sidebar):
+        """Donation button pinned at the bottom of the sidebar."""
+        import webbrowser
+        _PAYPAL_URL = "https://paypal.me/TeoVr81"
+
+        # Outer frame pinned to the bottom
+        outer = tk.Frame(sidebar, bg=C["surface"])
+        outer.pack(side="bottom", fill="x", pady=(0, 12))
+
+        tk.Frame(outer, bg=C["border"], height=1).pack(fill="x", padx=12, pady=(0, 8))
+
+        btn_frame = tk.Frame(outer, bg=C["surface2"], cursor="hand2")
+        btn_frame.pack(fill="x", padx=10, pady=2)
+
+        lbl_main = tk.Label(btn_frame, text=t("donate_label"),
+                            font=("Courier", 8, "bold"),
+                            fg=C["accent"], bg=C["surface2"],
+                            cursor="hand2")
+        lbl_main.pack(pady=(6, 1))
+
+        lbl_sub = tk.Label(btn_frame, text=t("donate_sub"),
+                           font=("Courier", 7),
+                           fg=C["text_dim"], bg=C["surface2"],
+                           cursor="hand2")
+        lbl_sub.pack(pady=(0, 6))
+
+        def _open(e=None):
+            webbrowser.open(_PAYPAL_URL)
+
+        def _enter(e=None):
+            for w in (btn_frame, lbl_main, lbl_sub):
+                w.config(bg=C["border"])
+
+        def _leave(e=None):
+            for w in (btn_frame, lbl_main, lbl_sub):
+                w.config(bg=C["surface2"])
+
+        for w in (btn_frame, lbl_main, lbl_sub):
+            w.bind("<Button-1>", _open)
+            w.bind("<Enter>",    _enter)
+            w.bind("<Leave>",    _leave)
+            Tooltip(w, t("tooltip_donate"))
 
     def _show_tab(self, attr):
         """Display the frame of the selected tab and refresh the sidebar."""

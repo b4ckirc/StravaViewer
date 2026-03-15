@@ -1504,6 +1504,11 @@ NOTA DEL ENTRENADOR: este modelo no conoce tu estado de forma actual. Consulta e
     "error_loading_data":    {"it": "Errore caricamento dati:",  "en": "Error loading data:",   "de": "Fehler beim Laden der Daten:", "fr": "Erreur de chargement :", "es": "Error al cargar datos:"},
     "no_runs_library":       {"it": "Nessuna corsa in libreria.\n\nScarica o importa delle attività prima.", "en": "No runs in library.\n\nDownload or import activities first.", "de": "Keine Läufe in der Bibliothek.\n\nLade oder importiere Aktivitäten zuerst.", "fr": "Aucune sortie dans la bibliothèque.\n\nTéléchargez ou importez des activités d'abord.", "es": "No hay carreras en la biblioteca.\n\nDescarga o importa actividades primero."},
     "heatmap_win_title":     {"it": "Heatmap — caricamento…",   "en": "Heatmap — loading…",    "de": "Heatmap — wird geladen…",     "fr": "Carte de chaleur — chargement…","es": "Mapa de calor — cargando…"},
+
+    # ── Donation button ───────────────────────────────────────────────────────
+    "donate_label":          {"it": "☕  Offrimi un caffè",      "en": "☕  Buy me a coffee",    "de": "☕  Kauf mir einen Kaffee",   "fr": "☕  Offre-moi un café",       "es": "☕  Invítame un café"},
+    "donate_sub":            {"it": "ogni km conta  🧡",         "en": "every km counts  🧡",    "de": "jeder km zählt  🧡",          "fr": "chaque km compte  🧡",        "es": "cada km cuenta  🧡"},
+    "tooltip_donate":        {"it": "Sostieni il progetto con una donazione PayPal — nessuna pressione, ogni contributo è benvenuto!", "en": "Support the project with a PayPal donation — no pressure, every contribution is welcome!", "de": "Unterstütze das Projekt mit einer PayPal-Spende — kein Druck, jeder Beitrag ist willkommen!", "fr": "Soutenez le projet avec un don PayPal — sans pression, toute contribution est bienvenue !", "es": "Apoya el proyecto con una donación PayPal — sin presión, ¡toda contribución es bienvenida!"},
 }
 
 
