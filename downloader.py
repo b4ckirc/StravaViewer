@@ -7,6 +7,7 @@ import os, json, time, webbrowser, urllib.parse, threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from config import (STRAVA_AUTH_URL, STRAVA_TOKEN_URL, STRAVA_API_BASE,
                     STRAVA_REDIRECT, STRAVA_TOKEN_FILE)
+from i18n import t
 
 try:
     import requests as _requests
@@ -29,11 +30,16 @@ class _OAuthHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.end_headers()
-            self.wfile.write(b"""<html><body style="font-family:sans-serif;
-                text-align:center;padding:60px;background:#0d1117;color:#e6edf3">
-                <h2 style="color:#fc4c02">&#10003; Autenticazione completata!</h2>
-                <p>Puoi chiudere questa finestra e tornare all'applicazione.</p>
-                </body></html>""")
+            title = t("dl_oauth_html_title")
+            body  = t("dl_oauth_html_body")
+            html  = (
+                f'<html><body style="font-family:sans-serif;'
+                f'text-align:center;padding:60px;background:#0d1117;color:#e6edf3">'
+                f'<h2 style="color:#fc4c02">{title}</h2>'
+                f'<p>{body}</p>'
+                f'</body></html>'
+            )
+            self.wfile.write(html.encode("utf-8"))
             _auth_event.set()
         else:
             self.send_response(400)
@@ -71,15 +77,15 @@ def _get_auth_code(client_id: str, progress_cb=None) -> str:
     t.start()
 
     if progress_cb:
-        progress_cb("🌐 Apertura browser per autenticazione Strava…")
-        progress_cb("   Accedi e autorizza l'app, poi torna qui.")
+        progress_cb(t("dl_oauth_open_browser"))
+        progress_cb(t("dl_oauth_authorize"))
     webbrowser.open(url)
 
     # Wait for callback (max 3 minutes)
     _auth_event.wait(timeout=180)
 
     if not _auth_code:
-        raise RuntimeError("Timeout autenticazione OAuth (3 minuti). Riprova.")
+        raise RuntimeError(t("dl_oauth_timeout"))
     return _auth_code
 
 
@@ -96,20 +102,20 @@ def save_token(token: dict):
 
 def get_access_token(client_id: str, client_secret: str, progress_cb=None) -> str:
     if not HAS_REQUESTS:
-        raise RuntimeError("Installa requests: pip install requests")
+        raise RuntimeError(t("dl_requests_missing"))
 
     token = load_token()
 
     # Valid token
     if token and token.get("expires_at", 0) > time.time() + 60:
         if progress_cb:
-            progress_cb("✅ Token esistente ancora valido, nessun login necessario.")
+            progress_cb(t("dl_token_valid"))
         return token["access_token"]
 
     # Refresh
     if token and "refresh_token" in token:
         if progress_cb:
-            progress_cb("🔄 Rinnovo token di accesso…")
+            progress_cb(t("dl_token_refreshing"))
         r = _requests.post(STRAVA_TOKEN_URL, data={
             "client_id":     client_id,
             "client_secret": client_secret,
@@ -120,13 +126,13 @@ def get_access_token(client_id: str, client_secret: str, progress_cb=None) -> st
         token = r.json()
         save_token(token)
         if progress_cb:
-            progress_cb("✅ Token rinnovato.")
+            progress_cb(t("dl_token_refreshed"))
         return token["access_token"]
 
     # First login — OAuth via browser
     code = _get_auth_code(client_id, progress_cb)
     if progress_cb:
-        progress_cb("🔑 Scambio codice OAuth con token di accesso…")
+        progress_cb(t("dl_oauth_exchanging"))
     r = _requests.post(STRAVA_TOKEN_URL, data={
         "client_id":     client_id,
         "client_secret": client_secret,
@@ -138,7 +144,8 @@ def get_access_token(client_id: str, client_secret: str, progress_cb=None) -> st
     save_token(token)
     athlete = token.get("athlete", {})
     if progress_cb:
-        progress_cb(f"✅ Autenticato come: {athlete.get('firstname','')} {athlete.get('lastname','')}")
+        name = f"{athlete.get('firstname', '')} {athlete.get('lastname', '')}".strip()
+        progress_cb(t("dl_authenticated_as").format(name=name))
     return token["access_token"]
 
 
@@ -160,7 +167,7 @@ def fetch_activity_list(access_token: str, progress_cb=None) -> list[dict]:
         if r.status_code == 429:
             wait = max(int(r.headers.get("X-RateLimit-Reset", time.time() + 60)) - int(time.time()), 5)
             if progress_cb:
-                progress_cb(f"⏳ Rate limit Strava, attendo {wait}s…")
+                progress_cb(t("dl_rate_limit").format(wait=wait))
             time.sleep(wait)
             continue
         r.raise_for_status()
@@ -170,7 +177,7 @@ def fetch_activity_list(access_token: str, progress_cb=None) -> list[dict]:
         runs = [a for a in acts if a.get("type") == "Run" or a.get("sport_type") == "Run"]
         all_runs.extend(runs)
         if progress_cb:
-            progress_cb(f"📄 Pagina {page}: {len(runs)} corse (tot. {len(all_runs)})")
+            progress_cb(t("dl_page_progress").format(page=page, count=len(runs), total=len(all_runs)))
         page += 1
         if len(acts) < 200:
             break

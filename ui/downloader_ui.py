@@ -185,7 +185,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
             pass
 
     def _run():
-        log("🟠 Start request…")
+        log(t("dl_log_start"))
         win.update_idletasks()
 
         cid = cid_var.get().strip()
@@ -204,7 +204,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
 
         start_btn.config(state="disabled", text=t("btn_downloading"))
         pbar.start(10)
-        log("🔵 Thread worker avviato.")
+        log(t("dl_log_worker_started"))
 
         counters = {"new": 0, "skip": 0, "err": 0}
 
@@ -217,15 +217,15 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
             try:
                 from downloader import get_access_token, fetch_activity_list, fetch_activity_detail
 
-                win.after(0, log, "🔑 Start OAuth authentication…")
-                win.after(0, log, "   Your browser will open shortly.")
+                win.after(0, log, t("dl_log_oauth_start"))
+                win.after(0, log, t("dl_log_browser_soon"))
                 token = get_access_token(cid, csc,
                                          progress_cb=lambda m: win.after(0, log, m))
 
-                win.after(0, log, "📋 Importing run list from Strava…")
+                win.after(0, log, t("dl_log_fetching"))
                 runs = fetch_activity_list(token,
                                            progress_cb=lambda m: win.after(0, log, m))
-                win.after(0, log, f"✅ {len(runs)} run found on Strava.")
+                win.after(0, log, t("dl_log_runs_found").format(n=len(runs)))
 
                 for i, run in enumerate(runs, 1):
                     sid = run.get("id")
@@ -233,7 +233,8 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
                         counters["skip"] += 1
                         win.after(0, upd)
                         continue
-                    win.after(0, log, f"⬇  [{i}/{len(runs)}] {run.get('name', '–')}")
+                    win.after(0, log, t("dl_log_downloading").format(
+                        i=i, total=len(runs), name=run.get("name", "–")))
                     try:
                         detail = fetch_activity_detail(sid, token)
                         if save_json_var.get():
@@ -242,19 +243,18 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
                             storage_mgr.mongo_storage.save(detail)
                         counters["new"] += 1
                     except Exception as e:
-                        win.after(0, log, f"   ⚠ Errore: {e}")
+                        win.after(0, log, t("dl_log_error_item").format(err=e))
                         counters["err"] += 1
                     win.after(0, upd)
 
-                win.after(0, log,
-                          f"\n🏁 Completed: {counters['new']} new, "
-                          f"{counters['skip']} alredy present, {counters['err']} errors.")
+                win.after(0, log, t("dl_log_completed").format(
+                    new=counters["new"], skip=counters["skip"], err=counters["err"]))
                 if on_done_cb:
                     win.after(0, on_done_cb)
 
             except Exception as e:
                 import traceback
-                win.after(0, log, f"❌ Critical error: {e}")
+                win.after(0, log, t("dl_log_critical").format(err=e))
                 win.after(0, log, traceback.format_exc())
             finally:
                 win.after(0, pbar.stop)
