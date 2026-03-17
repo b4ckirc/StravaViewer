@@ -8,7 +8,7 @@ from i18n import t
 
 try:
     import matplotlib.pyplot as plt
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
     HAS_MPL = True
 except ImportError:
     HAS_MPL = False
@@ -122,9 +122,6 @@ def embed_mpl(parent, fig):
     cnv = FigureCanvasTkAgg(fig, master=cf)
     cnv.draw()
     cnv.get_tk_widget().pack(fill="both", expand=True)
-    tf = tk.Frame(parent, bg=C["surface"])
-    tf.pack(fill="x")
-    NavigationToolbar2Tk(cnv, tf)
     return cnv
 
 

@@ -121,7 +121,7 @@ def _draw(a, hr_max_var, holder):
         handles = [mpatches.Patch(color=z[3], label=lbl) for z, lbl in zip(HR_ZONES, t("hr_zone_names"))]
         ax2.legend(handles=handles, fontsize=6.5, facecolor=C["surface2"],
                    edgecolor=C["border"], labelcolor=C["text"],
-                   loc="upper right", title=t("hr_zones_label"), title_fontsize=6)
+                   loc="upper left", title=t("hr_zones_label"), title_fontsize=6)
     else:
         ax2.text(0.5, 0.5, t("hr_insufficient"), ha="center", va="center",
                  color=C["text_dim"], transform=ax2.transAxes)
