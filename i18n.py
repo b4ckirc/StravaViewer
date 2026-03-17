@@ -42,7 +42,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "sidebar_database": {"it": "Database", "en": "Database",   "de": "Datenbank",   "fr": "Base de données", "es": "Base de datos"},
 
     # ── Topbar buttons ────────────────────────────────────────────────────────
-    "btn_open_file":      {"it": "📂  Apri File",          "en": "📂  Open File",        "de": "📂  Datei öffnen",    "fr": "📂  Ouvrir fichier",   "es": "📂  Abrir archivo"},
     "btn_download":       {"it": "⬇  Scarica da Strava",  "en": "⬇  Download from Strava","de": "⬇  Von Strava laden","fr": "⬇  Télécharger Strava","es": "⬇  Descargar Strava"},
     "btn_export":         {"it": "💾  Esporta",            "en": "💾  Export",            "de": "💾  Exportieren",     "fr": "💾  Exporter",         "es": "💾  Exportar"},
     "btn_database":       {"it": "📦  Database",           "en": "📦  Database",          "de": "📦  Datenbank",       "fr": "📦  Base de données",  "es": "📦  Base de datos"},
@@ -50,7 +49,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "btn_theme_light":    {"it": "☀  Chiaro",             "en": "☀  Light",             "de": "☀  Hell",            "fr": "☀  Clair",            "es": "☀  Claro"},
 
     # ── Topbar tooltips ───────────────────────────────────────────────────────
-    "tooltip_open_file":  {"it": "Apri un file JSON di attività Strava",        "en": "Open a Strava activity JSON file",        "de": "Strava-Aktivitäts-JSON-Datei öffnen",     "fr": "Ouvrir un fichier JSON d'activité Strava",    "es": "Abrir un archivo JSON de actividad Strava"},
     "tooltip_download":   {"it": "Autentica con Strava e scarica le tue attività","en": "Authenticate with Strava and download your activities","de": "Mit Strava authentifizieren und Aktivitäten herunterladen","fr": "S'authentifier sur Strava et télécharger vos activités","es": "Autenticarse en Strava y descargar actividades"},
     "tooltip_export":     {"it": "Esporta attività corrente in PNG, PDF, CSV o GPX","en": "Export current activity as PNG, PDF, CSV or GPX","de": "Aktuelle Aktivität als PNG, PDF, CSV oder GPX exportieren","fr": "Exporter l'activité en PNG, PDF, CSV ou GPX","es": "Exportar actividad como PNG, PDF, CSV o GPX"},
     "tooltip_database":   {"it": "Backup ZIP, import e heatmap del database",    "en": "ZIP backup, import and database heatmap",  "de": "ZIP-Backup, Import und Datenbank-Heatmap",  "fr": "Sauvegarde ZIP, import et heatmap de la base","es": "Copia ZIP, importar y mapa de calor de BD"},
@@ -63,11 +61,11 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
 
     # ── Welcome screen ────────────────────────────────────────────────────────
     "welcome_text": {
-        "it": "⬡\n\nBenvenuto in Strava Viewer\n\n• Apri un file JSON con «Apri File»\n• Scarica le corse da Strava con «Scarica da Strava»\n• Sfoglia la libreria nel tab «Libreria»",
-        "en": "⬡\n\nWelcome to Strava Viewer\n\n• Open a JSON file with «Open File»\n• Download runs from Strava with «Download from Strava»\n• Browse the library in the «Library» tab",
-        "de": "⬡\n\nWillkommen bei Strava Viewer\n\n• JSON-Datei öffnen mit «Datei öffnen»\n• Aktivitäten von Strava laden mit «Von Strava laden»\n• Bibliothek durchsuchen im Tab «Bibliothek»",
-        "fr": "⬡\n\nBienvenue dans Strava Viewer\n\n• Ouvrez un fichier JSON avec «Ouvrir fichier»\n• Téléchargez vos sorties depuis Strava avec «Télécharger Strava»\n• Parcourez la bibliothèque dans l'onglet «Bibliothèque»",
-        "es": "⬡\n\nBienvenido a Strava Viewer\n\n• Abre un archivo JSON con «Abrir archivo»\n• Descarga actividades de Strava con «Descargar Strava»\n• Explora la biblioteca en la pestaña «Biblioteca»",
+        "it": "⬡\n\nBenvenuto in Strava Viewer\n\n• Scarica le corse da Strava con «Scarica da Strava»\n• Sfoglia la libreria nel tab «Libreria»",
+        "en": "⬡\n\nWelcome to Strava Viewer\n\n• Download runs from Strava with «Download from Strava»\n• Browse the library in the «Library» tab",
+        "de": "⬡\n\nWillkommen bei Strava Viewer\n\n• Aktivitäten von Strava laden mit «Von Strava laden»\n• Bibliothek durchsuchen im Tab «Bibliothek»",
+        "fr": "⬡\n\nBienvenue dans Strava Viewer\n\n• Téléchargez vos sorties depuis Strava avec «Télécharger Strava»\n• Parcourez la bibliothèque dans l'onglet «Bibliothèque»",
+        "es": "⬡\n\nBienvenido a Strava Viewer\n\n• Descarga actividades de Strava con «Descargar Strava»\n• Explora la biblioteca en la pestaña «Biblioteca»",
     },
 
     # ── Export menu ───────────────────────────────────────────────────────────
@@ -99,7 +97,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "msg_limit":             {"it": "Limite",                  "en": "Limit",                  "de": "Limit",                  "fr": "Limite",                 "es": "Límite"},
     "msg_error":             {"it": "Errore",                  "en": "Error",                  "de": "Fehler",                 "fr": "Erreur",                 "es": "Error"},
     "msg_info":              {"it": "Info",                    "en": "Info",                   "de": "Info",                   "fr": "Info",                   "es": "Info"},
-    "msg_read_error":        {"it": "Errore lettura",          "en": "Read error",             "de": "Lesefehler",             "fr": "Erreur de lecture",      "es": "Error de lectura"},
     "msg_export_saved":      {"it": "Export",                  "en": "Export",                 "de": "Export",                 "fr": "Export",                 "es": "Exportar"},
     "msg_export_error":      {"it": "Errore export",           "en": "Export error",           "de": "Exportfehler",           "fr": "Erreur d'export",        "es": "Error al exportar"},
     "msg_no_gps":            {"it": "Nessun dato GPS disponibile per questa attività.", "en": "No GPS data available for this activity.", "de": "Keine GPS-Daten für diese Aktivität.", "fr": "Aucune donnée GPS pour cette activité.", "es": "Sin datos GPS para esta actividad."},
@@ -112,7 +109,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "msg_heatmap_loading":   {"it": "Caricamento polyline in corso…", "en": "Loading polylines…", "de": "Polylinien werden geladen…", "fr": "Chargement des tracés…", "es": "Cargando rutas…"},
     "msg_heatmap_no_gps":    {"it": "Nessun tracciato GPS trovato nel database.", "en": "No GPS track found in the database.", "de": "Kein GPS-Track in der Datenbank gefunden.", "fr": "Aucun tracé GPS trouvé dans la base de données.", "es": "No se encontraron rutas GPS en la base de datos."},
     "msg_folium_missing":    {"it": "Libreria 'folium' non installata.\nEsegui: pip install folium", "en": "Library 'folium' not installed.\nRun: pip install folium", "de": "Bibliothek 'folium' nicht installiert.\nAusführen: pip install folium", "fr": "Bibliothèque 'folium' non installée.\nExécuter : pip install folium", "es": "Librería 'folium' no instalada.\nEjecuta: pip install folium"},
-    "msg_select_file":       {"it": "Seleziona attività Strava (JSON)", "en": "Select Strava activity (JSON)", "de": "Strava-Aktivität auswählen (JSON)", "fr": "Sélectionner une activité Strava (JSON)", "es": "Seleccionar actividad Strava (JSON)"},
     "msg_select_backup":     {"it": "Seleziona backup ZIP",    "en": "Select ZIP backup",      "de": "ZIP-Backup auswählen",   "fr": "Sélectionner sauvegarde ZIP","es": "Seleccionar copia ZIP"},
     "msg_png_saved":         {"it": "PNG salvato:",            "en": "PNG saved:",             "de": "PNG gespeichert:",       "fr": "PNG sauvegardé :",        "es": "PNG guardado:"},
     "msg_pdf_saved":         {"it": "PDF salvato:",            "en": "PDF saved:",             "de": "PDF gespeichert:",       "fr": "PDF sauvegardé :",        "es": "PDF guardado:"},
@@ -135,7 +131,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "filter_date_from":      {"it": "Dal:",                   "en": "From:",                  "de": "Von:",                   "fr": "Du :",                    "es": "Desde:"},
     "filter_date_to":        {"it": "Al:",                    "en": "To:",                    "de": "Bis:",                   "fr": "Au :",                    "es": "Hasta:"},
     "filter_races_only":     {"it": "Solo gare",              "en": "Races only",             "de": "Nur Rennen",             "fr": "Courses seulement",       "es": "Solo carreras"},
-    "btn_search":            {"it": "🔍",                     "en": "🔍",                     "de": "🔍",                     "fr": "🔍",                      "es": "🔍"},
     "btn_calculate":         {"it": "▶  CALCOLA",             "en": "▶  CALCULATE",           "de": "▶  BERECHNEN",           "fr": "▶  CALCULER",             "es": "▶  CALCULAR"},
 
     # ── Library columns ───────────────────────────────────────────────────────
@@ -285,8 +280,6 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "section_annual_goal":   {"it": "OBIETTIVO ANNUALE KM",    "en": "ANNUAL KM GOAL",        "de": "JAHRES-KM-ZIEL",         "fr": "OBJECTIF KM ANNUEL",     "es": "OBJETIVO KM ANUAL"},
     "annual_goal_label":     {"it": "Obiettivo km:",           "en": "Goal km:",               "de": "Ziel km:",               "fr": "Objectif km :",          "es": "Objetivo km:"},
     "btn_save":              {"it": "💾 Salva",                "en": "💾 Save",                "de": "💾 Speichern",           "fr": "💾 Enregistrer",         "es": "💾 Guardar"},
-    "annual_goal_run":       {"it": "corsa",                   "en": "run",                    "de": "Lauf",                   "fr": "sortie",                 "es": "carrera"},
-    "annual_goal_runs":      {"it": "corse",                   "en": "runs",                   "de": "Läufe",                  "fr": "sorties",                "es": "carreras"},
 
     # ── Monthly stats ─────────────────────────────────────────────────────────
     "section_monthly":       {"it": "STATISTICHE ULTIMI 12 MESI", "en": "LAST 12 MONTHS STATISTICS", "de": "STATISTIKEN LETZTE 12 MONATE", "fr": "STATISTIQUES 12 DERNIERS MOIS", "es": "ESTADÍSTICAS ÚLTIMOS 12 MESES"},
@@ -463,7 +456,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "downloader_ready":      {"it": "✔ Finestra pronta. Inserisci le credenziali e clicca AVVIA DOWNLOAD.", "en": "✔ Window ready. Enter credentials and click START DOWNLOAD.", "de": "✔ Fenster bereit. Zugangsdaten eingeben und DOWNLOAD STARTEN klicken.", "fr": "✔ Fenêtre prête. Saisissez vos identifiants et cliquez sur LANCER LE TÉLÉCHARGEMENT.", "es": "✔ Ventana lista. Introduce las credenciales y haz clic en INICIAR DESCARGA."},
     "downloader_err_no_cid": {"it": "Inserisci il Client ID.",       "en": "Enter the Client ID.",        "de": "Client-ID eingeben.",        "fr": "Saisissez le Client ID.",      "es": "Introduce el Client ID."},
     "downloader_err_no_csc": {"it": "Inserisci il Client Secret.",   "en": "Enter the Client Secret.",    "de": "Client-Secret eingeben.",    "fr": "Saisissez le Client Secret.",  "es": "Introduce el Client Secret."},
-    "downloader_err_no_dst": {"it": "Seleziona almeno una destinazione.", "en": "Select at least one destination.", "de": "Mindestens ein Ziel auswählen.", "fr": "Sélectionnez au moins une destination.", "es": "Selecciona al menos un destino."},
+
 
     # ── Downloader log / progress messages ───────────────────────────────────
     "dl_oauth_html_title":   {"it": "✓ Autenticazione completata!",            "en": "✓ Authentication complete!",                     "de": "✓ Authentifizierung abgeschlossen!",         "fr": "✓ Authentification réussie !",                  "es": "✓ ¡Autenticación completada!"},
