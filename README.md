@@ -93,7 +93,7 @@ Monthly view of all runs with month-by-month navigation:
 
 ### Statistics
 Aggregate statistics on **all** runs in the database (ignores filters and pagination):
-- **Annual goal** — set a km target for the current year with progress bar; the value is saved in `settings.json` and remembered between sessions
+- **Annual goal** — set a km target for the current year with progress bar; the value is saved in MongoDB and remembered between sessions
 - Totals: runs, km, hours, elevation, average pace, average HR, calories, km/week
 - **Activity heatmap** — GitHub-style calendar grid of the last 52 weeks (rows = days of the week Mon→Sun, columns = weeks): each cell is colored in orange with intensity proportional to km run that day, dark gray if resting; color scale bar below; mouse hover tooltip with date and km
 - **Athletic profile** — hexagonal radar chart with 6 normalized 0–100 dimensions: *Speed* (average pace, scale 8:20→3:20/km), *Endurance* (median distances, scale 3→42 km), *Elevation* (average m↑/km, scale 0→40 m/km), *Consistency* (% weeks with at least one run in the last 52), *Volume* (average km/week in the last 52, scale 0→70), *Progression* (comparison of average pace last 3 months vs previous 3 months); alongside a panel with numeric scores, proportional bars and description of each dimension
@@ -110,6 +110,15 @@ Aggregate statistics on **all** runs in the database (ignores filters and pagina
 - **Performance prediction (Monte Carlo)** — estimate of time over any distance with simulation of 5000 scenarios; configurable parameters: target distance (standard or custom in km), positive elevation of the route, historical time window (last N days), minimum and maximum length of runs from which to retrieve best efforts (min/max km), races only filter; elevation correction is customized: calculated via linear regression on your real splits (sec/km per 1% gradient), with fallback to Minetti model if data is insufficient; the result is a histogram with P10/P25/P50/P75/P90 percentiles and a diagnostic panel with data used in the fit, the b coefficient and the raw base time; ℹ button with complete guide on parameters, calculation and interpretation of results
 - **Race analysis and VDOT** — analyzes all activities classified as "Race" on Strava (`workout_type = 1`) and calculates for each the VDOT according to Jack Daniels' formula (aerobic capacity index derived from actual distance and time, without lab testing); shows three stat cards (total races, best VDOT, most recent VDOT), a line chart of VDOT evolution over time with dashed line at historical maximum, a paginated race table (10 per page, clickable to open the activity) with date, km, time, VDOT and name, and a prediction table for 1K / 5K / 10K / half marathon / marathon calculated from the VDOT of the last recorded race; ℹ button with formula explanation, reference value table (beginner → elite) and guide to interpreting predictions
 - **Recurring routes** — automatically detects routes you have run at least 3 times by grouping activities by starting area (~300 m) and distance (±1 km); for each group shows: scrollable list with most frequent name, distance, number of runs, period and city/coordinates; scatter chart of pace over time with green→red coloring (faster→slower), dashed trend line, highlighting of the best run and the latest; header with best pace, average pace and trend indicator (improved/worsened/stable); list of group runs with date, km, pace, HR and name, clickable to open the activity; city is retrieved first from Strava metadata, then via Nominatim reverse geocoding (OpenStreetMap) with persistent cache on MongoDB, sequential thread with 1 second pause between requests to respect rate limits
+
+### Gear / Shoe Tracker *(new)*
+Automatic aggregation of mileage per shoe/gear item set on Strava:
+- **Per-gear cards** — one card per shoe with: total km, run count, average pace, first and last use date
+- **Progress bar** — visual fill toward a configurable replacement threshold per shoe (default 700 km)
+- **Status badge** — ✓ OK (< 80%), → Near limit (80–100%), ⚠ Replace soon (> 100%)
+- **Editable threshold** — inline text field and Save button per shoe; value persisted in MongoDB
+- **Monthly usage chart** — stacked bar chart of the last 12 months, one color per gear item
+- Gear data is read directly from Strava activity downloads; if no gear is assigned on Strava a friendly empty-state message is shown
 
 ### Database
 From the **Database** menu in the topbar:
@@ -153,6 +162,7 @@ strava_viewer/
     ├── tab_charts.py        # Charts tab + _build_export_fig() for PNG/PDF
     ├── tab_hr.py            # HR Zones tab
     ├── tab_map.py           # Map tab (opens external browser)
+    ├── tab_gear.py          # Gear / Shoe Tracker tab
     ├── tab_splits.py        # Splits tab
     ├── tab_intervals.py     # Interval Detection tab
     ├── tab_best.py          # Best Efforts tab
@@ -273,7 +283,6 @@ MongoDB data is saved in a persistent Docker volume and survives restarts.
 | File | Content |
 |---|---|
 | `.strava_token.json` | Strava OAuth token (access + refresh token) |
-| `settings.json` | Local user preferences (e.g. annual km goal) |
 
 ## AI Usage
 

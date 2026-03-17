@@ -93,7 +93,7 @@ Monatsansicht aller Läufe mit Monat-für-Monat-Navigation:
 
 ### Statistiken
 Aggregierte Statistiken über **alle** Läufe in der Datenbank (ignoriert Filter und Seitennummerierung):
-- **Jahresziel** — legen Sie ein km-Ziel für das laufende Jahr mit Fortschrittsbalken fest; der Wert wird in `settings.json` gespeichert und zwischen Sitzungen gespeichert
+- **Jahresziel** — legen Sie ein km-Ziel für das laufende Jahr mit Fortschrittsbalken fest; der Wert wird in MongoDB gespeichert und zwischen Sitzungen gespeichert
 - Summen: Läufe, km, Stunden, Höhenunterschied, Durchschnittstempo, Durchschnitts-HF, Kalorien, km/Woche
 - **Aktivitäts-Heatmap** — GitHub-Stil-Kalenderraster der letzten 52 Wochen (Zeilen = Wochentage Mo→So, Spalten = Wochen): jede Zelle ist orange gefärbt mit Intensität proportional zu den an diesem Tag gelaufenen km, dunkelgrau bei Ruhetagen; Farbskalabalken unten; Tooltip beim Hovern mit Datum und km
 - **Athletisches Profil** — hexagonales Radardiagramm mit 6 normalisierten 0–100 Dimensionen: *Geschwindigkeit* (Durchschnittstempo, Skala 8:20→3:20/km), *Ausdauer* (Median der Distanzen, Skala 3→42 km), *Höhenunterschied* (Durchschnitt m↑/km, Skala 0→40 m/km), *Konstanz* (% Wochen mit mindestens einem Lauf in den letzten 52), *Volumen* (Durchschnitt km/Woche in den letzten 52, Skala 0→70), *Progression* (Vergleich Durchschnittstempo letzte 3 Monate vs. vorherige 3 Monate); neben einem Panel mit numerischen Wertungen, proportionalen Balken und Beschreibung jeder Dimension
@@ -110,6 +110,15 @@ Aggregierte Statistiken über **alle** Läufe in der Datenbank (ignoriert Filter
 - **Leistungsvorhersage (Monte Carlo)** — Schätzung der Zeit über beliebige Distanzen mit Simulation von 5000 Szenarien; konfigurierbare Parameter: Zieldistanz (standard oder benutzerdefiniert in km), positiver Höhenunterschied der Strecke, historisches Zeitfenster (letzte N Tage), minimale und maximale Länge der Läufe zum Abrufen der Bestleistungen (min/max km), Nur-Rennen-Filter; die Höhenkorrektur ist individualisiert: berechnet durch lineare Regression auf Ihren echten Splits (Sek/km pro 1% Steigung), mit Fallback auf das Minetti-Modell bei unzureichenden Daten; das Ergebnis ist ein Histogramm mit P10/P25/P50/P75/P90 Perzentilen und einem Diagnosepanel mit den beim Fit verwendeten Daten, dem b-Koeffizient und der rohen Basiszeit; ℹ-Schaltfläche mit vollständigem Leitfaden zu Parametern, Berechnung und Ergebnisinterpretation
 - **Rennanalyse und VDOT** — analysiert alle als "Rennen" auf Strava klassifizierten Aktivitäten (`workout_type = 1`) und berechnet für jede den VDOT nach Jack Daniels' Formel (Index der aeroben Kapazität aus tatsächlicher Distanz und Zeit, ohne Labortest); zeigt drei Statistik-Karten (Gesamtrennen, bester VDOT, neuester VDOT), ein Liniendiagramm der VDOT-Entwicklung über die Zeit mit gestrichelter Linie beim historischen Maximum, eine paginierte Renntabelle (10 pro Seite, anklickbar zum Öffnen der Aktivität) mit Datum, km, Zeit, VDOT und Name, und eine Vorhersagetabelle für 1K / 5K / 10K / Halbmarathon / Marathon berechnet aus dem VDOT des zuletzt aufgezeichneten Rennens; ℹ-Schaltfläche mit Formerklärung, Referenzwerttabelle (Anfänger → Elite) und Leitfaden zur Interpretation der Vorhersagen
 - **Wiederkehrende Strecken** — erkennt automatisch Strecken, die Sie mindestens 3 Mal gelaufen sind, indem Aktivitäten nach Startbereich (~300 m) und Distanz (±1 km) gruppiert werden; für jede Gruppe wird angezeigt: scrollbare Liste mit häufigstem Namen, Distanz, Anzahl der Läufe, Zeitraum und Stadt/Koordinaten; Streudiagramm des Tempos im Zeitverlauf mit Grün→Rot-Färbung (schneller→langsamer), gestrichelte Trendlinie, Hervorhebung des besten Laufs und des letzten; Kopfzeile mit bestem Tempo, Durchschnittstempo und Trendindikator (verbessert/verschlechtert/stabil); Liste der Gruppenläufe mit Datum, km, Tempo, HF und Name, anklickbar zum Öffnen der Aktivität; die Stadt wird zunächst aus Strava-Metadaten abgerufen, dann über Nominatim-Reverse-Geocoding (OpenStreetMap) mit persistentem Cache auf MongoDB, sequentieller Thread mit 1 Sekunde Pause zwischen Anfragen zur Einhaltung der Rate-Limits
+
+### Ausrüstungs-/Schuh-Tracker *(neu)*
+Automatische Aggregation der Kilometer pro Schuh-/Ausrüstungsartikel aus Strava:
+- **Ausrüstungskarten** — eine Karte pro Schuh mit: Gesamt-km, Laufanzahl, Durchschnittstempo, Erst-/Letztnutzungsdatum
+- **Fortschrittsbalken** — visueller Füllstand zur konfigurierbaren Austauschschwelle pro Schuh (Standard 700 km)
+- **Statusabzeichen** — ✓ OK (< 80%), → Fast am Limit (80–100%), ⚠ Bald ersetzen (> 100%)
+- **Bearbeitbare Schwelle** — Textfeld und Speichern-Schaltfläche pro Schuh; Wert wird in MongoDB gespeichert
+- **Monatliches km-Diagramm** — gestapeltes Balkendiagramm der letzten 12 Monate, eine Farbe pro Gear
+- Gear-Daten kommen direkt aus Strava-Downloads; falls kein Gear zugewiesen, wird eine leere Statusmeldung angezeigt
 
 ### Datenbank
 Aus dem **Datenbank**-Menü in der Topbar:
@@ -153,6 +162,7 @@ strava_viewer/
     ├── tab_charts.py        # Diagramme-Tab + _build_export_fig() für PNG/PDF
     ├── tab_hr.py            # HF-Zonen-Tab
     ├── tab_map.py           # Karten-Tab (öffnet externen Browser)
+    ├── tab_gear.py          # Ausrüstungs-/Schuh-Tracker-Tab
     ├── tab_splits.py        # Splits-Tab
     ├── tab_intervals.py     # Intervallerkennung-Tab
     ├── tab_best.py          # Bestleistungen-Tab
@@ -273,7 +283,6 @@ MongoDB-Daten werden in einem persistenten Docker-Volume gespeichert und überle
 | Datei | Inhalt |
 |---|---|
 | `.strava_token.json` | Strava OAuth-Token (Access + Refresh Token) |
-| `settings.json` | Lokale Benutzereinstellungen (z. B. jährliches km-Ziel) |
 
 ## KI-Nutzung
 

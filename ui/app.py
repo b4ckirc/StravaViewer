@@ -8,7 +8,7 @@ from tkinter import ttk, filedialog, messagebox
 import config as _cfg
 from config import C, MAX_COMPARE, APP_NAME, APP_VERSION
 from models import ActivityData
-from storage_manager import StorageManager
+from storage_manager import StorageManager, load_settings_sync
 from i18n import t, set_language, get_language, SUPPORTED_LANGUAGES
 
 import ui.tab_dashboard  as tab_dashboard
@@ -23,6 +23,7 @@ import ui.tab_stats      as tab_stats
 import ui.tab_calendar   as tab_calendar
 import ui.tab_raw        as tab_raw
 import ui.tab_intervals  as tab_intervals
+import ui.tab_gear       as tab_gear
 from ui.downloader_ui    import open_download_window
 from ui.widgets          import topbar_btn, clear, Tooltip
 
@@ -40,19 +41,16 @@ _TAB_DEFS = [
     ("tab_library",  "▣",  "tab_library",   "global"),
     ("tab_calendar", "▦",  "tab_calendar",  "global"),
     ("tab_stats",    "≈",  "tab_stats",     "global"),
+    ("tab_gear",     "👟", "tab_gear",      "global"),
 ]
 
 
 class StravaApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        # Load language from settings before building UI
-        try:
-            with open("settings.json", encoding="utf-8") as _f:
-                _s = json.load(_f)
-            set_language(_s.get("language", "it"))
-        except Exception:
-            set_language("it")
+        # Load language from MongoDB settings before building UI
+        _startup = load_settings_sync()
+        set_language(_startup.get("language", "it"))
 
         self.title(f"{APP_NAME}  v{APP_VERSION}")
         self.configure(bg=C["bg"])
@@ -369,6 +367,8 @@ class StravaApp(tk.Tk):
         elif attr == "tab_calendar":
             tab_calendar.render(self.tab_calendar, self.storage,
                                 on_open=self._open_from_library)
+        elif attr == "tab_gear":
+            tab_gear.render(self.tab_gear, self.storage)
 
     # ── Welcome ───────────────────────────────────────────────────────────────
 
@@ -497,17 +497,7 @@ class StravaApp(tk.Tk):
         chosen = self._lang_var.get()
         if chosen in lang_options:
             lang_code = lang_keys[lang_options.index(chosen)]
-            try:
-                with open("settings.json", encoding="utf-8") as f:
-                    s = json.load(f)
-            except Exception:
-                s = {}
-            s["language"] = lang_code
-            try:
-                with open("settings.json", "w", encoding="utf-8") as f:
-                    json.dump(s, f, indent=2)
-            except Exception:
-                pass
+            self.storage.save_app_setting("language", lang_code)
             messagebox.showinfo(t("msg_language_changed"), t("msg_language_restart"))
 
     # ── Export current activity ────────────────────────────────────────────────

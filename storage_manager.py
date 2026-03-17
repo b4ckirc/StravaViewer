@@ -6,7 +6,26 @@ Exposes list_all(), load_activity(), delete(), exists() for the MongoDB backend.
 
 from models import ActivityData
 from storage import MongoStorage, start_mongo_container
-from config import MONGO_HOST, MONGO_PORT, DOCKER_COMPOSE, MONGO_DB
+from config import MONGO_HOST, MONGO_PORT, DOCKER_COMPOSE, MONGO_DB, MONGO_SETTINGS_COLL
+
+
+def load_settings_sync(timeout_ms: int = 800) -> dict:
+    """Quick synchronous read of app settings before the UI is built.
+
+    Used at startup to restore language preference. Returns an empty dict
+    if MongoDB is not reachable within *timeout_ms* milliseconds.
+    """
+    try:
+        import pymongo
+        client = pymongo.MongoClient(MONGO_HOST, MONGO_PORT,
+                                     serverSelectionTimeoutMS=timeout_ms)
+        client.server_info()
+        doc = client[MONGO_DB][MONGO_SETTINGS_COLL].find_one({"_id": "settings"}) or {}
+        client.close()
+        doc.pop("_id", None)
+        return doc
+    except Exception:
+        return {}
 
 
 class StorageManager:
@@ -124,6 +143,59 @@ class StorageManager:
         if self.mongo_ok and self.mongo_storage:
             try:
                 return self.mongo_storage.get_all_best_efforts(races_only)
+            except Exception:
+                pass
+        return []
+
+    def load_app_settings(self) -> dict:
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                return self.mongo_storage.load_app_settings()
+            except Exception:
+                pass
+        return {}
+
+    def save_app_setting(self, key: str, value):
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                self.mongo_storage.save_app_setting(key, value)
+            except Exception:
+                pass
+
+    def load_gear_settings(self) -> dict:
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                return self.mongo_storage.load_gear_settings()
+            except Exception:
+                pass
+        return {}
+
+    def save_gear_threshold(self, gear_name: str, km: float):
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                self.mongo_storage.save_gear_threshold(gear_name, km)
+            except Exception:
+                pass
+
+    def save_gear_dismissed(self, gear_name: str, dismissed: bool):
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                self.mongo_storage.save_gear_dismissed(gear_name, dismissed)
+            except Exception:
+                pass
+
+    def gear_stats(self) -> list[dict]:
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                return self.mongo_storage.gear_stats()
+            except Exception:
+                pass
+        return []
+
+    def gear_monthly_km(self) -> list[dict]:
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                return self.mongo_storage.gear_monthly_km()
             except Exception:
                 pass
         return []

@@ -4,7 +4,7 @@ Global statistics tab for all runs in the library.
 """
 
 import tkinter as tk
-import json, math, os
+import math, os
 from datetime import date, timedelta
 from config import C
 from models import fmt_time, fmt_pace
@@ -18,24 +18,6 @@ try:
     HAS_MPL = True
 except ImportError:
     HAS_MPL = False
-
-SETTINGS_FILE = "settings.json"
-
-
-def _load_settings() -> dict:
-    try:
-        with open(SETTINGS_FILE, encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-
-def _save_settings(s: dict):
-    try:
-        with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-            json.dump(s, f, indent=2)
-    except Exception:
-        pass
 
 
 def render(tab, storage_mgr, on_open=None):
@@ -111,7 +93,7 @@ def render(tab, storage_mgr, on_open=None):
         _render_athlete_radar(body, all_summaries)
 
     # ── Annual goal ────────────────────────────────────────────────────────────
-    _render_annual_goal(body, all_summaries)
+    _render_annual_goal(body, all_summaries, storage_mgr)
 
     # ── Statistics per year ───────────────────────────────────────────────────
     by_year = _group_by_year(all_summaries)
@@ -1465,9 +1447,9 @@ def _avg_km_per_week(summaries):
 
 # ── Annual goal section ───────────────────────────────────────────────────────
 
-def _render_annual_goal(body, all_summaries):
+def _render_annual_goal(body, all_summaries, storage_mgr):
     section_label(body, t("section_annual_goal"))
-    settings    = _load_settings()
+    app_settings = storage_mgr.load_app_settings()
     current_year = date.today().year
 
     year_km = sum(
@@ -1475,7 +1457,7 @@ def _render_annual_goal(body, all_summaries):
         if (s.get("start_date") or "")[:4] == str(current_year)
     ) / 1000
 
-    target_km = settings.get("annual_km_goal", 1000.0)
+    target_km = app_settings.get("annual_km_goal", 1000.0)
     pct       = min(1.0, year_km / target_km) if target_km > 0 else 0.0
 
     outer = tk.Frame(body, bg=C["surface2"],
@@ -1501,8 +1483,7 @@ def _render_annual_goal(body, all_summaries):
     def _save():
         try:
             val = float(goal_var.get())
-            settings["annual_km_goal"] = val
-            _save_settings(settings)
+            storage_mgr.save_app_setting("annual_km_goal", val)
         except Exception:
             pass
 

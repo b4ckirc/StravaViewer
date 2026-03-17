@@ -93,7 +93,7 @@ Vue mensuelle de toutes les courses avec navigation mois par mois :
 
 ### Statistiques
 Statistiques agrégées sur **toutes** les courses dans la base de données (ignore les filtres et la pagination) :
-- **Objectif annuel** — définissez un objectif km pour l'année en cours avec barre de progression ; la valeur est sauvegardée dans `settings.json` et mémorisée entre les sessions
+- **Objectif annuel** — définissez un objectif km pour l'année en cours avec barre de progression ; la valeur est sauvegardée dans MongoDB et mémorisée entre les sessions
 - Totaux : courses, km, heures, dénivelé, allure moyenne, FC moyenne, calories, km/semaine
 - **Carte de chaleur des activités** — grille calendrier style GitHub des 52 dernières semaines (lignes = jours de la semaine Lun→Dim, colonnes = semaines) : chaque cellule est colorée en orange avec une intensité proportionnelle aux km courus ce jour-là, gris foncé si repos ; barre d'échelle de couleur en bas ; info-bulle au survol avec date et km
 - **Profil athlétique** — graphique radar hexagonal avec 6 dimensions normalisées 0–100 : *Vitesse* (allure moyenne, échelle 8:20→3:20/km), *Endurance* (médiane des distances, échelle 3→42 km), *Dénivelé* (moyenne m↑/km, échelle 0→40 m/km), *Constance* (% semaines avec au moins une course dans les 52 dernières), *Volume* (moyenne km/semaine dans les 52 dernières, échelle 0→70), *Progression* (comparaison de l'allure moyenne des 3 derniers mois vs les 3 mois précédents) ; accompagné d'un panneau avec scores numériques, barres proportionnelles et description de chaque dimension
@@ -110,6 +110,15 @@ Statistiques agrégées sur **toutes** les courses dans la base de données (ign
 - **Prévision de performance (Monte Carlo)** — estimation du temps sur n'importe quelle distance avec simulation de 5000 scénarios ; paramètres configurables : distance cible (standard ou personnalisée en km), dénivelé positif du parcours, fenêtre temporelle de l'historique (N derniers jours), longueur minimale et maximale des courses pour récupérer les meilleures performances (km min/max), filtre courses seulement ; la correction de dénivelé est personnalisée : calculée par régression linéaire sur vos vrais splits (sec/km par 1% de pente), avec recours au modèle Minetti si les données sont insuffisantes ; le résultat est un histogramme avec les percentiles P10/P25/P50/P75/P90 et un panneau de diagnostic avec les données utilisées dans l'ajustement, le coefficient b et le temps de base brut ; bouton ℹ avec guide complet sur les paramètres, le calcul et l'interprétation des résultats
 - **Analyse des courses et VDOT** — analyse toutes les activités classées comme "Course" sur Strava (`workout_type = 1`) et calcule pour chacune le VDOT selon la formule de Jack Daniels (indice de capacité aérobie dérivé de la distance et du temps réels, sans test en laboratoire) ; affiche trois cartes de statistiques (total des courses, meilleur VDOT, VDOT le plus récent), un graphique linéaire de l'évolution du VDOT dans le temps avec ligne pointillée au maximum historique, un tableau de courses paginé (10 par page, cliquable pour ouvrir l'activité) avec date, km, temps, VDOT et nom, et un tableau de prévisions pour 1K / 5K / 10K / semi-marathon / marathon calculées à partir du VDOT de la dernière course enregistrée ; bouton ℹ avec explication de la formule, tableau de valeurs de référence (débutant → élite) et guide d'interprétation des prévisions
 - **Parcours récurrents** — détecte automatiquement les parcours que vous avez courus au moins 3 fois en regroupant les activités par zone de départ (~300 m) et distance (±1 km) ; pour chaque groupe affiche : liste déroulante avec le nom le plus fréquent, distance, nombre de courses, période et ville/coordonnées ; graphique de dispersion de l'allure dans le temps avec colorisation vert→rouge (plus rapide→plus lent), ligne de tendance pointillée, mise en évidence de la meilleure course et de la dernière ; en-tête avec meilleure allure, allure moyenne et indicateur de tendance (amélioré/dégradé/stable) ; liste des courses du groupe avec date, km, allure, FC et nom, cliquable pour ouvrir l'activité ; la ville est récupérée d'abord depuis les métadonnées Strava, puis via le géocodage inverse Nominatim (OpenStreetMap) avec cache persistant sur MongoDB, fil séquentiel avec pause de 1 seconde entre les requêtes pour respecter les limites de débit
+
+### Suivi d'équipement / chaussures *(nouveau)*
+Agrégation automatique du kilométrage par chaussure/équipement défini sur Strava :
+- **Cartes par équipement** — une carte par chaussure avec : km totaux, nombre de sorties, allure moyenne, dates de première/dernière utilisation
+- **Barre de progression** — remplissage visuel vers un seuil de remplacement configurable par chaussure (700 km par défaut)
+- **Badge de statut** — ✓ OK (< 80%), → Près de la limite (80–100%), ⚠ À remplacer bientôt (> 100%)
+- **Seuil modifiable** — champ texte et bouton Enregistrer par chaussure ; valeur persistée dans MongoDB
+- **Graphique km mensuels** — graphique à barres empilées des 12 derniers mois, une couleur par gear
+- Les données d'équipement proviennent des téléchargements Strava ; si aucun gear n'est assigné, un message d'état vide est affiché
 
 ### Base de données
 Depuis le menu **Base de données** dans la barre supérieure :
@@ -153,6 +162,7 @@ strava_viewer/
     ├── tab_charts.py        # Onglet Graphiques + _build_export_fig() pour PNG/PDF
     ├── tab_hr.py            # Onglet Zones FC
     ├── tab_map.py           # Onglet Carte (ouvre le navigateur externe)
+    ├── tab_gear.py          # Onglet Suivi d'équipement
     ├── tab_splits.py        # Onglet Splits
     ├── tab_intervals.py     # Onglet Détection d'intervalles
     ├── tab_best.py          # Onglet Meilleures performances
@@ -273,7 +283,6 @@ Les données MongoDB sont sauvegardées dans un volume Docker persistant et surv
 | Fichier | Contenu |
 |---|---|
 | `.strava_token.json` | Token OAuth Strava (access + refresh token) |
-| `settings.json` | Préférences utilisateur locales (ex. objectif km annuel) |
 
 ## Utilisation de l'IA
 

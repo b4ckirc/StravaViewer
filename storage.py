@@ -6,7 +6,8 @@ Run storage management:
 
 import os, json, subprocess, re
 from datetime import datetime
-from config import (MONGO_HOST, MONGO_PORT, MONGO_DB, MONGO_COLL, MONGO_TOKEN_COLL, DOCKER_COMPOSE)
+from config import (MONGO_HOST, MONGO_PORT, MONGO_DB, MONGO_COLL, MONGO_TOKEN_COLL,
+                    MONGO_GEAR_COLL, MONGO_SETTINGS_COLL, DOCKER_COMPOSE)
 
 try:
     import pymongo
@@ -119,6 +120,95 @@ class MongoStorage:
             {"$sort": {"_id": 1}},
         ]
         return list(self._coll.aggregate(pipeline))
+
+    # ── App settings ──────────────────────────────────────────────────────────
+
+    def _settings_coll(self):
+        return self._client[MONGO_DB][MONGO_SETTINGS_COLL]
+
+    def load_app_settings(self) -> dict:
+        """Return the app settings document (without _id)."""
+        doc = self._settings_coll().find_one({"_id": "settings"}) or {}
+        doc.pop("_id", None)
+        return doc
+
+    def save_app_setting(self, key: str, value):
+        """Upsert a single key in the app settings document."""
+        self._settings_coll().update_one(
+            {"_id": "settings"}, {"$set": {key: value}}, upsert=True)
+
+    # ── Gear settings ─────────────────────────────────────────────────────────
+
+    def _gear_coll(self):
+        return self._client[MONGO_DB][MONGO_GEAR_COLL]
+
+    def load_gear_settings(self) -> dict:
+        """Returns {gear_name: {"threshold": float, "dismissed": bool}}."""
+        result = {}
+        for doc in self._gear_coll().find({}):
+            name = doc.get("_id")
+            if name:
+                result[name] = {
+                    "threshold": doc.get("threshold", 700.0),
+                    "dismissed": doc.get("dismissed", False),
+                }
+        return result
+
+    def save_gear_threshold(self, gear_name: str, km: float):
+        self._gear_coll().update_one(
+            {"_id": gear_name}, {"$set": {"threshold": km}}, upsert=True)
+
+    def save_gear_dismissed(self, gear_name: str, dismissed: bool):
+        self._gear_coll().update_one(
+            {"_id": gear_name}, {"$set": {"dismissed": dismissed}}, upsert=True)
+
+    def gear_stats(self) -> list[dict]:
+        """Aggregate per-gear statistics (km, runs, avg speed, date range)."""
+        pipeline = [
+            {"$match": {"gear.name": {"$exists": True, "$type": "string", "$ne": ""}}},
+            {"$group": {
+                "_id":        "$gear.name",
+                "gear_id":    {"$first": "$gear.id"},
+                "total_km":   {"$sum": {"$divide": ["$distance", 1000]}},
+                "run_count":  {"$sum": 1},
+                "total_time": {"$sum": "$moving_time"},
+                "avg_speed":  {"$avg": "$average_speed"},
+                "last_used":  {"$max": "$start_date_local"},
+                "first_used": {"$min": "$start_date_local"},
+            }},
+            {"$sort": {"total_km": -1}},
+        ]
+        return [
+            {
+                "name":       doc["_id"],
+                "gear_id":    doc.get("gear_id", ""),
+                "total_km":   doc.get("total_km", 0),
+                "run_count":  doc.get("run_count", 0),
+                "total_time": doc.get("total_time", 0),
+                "avg_speed":  doc.get("avg_speed") or 0,
+                "last_used":  (doc.get("last_used") or "")[:10],
+                "first_used": (doc.get("first_used") or "")[:10],
+            }
+            for doc in self._coll.aggregate(pipeline)
+        ]
+
+    def gear_monthly_km(self) -> list[dict]:
+        """Returns monthly km per gear: [{gear, month, km}]."""
+        pipeline = [
+            {"$match": {"gear.name": {"$exists": True, "$type": "string", "$ne": ""}}},
+            {"$group": {
+                "_id": {
+                    "gear":  "$gear.name",
+                    "month": {"$substr": ["$start_date_local", 0, 7]},
+                },
+                "km": {"$sum": {"$divide": ["$distance", 1000]}},
+            }},
+            {"$sort": {"_id.month": 1}},
+        ]
+        return [
+            {"gear": doc["_id"]["gear"], "month": doc["_id"]["month"], "km": doc.get("km", 0)}
+            for doc in self._coll.aggregate(pipeline)
+        ]
 
     def close(self):
         self._client.close()

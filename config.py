@@ -69,6 +69,8 @@ MONGO_PORT      = 27017
 MONGO_DB        = "strava"
 MONGO_COLL      = "activities"
 MONGO_TOKEN_COLL = "strava_token"
+MONGO_GEAR_COLL     = "gear_settings"
+MONGO_SETTINGS_COLL = "app_settings"
 DOCKER_COMPOSE  = "docker-compose.yml"
 
 # Strava OAuth
