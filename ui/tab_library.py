@@ -43,62 +43,69 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
     tk.Label(fbar, text=t("filter_name"), font=("Segoe UI", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     name_var = tk.StringVar()
-    tk.Entry(fbar, textvariable=name_var, font=("Segoe UI", 9),
+    ent_name = tk.Entry(fbar, textvariable=name_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=18, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
-             ).pack(side="left", padx=(4, 14))
+             )
+    ent_name.pack(side="left", padx=(4, 14))
 
     tk.Label(fbar, text=t("filter_dist_km"), font=("Segoe UI", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     dist_min_var = tk.StringVar()
     dist_max_var = tk.StringVar()
-    tk.Entry(fbar, textvariable=dist_min_var, font=("Segoe UI", 9),
+    ent_dist_min = tk.Entry(fbar, textvariable=dist_min_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=6, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
-             ).pack(side="left", padx=(4, 2))
+             )
+    ent_dist_min.pack(side="left", padx=(4, 2))
     tk.Label(fbar, text="–", fg=C["text_dim"], bg=C["surface"],
              font=("Segoe UI", 9)).pack(side="left")
-    tk.Entry(fbar, textvariable=dist_max_var, font=("Segoe UI", 9),
+    ent_dist_max = tk.Entry(fbar, textvariable=dist_max_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=6, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
-             ).pack(side="left", padx=(2, 14))
+             )
+    ent_dist_max.pack(side="left", padx=(2, 14))
 
     tk.Label(fbar, text=t("filter_elev_m"), font=("Segoe UI", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     elev_min_var = tk.StringVar()
     elev_max_var = tk.StringVar()
-    tk.Entry(fbar, textvariable=elev_min_var, font=("Segoe UI", 9),
+    ent_elev_min = tk.Entry(fbar, textvariable=elev_min_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=6, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
-             ).pack(side="left", padx=(4, 2))
+             )
+    ent_elev_min.pack(side="left", padx=(4, 2))
     tk.Label(fbar, text="–", fg=C["text_dim"], bg=C["surface"],
              font=("Segoe UI", 9)).pack(side="left")
-    tk.Entry(fbar, textvariable=elev_max_var, font=("Segoe UI", 9),
+    ent_elev_max = tk.Entry(fbar, textvariable=elev_max_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=6, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
-             ).pack(side="left", padx=(2, 14))
+             )
+    ent_elev_max.pack(side="left", padx=(2, 14))
 
     tk.Label(fbar, text=t("filter_date_from"), font=("Segoe UI", 8),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left")
     date_from_var = tk.StringVar()
     date_to_var   = tk.StringVar()
-    tk.Entry(fbar, textvariable=date_from_var, font=("Segoe UI", 9),
+    ent_date_from = tk.Entry(fbar, textvariable=date_from_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=11, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
-             ).pack(side="left", padx=(4, 2))
+             )
+    ent_date_from.pack(side="left", padx=(4, 2))
     tk.Label(fbar, text=t("filter_date_to"), fg=C["text_dim"], bg=C["surface"],
              font=("Segoe UI", 8)).pack(side="left", padx=(6, 0))
-    tk.Entry(fbar, textvariable=date_to_var, font=("Segoe UI", 9),
+    ent_date_to = tk.Entry(fbar, textvariable=date_to_var, font=("Segoe UI", 9),
              bg=C["surface2"], fg=C["text"], width=11, bd=0,
              insertbackground=C["text"],
              highlightthickness=1, highlightbackground=C["border"]
-             ).pack(side="left", padx=(4, 2))
+             )
+    ent_date_to.pack(side="left", padx=(4, 2))
     tk.Label(fbar, text="(YYYY-MM-DD)", font=("Segoe UI", 7),
              fg=C["text_dim"], bg=C["surface"]).pack(side="left", padx=(4, 12))
 
@@ -386,6 +393,11 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
             messagebox.showerror(t("msg_error"), str(e))
             return
         _search()
+
+    # Bind Enter key on all filter entries to trigger search
+    for ent in (ent_name, ent_dist_min, ent_dist_max, ent_elev_min, ent_elev_max,
+                ent_date_from, ent_date_to):
+        ent.bind("<Return>", lambda e: _search())
 
     # Init: load first page
     _search()
