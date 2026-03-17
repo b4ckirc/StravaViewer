@@ -55,6 +55,15 @@ Scrollbare Tabelle mit Kilometer-für-Kilometer-Daten:
 - Distanz, Zeit, Tempo, Geschwindigkeit, HF, Höhenunterschied, Kadenz
 - Tempofarbe zur sofortigen Identifizierung der schnellsten/langsamsten km
 
+### Intervallerkennung *(neu)*
+Automatische Erkennung und Analyse strukturierter Intervalltrainings aus den km-Splittdaten:
+- **Automatische Erkennung** — der Algorithmus berechnet Mittelwert und Standardabweichung des Tempos und klassifiziert jeden km als *schnell*, *langsam* oder *neutral* mit einem ±0,5σ-Schwellenwert; benötigt mindestens 3 schnelle Segmente und einen Variationskoeffizienten ≥ 6%
+- **Trainingsklassifizierung** — identifiziert automatisch den Sitzungstyp: *VO₂max-Intervalle*, *Schwellen-Intervalle*, *Tempo / Progressiv*, *Fartlek*, *Leichte Strides*
+- **Analytik-Leiste** — 4 StatCards: Durchschnittstempo Arbeit, Durchschnittstempo Erholung, Fade Rate (letztes vs. erstes Intervall), Konsistenz-Score (0–100)
+- **Segmenttabelle** — scrollbare Liste aller erkannten Segmente mit Typ (⚡ Arbeit / ○ Erholung), Distanz, Zeit, Tempo, HF und Delta vs. Durchschnitt; Arbeitsintervalle werden mit orangem linken Rand hervorgehoben
+- **Diagramme** — Balkendiagramm des Tempos pro Segment (orange = Arbeit, blau = Erholung) mit Referenzlinien; HF-Liniendiagramm pro Segment wenn vorhanden
+- Für Nicht-Intervall-Einheiten wird eine klare Meldung „Kein Intervalltraining" mit Gleichmäßigkeitsstatistiken angezeigt
+
 ### Bestleistungen
 Liste der von Strava erkannten Bestleistungen (1 km, 5 km, 10 km, Halbmarathon, Marathon usw.) mit 🏆-Abzeichen für persönliche Rekorde.
 
@@ -127,6 +136,7 @@ Aus dem **Exportieren**-Menü:
 strava_viewer/
 ├── main.py                  # Einstiegspunkt — startet StravaApp
 ├── config.py                # Konstanten: Farben, Strava-URLs, MongoDB-Parameter
+├── interval_detector.py     # Intervallerkennung-Algorithmus (reines Python, keine UI-Abhängigkeiten)
 ├── models.py                # ActivityData-Klasse — Strava-JSON-Parsing, berechnete Eigenschaften
 ├── storage.py               # MongoStorage — Aktivitätsspeicherung/-lesung auf MongoDB
 ├── storage_manager.py       # Fassade: verwaltet MongoDB-Verbindung und Docker-Start
@@ -144,6 +154,7 @@ strava_viewer/
     ├── tab_hr.py            # HF-Zonen-Tab
     ├── tab_map.py           # Karten-Tab (öffnet externen Browser)
     ├── tab_splits.py        # Splits-Tab
+    ├── tab_intervals.py     # Intervallerkennung-Tab
     ├── tab_best.py          # Bestleistungen-Tab
     ├── tab_compare.py       # Vergleichs-Tab
     ├── tab_library.py       # Bibliotheks-Tab mit Seitennummerierung

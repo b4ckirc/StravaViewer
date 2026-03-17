@@ -55,6 +55,15 @@ Scrollable table with kilometer-by-kilometer data:
 - Distance, time, pace, speed, HR, elevation, cadence
 - Pace color to immediately identify the fastest/slowest km
 
+### Interval Detection *(new)*
+Automatic detection and analysis of structured interval workouts directly from per-km splits:
+- **Automatic detection** — the algorithm computes pace mean and standard deviation and labels each km as *fast*, *slow* or *neutral* using a ±0.5σ threshold; requires at least 3 fast segments and a coefficient of variation ≥ 6% to classify the session as intervals
+- **Workout classification** — automatically identifies session type: *VO₂max Intervals*, *Threshold Intervals*, *Tempo / Progressive*, *Fartlek*, *Easy Strides*
+- **Analytics strip** — 4 stat cards: average work pace, average recovery pace, fade rate (last vs first interval), consistency score (0–100)
+- **Segment table** — scrollable list of all detected segments with type (⚡ Work / ○ Rest), distance, time, pace, HR and delta vs average; work intervals highlighted with orange left border
+- **Charts** — pace bar chart per segment (orange = work, blue = rest) with reference lines for work/recovery averages; HR line chart per segment when heart rate data is available
+- For non-interval sessions, shows a clear "Not an interval session" message with pace uniformity statistics
+
 ### Best Efforts
 List of best efforts detected by Strava (1 km, 5 km, 10 km, half marathon, marathon, etc.) with 🏆 badge for personal records.
 
@@ -127,6 +136,7 @@ From the **Export** menu:
 strava_viewer/
 ├── main.py                  # Entry point — starts StravaApp
 ├── config.py                # Constants: colors, Strava URLs, MongoDB parameters
+├── interval_detector.py     # Interval detection algorithm (pure Python, no UI deps)
 ├── models.py                # ActivityData class — Strava JSON parsing, computed properties
 ├── storage.py               # MongoStorage — activity save/read on MongoDB
 ├── storage_manager.py       # Facade: manages MongoDB connection and Docker startup
@@ -144,6 +154,7 @@ strava_viewer/
     ├── tab_hr.py            # HR Zones tab
     ├── tab_map.py           # Map tab (opens external browser)
     ├── tab_splits.py        # Splits tab
+    ├── tab_intervals.py     # Interval Detection tab
     ├── tab_best.py          # Best Efforts tab
     ├── tab_compare.py       # Compare tab
     ├── tab_library.py       # Library tab with pagination

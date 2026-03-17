@@ -55,6 +55,15 @@ Tableau déroulant avec les données kilomètre par kilomètre :
 - Distance, temps, allure, vitesse, FC, dénivelé, cadence
 - Couleur de l'allure pour identifier immédiatement les km les plus rapides/lents
 
+### Détection d'intervalles *(nouveau)*
+Détection automatique et analyse des séances d'entraînement par intervalles structurés à partir des données de splits par km :
+- **Détection automatique** — l'algorithme calcule la moyenne et l'écart-type de l'allure et classe chaque km comme *rapide*, *lent* ou *neutre* avec un seuil ±0,5σ ; nécessite au moins 3 segments rapides et un coefficient de variation ≥ 6%
+- **Classification de l'entraînement** — identifie automatiquement le type de séance : *Intervalles VO₂max*, *Intervalles au seuil*, *Tempo / Progressif*, *Fartlek*, *Foulées légères*
+- **Bande d'analyse** — 4 StatCards : allure travail moyenne, allure récupération moyenne, taux de déclin (dernier vs premier intervalle), score de régularité (0–100)
+- **Tableau des segments** — liste déroulante de tous les segments détectés avec type (⚡ Travail / ○ Récupération), distance, temps, allure, FC et delta vs moyenne ; les intervalles de travail sont mis en évidence avec une bordure gauche orange
+- **Graphiques** — graphique en barres de l'allure par segment (orange = travail, bleu = récupération) avec lignes de référence ; graphique linéaire de la FC par segment si disponible
+- Pour les séances non-intervalles, affiche un message clair « Pas une séance d'intervalles » avec les statistiques d'uniformité d'allure
+
 ### Meilleures performances
 Liste des meilleures performances détectées par Strava (1 km, 5 km, 10 km, semi-marathon, marathon, etc.) avec badge 🏆 pour les records personnels.
 
@@ -127,6 +136,7 @@ Depuis le menu **Exporter** :
 strava_viewer/
 ├── main.py                  # Point d'entrée — démarre StravaApp
 ├── config.py                # Constantes : couleurs, URL Strava, paramètres MongoDB
+├── interval_detector.py     # Algorithme de détection d'intervalles (Python pur, aucune dépendance UI)
 ├── models.py                # Classe ActivityData — parsing JSON Strava, propriétés calculées
 ├── storage.py               # MongoStorage — sauvegarde/lecture des activités sur MongoDB
 ├── storage_manager.py       # Façade : gère la connexion MongoDB et le démarrage Docker
@@ -144,6 +154,7 @@ strava_viewer/
     ├── tab_hr.py            # Onglet Zones FC
     ├── tab_map.py           # Onglet Carte (ouvre le navigateur externe)
     ├── tab_splits.py        # Onglet Splits
+    ├── tab_intervals.py     # Onglet Détection d'intervalles
     ├── tab_best.py          # Onglet Meilleures performances
     ├── tab_compare.py       # Onglet Comparaison
     ├── tab_library.py       # Onglet Bibliothèque avec pagination

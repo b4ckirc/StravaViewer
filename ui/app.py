@@ -22,6 +22,7 @@ import ui.tab_library    as tab_library
 import ui.tab_stats      as tab_stats
 import ui.tab_calendar   as tab_calendar
 import ui.tab_raw        as tab_raw
+import ui.tab_intervals  as tab_intervals
 from ui.downloader_ui    import open_download_window
 from ui.widgets          import topbar_btn, clear, Tooltip
 
@@ -31,8 +32,9 @@ _TAB_DEFS = [
     ("tab_chart",    "▤",  "tab_charts",    "activity"),
     ("tab_hrzone",   "♥",  "tab_hr",        "activity"),
     ("tab_map",      "◈",  "tab_map",       "activity"),
-    ("tab_split",    "≡",  "tab_splits",    "activity"),
-    ("tab_best",     "★",  "tab_best",      "activity"),
+    ("tab_split",     "≡",  "tab_splits",    "activity"),
+    ("tab_intervals", "⚡", "tab_intervals", "activity"),
+    ("tab_best",      "★", "tab_best",      "activity"),
     ("tab_compare",  "⇄",  "tab_compare",   "activity"),
     ("tab_raw",      "{ }","tab_raw",       "activity"),
     ("tab_library",  "▣",  "tab_library",   "global"),
@@ -372,7 +374,7 @@ class StravaApp(tk.Tk):
 
     def _show_welcome(self):
         for attr in ("tab_dash","tab_chart","tab_hrzone","tab_map",
-                     "tab_split","tab_best","tab_compare","tab_raw"):
+                     "tab_split","tab_intervals","tab_best","tab_compare","tab_raw"):
             clear(getattr(self, attr))
         tk.Label(self.tab_dash,
                  text=t("welcome_text"),
@@ -417,8 +419,9 @@ class StravaApp(tk.Tk):
         tab_charts.render(self.tab_chart,     act)
         tab_hr.render(self.tab_hrzone,        act)
         tab_map.render(self.tab_map,          act)
-        tab_splits.render(self.tab_split,     act)
-        tab_best.render(self.tab_best,        act)
+        tab_splits.render(self.tab_split,         act)
+        tab_intervals.render(self.tab_intervals,  act)
+        tab_best.render(self.tab_best,            act)
         tab_raw.render(self.tab_raw,          act)
         self._show_tab("tab_dash")
 

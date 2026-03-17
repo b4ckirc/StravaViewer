@@ -55,6 +55,15 @@ Tabella scrollabile con i dati chilometro per chilometro:
 - Distanza, tempo, passo, velocità, HR, dislivello, cadenza
 - Colore del passo per identificare subito i km più veloci/lenti
 
+### Rilevamento Intervalli *(nuovo)*
+Rilevamento automatico e analisi degli allenamenti a intervalli strutturati dai dati di passo per km:
+- **Rilevamento automatico** — l'algoritmo calcola media e deviazione standard del passo e classifica ogni km come *veloce*, *lento* o *neutro* con soglia ±0,5σ; richiede almeno 3 tratti veloci e un coefficiente di variazione ≥ 6% per classificare la sessione come intervalli
+- **Classificazione dell'allenamento** — identifica automaticamente il tipo di sessione: *Intervalli VO₂max*, *Intervalli a soglia*, *Tempo / Progressivo*, *Fartlek*, *Allunghi su fondo lento*
+- **Scheda analitica** — 4 StatCard: passo medio lavoro, passo medio recupero, fade rate (ultimo vs primo intervallo), punteggio di consistenza (0–100)
+- **Tabella segmenti** — elenco scrollabile di tutti i segmenti rilevati con tipo (⚡ Lavoro / ○ Recupero), distanza, tempo, passo, HR e delta vs media; gli intervalli di lavoro sono evidenziati con bordo sinistro arancione
+- **Grafici** — grafico a barre del passo per segmento (arancione = lavoro, blu = recupero) con linee di riferimento; grafico a linee dell'HR per segmento se disponibile
+- Per le sessioni non a intervalli, mostra un chiaro messaggio "Non è un allenamento a intervalli" con statistiche di uniformità del passo
+
 ### Best Efforts
 Elenco dei migliori sforzi rilevati da Strava (1 km, 5 km, 10 km, mezza maratona, maratona, ecc.) con badge 🏆 per i record personali.
 
@@ -127,6 +136,7 @@ Dal menu **Esporta**:
 strava_viewer/
 ├── main.py                  # Entry point — avvia StravaApp
 ├── config.py                # Costanti: colori, URL Strava, parametri MongoDB
+├── interval_detector.py     # Algoritmo di rilevamento intervalli (Python puro, nessuna dipendenza UI)
 ├── models.py                # Classe ActivityData — parsing JSON Strava, proprietà calcolate
 ├── storage.py               # MongoStorage — salvataggio/lettura attività su MongoDB
 ├── storage_manager.py       # Facade: gestisce connessione MongoDB e avvio Docker
@@ -144,6 +154,7 @@ strava_viewer/
     ├── tab_hr.py            # Tab Zone HR
     ├── tab_map.py           # Tab Mappa (apre browser esterno)
     ├── tab_splits.py        # Tab Splits
+    ├── tab_intervals.py     # Tab Rilevamento Intervalli
     ├── tab_best.py          # Tab Best Efforts
     ├── tab_compare.py       # Tab Confronto
     ├── tab_library.py       # Tab Libreria con paginazione
