@@ -144,21 +144,12 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
     dst_f.pack(fill="x", padx=24, pady=(4, 0))
     tk.Label(dst_f, text=t("downloader_save_in"), font=("Segoe UI", 8, "bold"),
              fg=C["text_dim"], bg=C["surface2"], pady=8).pack(side="left", padx=12)
-    save_json_var  = tk.BooleanVar(value=True)
-    save_mongo_var = tk.BooleanVar(value=storage_mgr.mongo_ok)
-    tk.Checkbutton(dst_f, text="File JSON", variable=save_json_var,
-                   font=("Segoe UI", 9), fg=C["text"], bg=C["surface2"],
-                   selectcolor=C["surface"], activebackground=C["surface2"],
-                   activeforeground=C["text"]).pack(side="left", padx=10)
-    mongo_cb = tk.Checkbutton(dst_f, text="MongoDB", variable=save_mongo_var,
-                              font=("Segoe UI", 9), fg=C["text"], bg=C["surface2"],
-                              selectcolor=C["surface"], activebackground=C["surface2"],
-                              activeforeground=C["text"])
-    mongo_cb.pack(side="left", padx=10)
-    if not storage_mgr.mongo_ok:
-        mongo_cb.config(state="disabled")
-        tk.Label(dst_f, text=t("downloader_mongo_off"), font=("Segoe UI", 7),
-                 fg=C["red"], bg=C["surface2"]).pack(side="left")
+    if storage_mgr.mongo_ok:
+        tk.Label(dst_f, text="MongoDB ✔", font=("Segoe UI", 9, "bold"),
+                 fg=C["green"], bg=C["surface2"]).pack(side="left", padx=10)
+    else:
+        tk.Label(dst_f, text=t("downloader_mongo_off"), font=("Segoe UI", 8),
+                 fg=C["red"], bg=C["surface2"]).pack(side="left", padx=10)
 
     # ── Counters ─────────────────────────────────────────────────────────────
     stat_f = tk.Frame(win, bg=C["surface2"])
@@ -196,8 +187,8 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
         if not csc:
             messagebox.showerror(t("msg_error"), t("downloader_err_no_csc"), parent=win)
             return
-        if not save_json_var.get() and not save_mongo_var.get():
-            messagebox.showerror(t("msg_error"), t("downloader_err_no_dst"), parent=win)
+        if not storage_mgr.mongo_ok:
+            messagebox.showerror(t("msg_error"), t("downloader_mongo_off"), parent=win)
             return
 
         _save_creds(storage_mgr, cid, csc)
@@ -237,10 +228,7 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
                         i=i, total=len(runs), name=run.get("name", "–")))
                     try:
                         detail = fetch_activity_detail(sid, token)
-                        if save_json_var.get():
-                            storage_mgr.json_storage.save(detail)
-                        if save_mongo_var.get() and storage_mgr.mongo_ok:
-                            storage_mgr.mongo_storage.save(detail)
+                        storage_mgr.mongo_storage.save(detail)
                         counters["new"] += 1
                     except Exception as e:
                         win.after(0, log, t("dl_log_error_item").format(err=e))

@@ -1,22 +1,16 @@
 # ── storage_manager.py ────────────────────────────────────────────────────────
 """
-StorageManager: unified facade over JSONStorage + MongoStorage.
-Exposes list_all(), load_activity(), delete(), exists() regardless
-of which backend(s) are active.
+StorageManager: facade over MongoStorage.
+Exposes list_all(), load_activity(), delete(), exists() for the MongoDB backend.
 """
 
-import os
 from models import ActivityData
-from storage import JSONStorage, MongoStorage, start_mongo_container
+from storage import MongoStorage, start_mongo_container
 from config import MONGO_HOST, MONGO_PORT, DOCKER_COMPOSE, MONGO_DB
-
-DEFAULT_JSON_DIR = "strava_activities"
 
 
 class StorageManager:
-    def __init__(self, json_dir: str = DEFAULT_JSON_DIR,
-                 auto_start_mongo: bool = False):
-        self.json_storage  = JSONStorage(json_dir)
+    def __init__(self, auto_start_mongo: bool = False):
         self.mongo_storage = None
         self.mongo_ok      = False
 
@@ -70,67 +64,37 @@ class StorageManager:
         self.mongo_storage = None
         self.mongo_ok = False
 
-    # ── Interfaccia unificata ─────────────────────────────────────────────────
+    # ── Unified interface ─────────────────────────────────────────────────────
 
     def list_all(self, filters: dict = None) -> list[dict]:
-        """
-        List summaries from all active backends, deduplicated by strava_id.
-        MongoDB records take priority over JSON ones in case of duplicates.
-        """
-        seen_ids = set()
-        results  = []
-
-        # MongoDB first (more complete)
         if self.mongo_ok and self.mongo_storage:
             try:
-                for s in self.mongo_storage.list_all(filters):
-                    sid = s.get("strava_id")
-                    if sid:
-                        seen_ids.add(sid)
-                    results.append(s)
+                return self.mongo_storage.list_all(filters)
             except Exception:
                 pass
-
-        # JSON (only if not already present in Mongo)
-        for s in self.json_storage.list_all(filters):
-            sid = s.get("strava_id")
-            if sid and sid in seen_ids:
-                continue
-            results.append(s)
-
-        # Sort by descending date
-        results.sort(key=lambda x: x.get("start_date", ""), reverse=True)
-        return results
+        return []
 
     def load_activity(self, summary: dict) -> ActivityData | None:
-        """Loads the complete activity from the correct backend."""
+        """Loads the complete activity from MongoDB."""
+        if not (self.mongo_ok and self.mongo_storage):
+            return None
         try:
-            if summary["source"] == "mongo" and self.mongo_ok:
-                data = self.mongo_storage.load(summary["ref"])
-            else:
-                data = self.json_storage.load(summary["ref"])
+            data = self.mongo_storage.load(summary["ref"])
             return ActivityData(data) if data else None
         except Exception as e:
             print(f"[StorageManager] Errore caricamento: {e}")
             return None
 
     def delete(self, summary: dict):
-        """Elimina dal backend corretto."""
-        if summary["source"] == "mongo" and self.mongo_ok:
+        if self.mongo_ok and self.mongo_storage:
             self.mongo_storage.delete(summary["ref"])
-        else:
-            self.json_storage.delete(summary["ref"])
 
     def exists(self, strava_id) -> bool:
-        """Checks if the activity exists in at least one backend."""
-        if self.json_storage.exists(strava_id):
-            return True
         if self.mongo_ok and self.mongo_storage:
             return self.mongo_storage.exists(strava_id)
         return False
 
     def global_stats(self) -> dict | None:
-        """Aggregate statistics (only if MongoDB is available)."""
         if self.mongo_ok and self.mongo_storage:
             return self.mongo_storage.global_stats()
         return None
@@ -141,45 +105,40 @@ class StorageManager:
         return []
 
     def get_personal_records(self) -> dict:
-        """Best time for the main distances across the entire database."""
         if self.mongo_ok and self.mongo_storage:
             try:
                 return self.mongo_storage.get_best_efforts_records()
             except Exception:
                 pass
-        return self.json_storage.get_best_efforts_records()
+        return {}
 
     def get_grade_splits(self, races_only: bool = False) -> list[dict]:
-        """Dati pendenza/passo per grade analysis (da tutti gli split)."""
         if self.mongo_ok and self.mongo_storage:
             try:
                 return self.mongo_storage.get_grade_splits(races_only)
             except Exception:
                 pass
-        return self.json_storage.get_grade_splits(races_only)
+        return []
 
     def get_all_best_efforts(self, races_only: bool = False) -> list[dict]:
-        """Tutti i best effort per la curva di performance."""
         if self.mongo_ok and self.mongo_storage:
             try:
                 return self.mongo_storage.get_all_best_efforts(races_only)
             except Exception:
                 pass
-        return self.json_storage.get_all_best_efforts(races_only)
+        return []
 
     def scan_effort_names(self) -> set:
-        """Diagnostica: ritorna tutti i nomi di best effort presenti nel database."""
         if self.mongo_ok and self.mongo_storage:
             try:
                 return self.mongo_storage.scan_effort_names()
             except Exception:
                 pass
-        return self.json_storage.scan_effort_names()
+        return set()
 
     _GEOCODE_COLL = "geocode_cache"
 
     def get_geocode(self, lat: float, lon: float) -> str | None:
-        """Returns the geocoded city for the coordinates, or None if not in cache."""
         key = f"{lat:.3f},{lon:.3f}"
         if self.mongo_ok and self.mongo_storage:
             try:
@@ -189,48 +148,21 @@ class StorageManager:
                     return doc.get("city", "")
             except Exception:
                 pass
-        try:
-            import json as _json
-            with open("geocode_cache.json", encoding="utf-8") as f:
-                cache = _json.load(f)
-            if key in cache:
-                return cache[key]
-        except Exception:
-            pass
         return None
 
     def set_geocode(self, lat: float, lon: float, city: str):
-        """Salva il risultato del geocoding nella cache persistente."""
         key = f"{lat:.3f},{lon:.3f}"
         if self.mongo_ok and self.mongo_storage:
             try:
                 coll = self.mongo_storage._client[MONGO_DB][self._GEOCODE_COLL]
                 coll.update_one({"_id": key}, {"$set": {"city": city}}, upsert=True)
-                return
             except Exception:
                 pass
-        try:
-            import json as _json, os as _os
-            path = "geocode_cache.json"
-            cache = {}
-            if _os.path.exists(path):
-                with open(path, encoding="utf-8") as f:
-                    cache = _json.load(f)
-            cache[key] = city
-            with open(path, "w", encoding="utf-8") as f:
-                _json.dump(cache, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
 
     def get_route_groups(self, min_runs: int = 3) -> list[list[dict]]:
-        """
-        Raggruppa le attività per percorso ricorrente.
-        Criterion: same starting zone (~300 m) + similar distance (±1 km).
-        Returns list of groups sorted by number of runs (descending).
-        """
         from collections import defaultdict
         _RUN_TYPES = {"Run", "Trail Run", "VirtualRun", "Hike", "Walk"}
-        GRID = 0.003          # ~300 m per degree
+        GRID = 0.003
         summaries = self.list_all()
         groups: dict = defaultdict(list)
         for s in summaries:
@@ -243,7 +175,7 @@ class StorageManager:
                 continue
             grid_lat = round(round(lat / GRID) * GRID, 6)
             grid_lon = round(round(lon / GRID) * GRID, 6)
-            dist_bucket = round(dist / 1000)        # km, nearest 1 km
+            dist_bucket = round(dist / 1000)
             groups[(grid_lat, grid_lon, dist_bucket)].append(s)
         result = [
             sorted(v, key=lambda x: x.get("start_date", ""))
@@ -254,111 +186,59 @@ class StorageManager:
         return result
 
     def get_group_polylines(self, group: list) -> list:
-        """
-        Returns [(name, date_str, [(lat,lon),...])] for the activities in the group.
-        On MongoDB uses a single $in query; on JSON loads the files one by one.
-        """
         from models import decode_polyline
-        result = []
-
-        if self.mongo_ok and self.mongo_storage:
-            try:
-                ids = [s["strava_id"] for s in group if s.get("strava_id")]
-                cursor = self.mongo_storage._coll.find(
-                    {"id": {"$in": ids}},
-                    {"name": 1, "start_date_local": 1,
-                     "map.polyline": 1, "map.summary_polyline": 1}
-                )
-                for doc in cursor:
-                    m = doc.get("map") or {}
-                    poly_str = m.get("polyline") or m.get("summary_polyline", "")
-                    if poly_str:
-                        pts = decode_polyline(poly_str)
-                        if pts:
-                            result.append((
-                                doc.get("name", ""),
-                                (doc.get("start_date_local") or "")[:10],
-                                pts,
-                            ))
-                return result
-            except Exception:
-                pass
-
-        for s in group:
-            try:
-                data = self.json_storage.load(s["ref"])
-                m = (data.get("map") or {})
+        if not (self.mongo_ok and self.mongo_storage):
+            return []
+        try:
+            ids = [s["strava_id"] for s in group if s.get("strava_id")]
+            cursor = self.mongo_storage._coll.find(
+                {"id": {"$in": ids}},
+                {"name": 1, "start_date_local": 1,
+                 "map.polyline": 1, "map.summary_polyline": 1}
+            )
+            result = []
+            for doc in cursor:
+                m = doc.get("map") or {}
                 poly_str = m.get("polyline") or m.get("summary_polyline", "")
                 if poly_str:
                     pts = decode_polyline(poly_str)
                     if pts:
                         result.append((
-                            data.get("name", ""),
-                            (data.get("start_date_local") or "")[:10],
+                            doc.get("name", ""),
+                            (doc.get("start_date_local") or "")[:10],
                             pts,
                         ))
-            except Exception:
-                pass
-        return result
+            return result
+        except Exception:
+            return []
 
     def list_polylines(self) -> list:
-        """
-        Ritorna [(name, date_str, [(lat, lon), ...])] per tutte le attività con GPS.
-        Legge solo i campi necessari (lightweight).
-        """
         from models import decode_polyline
-        result = []
-
-        if self.mongo_ok and self.mongo_storage:
-            try:
-                cursor = self.mongo_storage._coll.find(
-                    {"map.summary_polyline": {"$exists": True, "$ne": ""}},
-                    {"name": 1, "start_date_local": 1,
-                     "map.polyline": 1, "map.summary_polyline": 1}
-                )
-                for doc in cursor:
-                    m = doc.get("map") or {}
-                    poly_str = m.get("polyline") or m.get("summary_polyline", "")
-                    if poly_str:
-                        pts = decode_polyline(poly_str)
-                        if pts:
-                            result.append((
-                                doc.get("name", ""),
-                                (doc.get("start_date_local") or "")[:10],
-                                pts,
-                            ))
-            except Exception:
-                pass
-        else:
-            import os as _os, json as _json
-            json_dir = self.json_storage.directory
-            if _os.path.isdir(json_dir):
-                for fname in sorted(_os.listdir(json_dir)):
-                    if not fname.endswith(".json"):
-                        continue
-                    try:
-                        with open(_os.path.join(json_dir, fname), encoding="utf-8") as f:
-                            data = _json.load(f)
-                        m = data.get("map") or {}
-                        poly_str = m.get("polyline") or m.get("summary_polyline", "")
-                        if poly_str:
-                            pts = decode_polyline(poly_str)
-                            if pts:
-                                result.append((
-                                    data.get("name", ""),
-                                    (data.get("start_date_local") or "")[:10],
-                                    pts,
-                                ))
-                    except Exception:
-                        pass
-
-        return result
+        if not (self.mongo_ok and self.mongo_storage):
+            return []
+        try:
+            cursor = self.mongo_storage._coll.find(
+                {"map.summary_polyline": {"$exists": True, "$ne": ""}},
+                {"name": 1, "start_date_local": 1,
+                 "map.polyline": 1, "map.summary_polyline": 1}
+            )
+            result = []
+            for doc in cursor:
+                m = doc.get("map") or {}
+                poly_str = m.get("polyline") or m.get("summary_polyline", "")
+                if poly_str:
+                    pts = decode_polyline(poly_str)
+                    if pts:
+                        result.append((
+                            doc.get("name", ""),
+                            (doc.get("start_date_local") or "")[:10],
+                            pts,
+                        ))
+            return result
+        except Exception:
+            return []
 
     def stats_per_month(self, year: int = None) -> list:
-        """
-        Statistiche aggregate per mese (YYYY-MM), opzionalmente filtrate per anno.
-        Ritorna lista di dict ordinata cronologicamente.
-        """
         from collections import defaultdict
         summaries = self.list_all()
         by_month = defaultdict(lambda: {

@@ -168,10 +168,6 @@ class StravaApp(tk.Tk):
             side="right", fill="y", pady=12)
 
         # Buttons right → left
-        topbar_btn(topbar, t("btn_open_file"),
-                   self._open_file,
-                   tooltip=t("tooltip_open_file")
-                   ).pack(side="right", padx=4, pady=10)
         topbar_btn(topbar, t("btn_download"),
                    self._open_downloader, primary=True,
                    tooltip=t("tooltip_download")
@@ -414,22 +410,6 @@ class StravaApp(tk.Tk):
         else:
             self._show_welcome()
 
-    # ── Open single JSON file ────────────────────────────────────────────
-
-    def _open_file(self):
-        path = filedialog.askopenfilename(
-            title=t("msg_select_file"),
-            filetypes=[("JSON", "*.json"), ("Tutti", "*.*")])
-        if not path:
-            return
-        try:
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception as e:
-            messagebox.showerror(t("msg_read_error"), str(e))
-            return
-        self._load_activity(ActivityData(data))
-
     def _load_activity(self, act: ActivityData):
         self.activity = act
         self.title(f"{APP_NAME}  •  {act.name}")
@@ -591,7 +571,10 @@ class StravaApp(tk.Tk):
                   command=win.destroy, **b).pack(pady=(8, 0))
 
     def _export_zip(self):
-        import zipfile
+        import zipfile, re as _re
+        if not (self.storage.mongo_ok and self.storage.mongo_storage):
+            messagebox.showerror(t("msg_error"), t("mongo_offline"))
+            return
         path = filedialog.asksaveasfilename(
             defaultextension=".zip",
             initialfile="strava_backup.zip",
@@ -601,25 +584,16 @@ class StravaApp(tk.Tk):
         try:
             count = 0
             with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as zf:
-                if self.storage.mongo_ok and self.storage.mongo_storage:
-                    cursor = self.storage.mongo_storage._coll.find({})
-                    for doc in cursor:
-                        doc.pop("_id", None)
-                        act_id   = doc.get("id", "unknown")
-                        date_str = (doc.get("start_date_local", "")[:10]) or "nodate"
-                        raw_name = doc.get("name", "activity")[:40]
-                        import re as _re
-                        safe_name = _re.sub(r'[<>:"/\\|?*\x00-\x1f]', '-', raw_name).strip()
-                        fname = f"{date_str}_{act_id}_{safe_name}.json"
-                        zf.writestr(fname,
-                                    json.dumps(doc, ensure_ascii=False, indent=2))
-                        count += 1
-                else:
-                    json_dir = self.storage.json_storage.directory
-                    for fname in os.listdir(json_dir):
-                        if fname.endswith(".json"):
-                            zf.write(os.path.join(json_dir, fname), fname)
-                            count += 1
+                cursor = self.storage.mongo_storage._coll.find({})
+                for doc in cursor:
+                    doc.pop("_id", None)
+                    act_id   = doc.get("id", "unknown")
+                    date_str = (doc.get("start_date_local", "")[:10]) or "nodate"
+                    raw_name = doc.get("name", "activity")[:40]
+                    safe_name = _re.sub(r'[<>:"/\\|?*\x00-\x1f]', '-', raw_name).strip()
+                    fname = f"{date_str}_{act_id}_{safe_name}.json"
+                    zf.writestr(fname, json.dumps(doc, ensure_ascii=False, indent=2))
+                    count += 1
             messagebox.showinfo("Export ZIP",
                                 f"{t('msg_backup_done')}\n{count} {t('msg_runs_exported')}\n{path}")
         except Exception as e:
@@ -627,6 +601,9 @@ class StravaApp(tk.Tk):
 
     def _import_zip(self):
         import zipfile
+        if not (self.storage.mongo_ok and self.storage.mongo_storage):
+            messagebox.showerror(t("msg_error"), t("mongo_offline"))
+            return
         path = filedialog.askopenfilename(
             title=t("msg_select_backup"),
             filetypes=[("ZIP", "*.zip"), ("Tutti", "*.*")])
@@ -645,9 +622,7 @@ class StravaApp(tk.Tk):
                         if sid and self.storage.exists(sid):
                             skip_count += 1
                             continue
-                        self.storage.json_storage.save(data)
-                        if self.storage.mongo_ok and self.storage.mongo_storage:
-                            self.storage.mongo_storage.save(data)
+                        self.storage.mongo_storage.save(data)
                         new_count += 1
                     except Exception:
                         err_count += 1

@@ -28,9 +28,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
 
     # ── Data source ───────────────────────────────────────────────────────────
     def get_summaries(filters=None):
-        if storage_mgr.mongo_ok and storage_mgr.mongo_storage:
-            return storage_mgr.mongo_storage.list_all(filters)
-        return storage_mgr.json_storage.list_all(filters)
+        return storage_mgr.list_all(filters)
 
     # Pagination state
     state = {"page": 0, "summaries": []}

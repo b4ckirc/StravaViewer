@@ -1,9 +1,7 @@
 # ── storage.py ────────────────────────────────────────────────────────────────
 """
 Run storage management:
-  - JSONStorage   → local folder of .json files
   - MongoStorage  → MongoDB collection (via pymongo)
-Both expose the same interface.
 """
 
 import os, json, subprocess, re
@@ -15,179 +13,6 @@ try:
     HAS_MONGO = True
 except ImportError:
     HAS_MONGO = False
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  JSON STORAGE
-# ══════════════════════════════════════════════════════════════════════════════
-
-class JSONStorage:
-    def __init__(self, directory: str):
-        self.directory = directory
-        os.makedirs(directory, exist_ok=True)
-
-    def save(self, data: dict) -> str:
-        """Saves the activity as a JSON file. Returns the file path."""
-        act_id   = data.get("id", "unknown")
-        date_str = (data.get("start_date_local", "")[:10]) or "nodate"
-        name     = _sanitize_filename(data.get("name", "activity"))
-        filename = f"{date_str}_{act_id}_{name}.json"
-        path     = os.path.join(self.directory, filename)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        return path
-
-    def list_all(self, filters: dict = None) -> list[dict]:
-        """
-        Returns a list of summary dicts for all activities.
-        filters: {
-          "date_from": datetime,  "date_to": datetime,
-          "dist_min":  float(km), "dist_max": float(km),
-          "name":      str (substring),
-        }
-        """
-        results = []
-        for fname in sorted(os.listdir(self.directory), reverse=True):
-            if not fname.endswith(".json"):
-                continue
-            path = os.path.join(self.directory, fname)
-            try:
-                with open(path, encoding="utf-8") as f:
-                    data = json.load(f)
-            except Exception:
-                continue
-            summary = _make_summary(data, source="json", ref=path)
-            if _passes(summary, filters):
-                results.append(summary)
-        return results
-
-    def load(self, ref: str) -> dict:
-        """Loads a complete activity from the file path."""
-        with open(ref, encoding="utf-8") as f:
-            return json.load(f)
-
-    def delete(self, ref: str):
-        os.remove(ref)
-
-    def exists(self, strava_id) -> bool:
-        if strava_id is None:
-            return False
-        for fname in os.listdir(self.directory):
-            if str(strava_id) in fname:
-                return True
-        return False
-
-    def scan_effort_names(self) -> set:
-        """Returns all unique best effort names found in files (diagnostics)."""
-        names = set()
-        for fname in sorted(os.listdir(self.directory)):
-            if not fname.endswith(".json"):
-                continue
-            path = os.path.join(self.directory, fname)
-            try:
-                with open(path, encoding="utf-8") as f:
-                    data = json.load(f)
-            except Exception:
-                continue
-            for effort in data.get("best_efforts") or []:
-                n = effort.get("name", "")
-                if n:
-                    names.add(n)
-        return names
-
-    def get_best_efforts_records(self) -> dict:
-        """Scans all files and returns the best time for the main distances."""
-        target = _build_effort_target()
-        records = {}
-        for fname in sorted(os.listdir(self.directory)):
-            if not fname.endswith(".json"):
-                continue
-            path = os.path.join(self.directory, fname)
-            try:
-                with open(path, encoding="utf-8") as f:
-                    data = json.load(f)
-            except Exception:
-                continue
-            act_name = data.get("name", "–")
-            act_date = (data.get("start_date_local") or "")[:10]
-            act_id   = data.get("id")
-            for effort in data.get("best_efforts") or []:
-                raw_name = effort.get("name", "")
-                canonical = target.get(raw_name)
-                if not canonical:
-                    continue
-                t = effort.get("moving_time") or effort.get("elapsed_time")
-                if not t:
-                    continue
-                if canonical not in records or t < records[canonical]["elapsed_time"]:
-                    records[canonical] = {
-                        "elapsed_time": t,
-                        "activity_name": act_name,
-                        "date": act_date,
-                        "activity_id": act_id,
-                    }
-        return records
-
-    def get_grade_splits(self, races_only: bool = False) -> list[dict]:
-        """Returns list of {grade_pct, pace_ms, date} from all activity splits."""
-        results = []
-        for fname in sorted(os.listdir(self.directory)):
-            if not fname.endswith(".json"):
-                continue
-            path = os.path.join(self.directory, fname)
-            try:
-                with open(path, encoding="utf-8") as f:
-                    data = json.load(f)
-            except Exception:
-                continue
-            if races_only and data.get("workout_type") != 1:
-                continue
-            act_date = (data.get("start_date_local") or "")[:10]
-            for sp in data.get("splits_metric") or []:
-                dist  = sp.get("distance", 0)
-                elev  = sp.get("elevation_difference")
-                speed = sp.get("average_speed", 0)
-                if dist and dist > 100 and elev is not None and speed > 0:
-                    results.append({
-                        "grade_pct": (elev / dist) * 100,
-                        "pace_ms":   speed,
-                        "date":      act_date,
-                    })
-        return results
-
-    def get_all_best_efforts(self, races_only: bool = False) -> list[dict]:
-        """Returns all best efforts (all canonical distances) for the performance curve."""
-        target = _build_effort_target()
-        results = []
-        for fname in sorted(os.listdir(self.directory)):
-            if not fname.endswith(".json"):
-                continue
-            path = os.path.join(self.directory, fname)
-            try:
-                with open(path, encoding="utf-8") as f:
-                    data = json.load(f)
-            except Exception:
-                continue
-            if races_only and data.get("workout_type") != 1:
-                continue
-            act_name = data.get("name", "–")
-            act_date = (data.get("start_date_local") or "")[:10]
-            act_dist_km = (data.get("distance") or 0) / 1000.0
-            for effort in data.get("best_efforts") or []:
-                raw_name  = effort.get("name", "")
-                canonical = target.get(raw_name)
-                if not canonical:
-                    continue
-                t = effort.get("moving_time") or effort.get("elapsed_time")
-                if t and t > 0:
-                    results.append({
-                        "canonical":       canonical,
-                        "elapsed_time":    t,
-                        "activity_name":   act_name,
-                        "date":            act_date,
-                        "activity_dist_km": act_dist_km,
-                    })
-        return results
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -532,17 +357,6 @@ _EFFORT_DISTANCES: dict[str, float] = {
 def _build_effort_target() -> dict[str, str]:
     """Returns the raw_name → canonical map (e.g. '1k' → '1k')."""
     return dict(_EFFORT_ALIASES)
-
-def _sanitize_filename(name: str, maxlen: int = 40) -> str:
-    """Removes invalid characters for file names (Windows/Unix) and truncates."""
-    # Forbidden characters on Windows: < > : " / \ | ? * and control characters
-    name = re.sub(r'[<>:"/\\|?*\x00-\x1f\x7f]', '-', name)
-    # Typographic quotes and other problematic Unicode characters
-    name = re.sub(r'[\u201c\u201d\u2018\u2019\u00ab\u00bb]', '-', name)
-    # Collapse multiple dashes/spaces and trim edges
-    name = re.sub(r'[-\s]{2,}', ' ', name).strip('-').strip()
-    return name[:maxlen]
-
 
 def _make_summary(data: dict, source: str, ref: str) -> dict:
     latlng = data.get("start_latlng") or []
