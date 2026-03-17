@@ -15,6 +15,9 @@ def render(tab, activity):
     tk.Label(tab, text=t("best_title"),
              font=("Segoe UI", 11, "bold"), fg=C["accent"],
              bg=C["surface"], pady=12).pack(fill="x")
+    # pixel widths: name, time, pace  (badge is flexible)
+    col_pwidths = [200, 85, 110]
+
     for i, be in enumerate(a.best_efforts):
         name    = be.get("name", "")
         elapsed = be.get("elapsed_time", 0)
@@ -27,11 +30,15 @@ def render(tab, activity):
         bg  = C["surface2"] if i % 2 == 0 else C["surface"]
         row = tk.Frame(tab, bg=bg, padx=24, pady=10)
         row.pack(fill="x")
-        tk.Label(row, text=f"{name:<24}", font=("Segoe UI", 10, "bold"),
-                 fg=C["blue"], bg=bg).pack(side="left")
-        tk.Label(row, text=fmt_time(elapsed), font=("Segoe UI", 10),
-                 fg=C["text"], bg=bg, width=10).pack(side="left")
-        tk.Label(row, text=f"{pace} /km", font=("Segoe UI", 10),
-                 fg=C["green"], bg=bg, width=14).pack(side="left")
+        for text, fg, pw, anc, bold in [
+            (name,              C["blue"],  col_pwidths[0], "w",      True),
+            (fmt_time(elapsed), C["text"],  col_pwidths[1], "center", False),
+            (f"{pace} /km",     C["green"], col_pwidths[2], "center", False),
+        ]:
+            cf = tk.Frame(row, width=pw, height=24, bg=bg)
+            cf.pack_propagate(False)
+            cf.pack(side="left")
+            tk.Label(cf, text=text, font=("Segoe UI", 10, "bold") if bold else ("Segoe UI", 10),
+                     fg=fg, bg=bg, anchor=anc).pack(fill="both", expand=True)
         tk.Label(row, text=badge, font=("Segoe UI", 9, "bold"),
                  fg=bc, bg=bg).pack(side="left")
