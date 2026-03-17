@@ -159,18 +159,18 @@ def _build_export_fig(a):
     if avg_pace:
         ax1.axhline(avg_pace, color=C["yellow"], linestyle="--", lw=1.2)
     ax1.set_ylabel("min/km", fontsize=7)
-    style_ax(ax1, "PASSO PER KM")
+    style_ax(ax1, t("chart_pace_per_km"))
     ax2 = fig.add_subplot(gs[1, 0])
     ax2.plot(kms, [s * 3.6 for s in speeds], color=C["blue"], lw=1.8, marker="o", ms=3)
     ax2.fill_between(kms, [s * 3.6 for s in speeds], alpha=0.12, color=C["blue"])
     ax2.set_ylabel("km/h", fontsize=7)
-    style_ax(ax2, "VELOCITÀ")
+    style_ax(ax2, t("chart_speed"))
     ax3 = fig.add_subplot(gs[1, 1])
     ax3.bar(kms, elevs, color=[C["green"] if e >= 0 else C["red"] for e in elevs],
             alpha=0.85, width=0.7)
     ax3.axhline(0, color=C["border"], lw=0.8)
     ax3.set_ylabel("m", fontsize=7)
-    style_ax(ax3, "DISLIVELLO")
+    style_ax(ax3, t("chart_elev_per_km"))
     if has_hr and rows == 3:
         ax4 = fig.add_subplot(gs[2, :])
         hv  = [h or 0 for h in hrs]
@@ -179,7 +179,7 @@ def _build_export_fig(a):
         if a.avg_hr:
             ax4.axhline(a.avg_hr, color=C["accent2"], linestyle="--", lw=1)
         ax4.set_ylabel("bpm", fontsize=7)
-        style_ax(ax4, "FREQUENZA CARDIACA")
+        style_ax(ax4, t("chart_hr"))
     fig.suptitle(f"{a.name}  •  {a.date_str}",
                  color=C["text"], fontsize=10, fontweight="bold", fontfamily="monospace")
     return fig

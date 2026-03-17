@@ -63,7 +63,13 @@ def export_pdf(activity, path: str):
         if a.splits:
             t(0.05, 0.27, tr("pdf_splits_header"),
               fontsize=8, fontweight="bold", color=C["accent"])
-            hdr = f"{'KM':>3}  {'DIST':>7}  {'TEMPO':>7}  {'PASSO':>7}  {'KM/H':>6}  {'HR':>5}  {'ELEV':>7}"
+            hdr = (f"{'KM':>3}  "
+                   f"{tr('col_dist')[:7]:>7}  "
+                   f"{tr('col_time')[:7]:>7}  "
+                   f"{tr('col_pace')[:7]:>7}  "
+                   f"{'KM/H':>6}  "
+                   f"{tr('col_hr')[:5]:>5}  "
+                   f"{tr('col_elev').lstrip('↑')[:7]:>7}")
             t(0.05, 0.23, hdr, fontsize=6.5, color=C["text_dim"])
             for i, s in enumerate(a.splits[:20]):
                 sp = s.get("average_speed", 0)
