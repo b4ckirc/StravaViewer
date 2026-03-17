@@ -131,6 +131,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "filter_date_from":      {"it": "Dal:",                   "en": "From:",                  "de": "Von:",                   "fr": "Du :",                    "es": "Desde:"},
     "filter_date_to":        {"it": "Al:",                    "en": "To:",                    "de": "Bis:",                   "fr": "Au :",                    "es": "Hasta:"},
     "filter_races_only":     {"it": "Solo gare",              "en": "Races only",             "de": "Nur Rennen",             "fr": "Courses seulement",       "es": "Solo carreras"},
+    "btn_reset_filters":     {"it": "✕ Reset",                "en": "✕ Reset",                "de": "✕ Zurücksetzen",         "fr": "✕ Réinitialiser",         "es": "✕ Restablecer"},
     "btn_calculate":         {"it": "▶  CALCOLA",             "en": "▶  CALCULATE",           "de": "▶  BERECHNEN",           "fr": "▶  CALCULER",             "es": "▶  CALCULAR"},
 
     # ── Library columns ───────────────────────────────────────────────────────

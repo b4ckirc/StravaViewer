@@ -123,6 +123,21 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
               fg="white", bd=0, padx=10, pady=4, cursor="hand2",
               command=lambda: _search()).pack(side="left", padx=4)
 
+    def _reset_filters():
+        name_var.set("")
+        dist_min_var.set("")
+        dist_max_var.set("")
+        elev_min_var.set("")
+        elev_max_var.set("")
+        date_from_var.set("")
+        date_to_var.set("")
+        races_var.set(False)
+        _search()
+
+    tk.Button(fbar, text=t("btn_reset_filters"), font=("Segoe UI", 9),
+              bg=C["surface2"], fg=C["text_dim"], bd=0, padx=8, pady=4, cursor="hand2",
+              command=_reset_filters).pack(side="left", padx=(2, 4))
+
     # ── Comparison bar ───────────────────────────────────────────────────────
     cbar = tk.Frame(tab, bg=C["surface2"], pady=8)
     cbar.pack(fill="x")
@@ -149,22 +164,29 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
               ).pack(side="right", padx=4)
 
     # ── Table header ─────────────────────────────────────────────────────────
-    cols   = [t("col_date"), t("col_name"), t("col_dist"), t("col_time"), t("col_pace"), t("col_hr"), t("col_elev"), t("col_actions")]
-    widths = [12,       32,     9,       8,       8,       6,     8,       18]
-
-    hdr_f = tk.Frame(tab, bg=C["surface"])
-    hdr_f.pack(fill="x")
-    for col, w in zip(cols, widths):
-        tk.Label(hdr_f, text=col, font=("Segoe UI", 10, "bold"),
-                 fg=C["text_dim"], bg=C["surface"],
-                 width=w, anchor="w" if col == "NOME" else "center",
-                 pady=8, padx=4).pack(side="left")
+    cols    = [t("col_date"), t("col_name"), t("col_dist"), t("col_time"), t("col_pace"), t("col_hr"), t("col_elev"), t("col_actions")]
+    pwidths = [85, 220, 65, 60, 60, 45, 65, 130]   # pixel widths, shared by header and rows
 
     # ── Scrollable list ─────────────────────────────────────────────────────
-    sc = tk.Canvas(tab, bg=C["bg"], bd=0, highlightthickness=0)
-    sb = ttk.Scrollbar(tab, orient="vertical", command=sc.yview)
+    body_f = tk.Frame(tab, bg=C["bg"])
+    body_f.pack(fill="both", expand=True)
+
+    sc = tk.Canvas(body_f, bg=C["bg"], bd=0, highlightthickness=0)
+    sb = ttk.Scrollbar(body_f, orient="vertical", command=sc.yview)
     sc.configure(yscrollcommand=sb.set)
     sb.pack(side="right", fill="y")
+
+    hdr_f = tk.Frame(body_f, bg=C["surface"])
+    hdr_f.pack(fill="x", side="top")
+    for i, (col, pw) in enumerate(zip(cols, pwidths)):
+        cell = tk.Frame(hdr_f, width=pw, height=36, bg=C["surface"])
+        cell.pack_propagate(False)
+        cell.pack(side="left")
+        tk.Label(cell, text=col, font=("Segoe UI", 10, "bold"),
+                 fg=C["text_dim"], bg=C["surface"],
+                 anchor="w" if i == 1 else "center",
+                 pady=8, padx=4).pack(fill="both", expand=True)
+
     sc.pack(fill="both", expand=True)
     list_frame = tk.Frame(sc, bg=C["bg"])
     wid = sc.create_window((0, 0), window=list_frame, anchor="nw")
@@ -280,19 +302,24 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
             elev_s  = f"{s.get('elev_gain', 0):.0f}m"
 
             cells = []
-            for v, col, w, anc in [
-                (date_s, C["text_dim"], 12, "center"),
-                (name_s, C["text"],     32, "w"),
-                (dist_s, C["accent"],    9, "center"),
-                (time_s, C["blue"],      8, "center"),
-                (pace_s, pace_col,       8, "center"),
-                (hr_s,   C["red"],       6, "center"),
-                (elev_s, C["yellow"],    8, "center"),
+            cell_frames = []
+            for v, col, pw, anc in [
+                (date_s, C["text_dim"], pwidths[0], "center"),
+                (name_s, C["text"],     pwidths[1], "w"),
+                (dist_s, C["accent"],   pwidths[2], "center"),
+                (time_s, C["blue"],     pwidths[3], "center"),
+                (pace_s, pace_col,      pwidths[4], "center"),
+                (hr_s,   C["red"],      pwidths[5], "center"),
+                (elev_s, C["yellow"],   pwidths[6], "center"),
             ]:
-                lbl = tk.Label(row, text=v, font=("Segoe UI", 10), fg=col, bg=bg,
-                               width=w, anchor=anc, pady=7, padx=4)
-                lbl.pack(side="left")
+                cf = tk.Frame(row, width=pw, height=32, bg=bg)
+                cf.pack_propagate(False)
+                cf.pack(side="left")
+                lbl = tk.Label(cf, text=v, font=("Segoe UI", 10), fg=col, bg=bg,
+                               anchor=anc, pady=7, padx=4)
+                lbl.pack(fill="both", expand=True)
                 cells.append(lbl)
+                cell_frames.append(cf)
 
             act_f = tk.Frame(row, bg=bg)
             act_f.pack(side="left", padx=4)
@@ -323,9 +350,9 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
             btn_del.pack(side="left", padx=2)
 
             # Hover effect on the entire row (including action buttons)
-            all_row_widgets = [row, act_f] + cells
+            all_row_widgets = [row, act_f] + cells + cell_frames
 
-            def _on_enter(e, widgets=all_row_widgets, hbg=bg_hover, lbgs=cells, rbg=bg):
+            def _on_enter(e, widgets=all_row_widgets, hbg=bg_hover, rbg=bg):
                 for w in widgets:
                     w.config(bg=hbg)
 
@@ -333,7 +360,7 @@ def render(tab, storage_mgr, on_open, on_compare_add, on_compare_clear, app_ref)
                 for w in widgets:
                     w.config(bg=rbg)
 
-            for w in [row] + cells:
+            for w in [row] + cells + cell_frames:
                 w.bind("<Enter>", _on_enter)
                 w.bind("<Leave>", _on_leave)
 
