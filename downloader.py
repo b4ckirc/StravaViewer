@@ -73,8 +73,8 @@ def _get_auth_code(client_id: str, progress_cb=None) -> str:
             server.handle_request()
         server.server_close()
 
-    t = threading.Thread(target=_serve, daemon=True)
-    t.start()
+    srv_thread = threading.Thread(target=_serve, daemon=True)
+    srv_thread.start()
 
     if progress_cb:
         progress_cb(t("dl_oauth_open_browser"))
@@ -89,22 +89,28 @@ def _get_auth_code(client_id: str, progress_cb=None) -> str:
     return _auth_code
 
 
-def load_token() -> dict | None:
+def load_token(mongo_storage=None) -> dict | None:
+    if mongo_storage is not None:
+        return mongo_storage.load_token()
     if os.path.exists(STRAVA_TOKEN_FILE):
         with open(STRAVA_TOKEN_FILE) as f:
             return json.load(f)
     return None
 
-def save_token(token: dict):
-    with open(STRAVA_TOKEN_FILE, "w") as f:
-        json.dump(token, f, indent=2)
+def save_token(token: dict, mongo_storage=None):
+    if mongo_storage is not None:
+        mongo_storage.save_token(token)
+    else:
+        with open(STRAVA_TOKEN_FILE, "w") as f:
+            json.dump(token, f, indent=2)
 
 
-def get_access_token(client_id: str, client_secret: str, progress_cb=None) -> str:
+def get_access_token(client_id: str, client_secret: str, progress_cb=None,
+                     mongo_storage=None) -> str:
     if not HAS_REQUESTS:
         raise RuntimeError(t("dl_requests_missing"))
 
-    token = load_token()
+    token = load_token(mongo_storage)
 
     # Valid token
     if token and token.get("expires_at", 0) > time.time() + 60:
@@ -124,7 +130,7 @@ def get_access_token(client_id: str, client_secret: str, progress_cb=None) -> st
         }, timeout=15)
         r.raise_for_status()
         token = r.json()
-        save_token(token)
+        save_token(token, mongo_storage)
         if progress_cb:
             progress_cb(t("dl_token_refreshed"))
         return token["access_token"]
@@ -141,7 +147,7 @@ def get_access_token(client_id: str, client_secret: str, progress_cb=None) -> st
     }, timeout=15)
     r.raise_for_status()
     token = r.json()
-    save_token(token)
+    save_token(token, mongo_storage)
     athlete = token.get("athlete", {})
     if progress_cb:
         name = f"{athlete.get('firstname', '')} {athlete.get('lastname', '')}".strip()

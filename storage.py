@@ -6,7 +6,7 @@ Run storage management:
 
 import os, json, subprocess, re
 from datetime import datetime
-from config import (MONGO_HOST, MONGO_PORT, MONGO_DB, MONGO_COLL, DOCKER_COMPOSE)
+from config import (MONGO_HOST, MONGO_PORT, MONGO_DB, MONGO_COLL, MONGO_TOKEN_COLL, DOCKER_COMPOSE)
 
 try:
     import pymongo
@@ -29,6 +29,20 @@ class MongoStorage:
         self._client.server_info()
         self._coll = self._client[db][coll]
         self._coll.create_index("id", unique=True, sparse=True)
+        self._token_coll = self._client[db][MONGO_TOKEN_COLL]
+
+    def save_token(self, token: dict):
+        """Upsert the Strava OAuth token (single document, key="_token")."""
+        self._token_coll.update_one(
+            {"_key": "_token"},
+            {"$set": {"_key": "_token", **token}},
+            upsert=True,
+        )
+
+    def load_token(self) -> dict | None:
+        """Return the stored Strava OAuth token, or None if absent."""
+        doc = self._token_coll.find_one({"_key": "_token"}, {"_id": 0, "_key": 0})
+        return doc if doc else None
 
     def save(self, data: dict) -> str:
         """Activity upsert. Returns the MongoDB _id as a string."""

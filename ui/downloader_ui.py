@@ -211,7 +211,8 @@ def open_download_window(parent, storage_mgr, on_done_cb=None):
                 win.after(0, log, t("dl_log_oauth_start"))
                 win.after(0, log, t("dl_log_browser_soon"))
                 token = get_access_token(cid, csc,
-                                         progress_cb=lambda m: win.after(0, log, m))
+                                         progress_cb=lambda m: win.after(0, log, m),
+                                         mongo_storage=storage_mgr.mongo_storage)
 
                 win.after(0, log, t("dl_log_fetching"))
                 runs = fetch_activity_list(token,
