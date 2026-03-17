@@ -1,6 +1,6 @@
 # ⬡ Strava Viewer 3.0
 
-Aplicación de escritorio para analizar, visualizar y comparar actividades de carrera descargadas desde Strava. Interfaz gráfica nativa (tkinter), tema claro/oscuro, soporte MongoDB y almacenamiento local JSON.
+Aplicación de escritorio para analizar, visualizar y comparar actividades de carrera descargadas desde Strava. Interfaz gráfica nativa (tkinter), tema claro/oscuro y MongoDB como único backend de almacenamiento.
 
 ---
 
@@ -11,8 +11,7 @@ Aplicación de escritorio para analizar, visualizar y comparar actividades de ca
 ## Funcionalidades
 
 ### Apertura de actividades
-- Abre un único archivo JSON exportado desde Strava mediante el botón **Abrir Archivo**
-- O descarga directamente todas tus carreras desde Strava con **Descargar desde Strava**
+- Descarga directamente todas tus carreras desde Strava con el botón **Descargar desde Strava** — las actividades se guardan en MongoDB
 
 ### Panel de control
 Resumen completo de la actividad abierta:
@@ -73,7 +72,7 @@ Lista de todas las carreras guardadas en la base de datos, con:
 - Color del ritmo **semántico**: verde < 5:00/km, amarillo < 6:30/km, rojo por encima
 - Hover sobre la fila con resaltado visual
 - Abrir actividad con 📂, agregar a la comparación con ➕, eliminar con 🗑
-- Indicador de la fuente de datos activa (MongoDB o Archivo JSON)
+- Indicador del estado de la conexión MongoDB
 
 ### Calendario
 Vista mensual de todas las carreras con navegación mes a mes:
@@ -101,12 +100,12 @@ Estadísticas agregadas sobre **todas** las carreras en la base de datos (ignora
 - **Curva de rendimiento** — gráfico log-log distancia vs tiempo sobre los mejores esfuerzos (de 400m a la maratón) con ajuste de la ley de potencia `t = A × d^b`; los tiempos usados son el `moving_time` (pausas excluidas); filtros "Últimos días" y "Solo carreras"; el exponente `b` revela el perfil atlético (velocista vs fondista, comparación con b=1,06 de Riegel); botón ℹ con teoría y guía interpretativa
 - **Predicción de rendimiento (Monte Carlo)** — estimación del tiempo sobre cualquier distancia con simulación de 5000 escenarios; parámetros configurables: distancia objetivo (estándar o personalizada en km), desnivel positivo del recorrido, ventana temporal del historial (últimos N días), longitud mínima y máxima de las carreras de las que obtener los mejores esfuerzos (km min/max), filtro solo carreras; la corrección de desnivel es personalizada: se calcula mediante regresión lineal sobre tus splits reales (seg/km por 1% de pendiente), con fallback al modelo Minetti si los datos son insuficientes; el resultado es un histograma con los percentiles P10/P25/P50/P75/P90 y un panel de diagnóstico con los datos usados en el ajuste, el coeficiente b y el tiempo base bruto; botón ℹ con guía completa sobre parámetros, cálculo e interpretación de resultados
 - **Análisis de carreras y VDOT** — analiza todas las actividades clasificadas como "Carrera" en Strava (`workout_type = 1`) y calcula para cada una el VDOT según la fórmula de Jack Daniels (índice de capacidad aeróbica derivado de distancia y tiempo reales, sin test de laboratorio); muestra tres tarjetas de estadísticas (carreras totales, mejor VDOT, VDOT más reciente), un gráfico lineal de la evolución del VDOT en el tiempo con línea discontinua en el máximo histórico, una tabla de carreras paginada (10 por página, clicable para abrir la actividad) con fecha, km, tiempo, VDOT y nombre, y una tabla de predicciones para 1K / 5K / 10K / media maratón / maratón calculadas a partir del VDOT de la última carrera registrada; botón ℹ con explicación de la fórmula, tabla de valores de referencia (principiante → élite) y guía de interpretación de las predicciones
-- **Rutas recurrentes** — detecta automáticamente las rutas que has corrido al menos 3 veces agrupando las actividades por zona de inicio (~300 m) y distancia (±1 km); para cada grupo muestra: lista desplazable con nombre más frecuente, distancia, número de carreras, período y ciudad/coordenadas; gráfico de dispersión del ritmo en el tiempo con coloración verde→rojo (más rápido→más lento), línea de tendencia discontinua, resaltado de la mejor carrera y la última; encabezado con mejor ritmo, ritmo medio e indicador de tendencia (mejorado/empeorado/estable); lista de las carreras del grupo con fecha, km, ritmo, FC y nombre, clicable para abrir la actividad; la ciudad se recupera primero de los metadatos de Strava, luego mediante geocodificación inversa Nominatim (OpenStreetMap) con caché persistente en MongoDB o archivo JSON, hilo secuencial con pausa de 1 segundo entre las solicitudes para respetar el límite de velocidad
+- **Rutas recurrentes** — detecta automáticamente las rutas que has corrido al menos 3 veces agrupando las actividades por zona de inicio (~300 m) y distancia (±1 km); para cada grupo muestra: lista desplazable con nombre más frecuente, distancia, número de carreras, período y ciudad/coordenadas; gráfico de dispersión del ritmo en el tiempo con coloración verde→rojo (más rápido→más lento), línea de tendencia discontinua, resaltado de la mejor carrera y la última; encabezado con mejor ritmo, ritmo medio e indicador de tendencia (mejorado/empeorado/estable); lista de las carreras del grupo con fecha, km, ritmo, FC y nombre, clicable para abrir la actividad; la ciudad se recupera primero de los metadatos de Strava, luego mediante geocodificación inversa Nominatim (OpenStreetMap) con caché persistente en MongoDB, hilo secuencial con pausa de 1 segundo entre las solicitudes para respetar el límite de velocidad
 
 ### Base de datos
 Desde el menú **Base de datos** en la barra superior:
 - **Exportar ZIP** — exporta todas las actividades de la base de datos en un archivo `.zip` (un archivo JSON por carrera); útil como copia de seguridad o para mover la base de datos a otra máquina
-- **Importar ZIP** — importa un archivo `.zip` previamente exportado; las actividades ya presentes se omiten (deduplicación por ID de Strava); las nuevas se guardan en JSON y, si está disponible, en MongoDB
+- **Importar ZIP** — importa un archivo `.zip` previamente exportado; las actividades ya presentes se omiten (deduplicación por ID de Strava); las nuevas se guardan en MongoDB
 - **Mapa de calor de carreras** — genera un mapa interactivo en el navegador con todas las polilíneas GPS superpuestas; fondo oscuro CartoDB, cada trazado en naranja semitransparente; tooltip con nombre y fecha al pasar el cursor
 
 ### Tema
@@ -129,8 +128,8 @@ strava_viewer/
 ├── main.py                  # Punto de entrada — inicia StravaApp
 ├── config.py                # Constantes: colores, URLs de Strava, parámetros MongoDB
 ├── models.py                # Clase ActivityData — parsing JSON Strava, propiedades calculadas
-├── storage.py               # JSONStorage y MongoStorage — guardado/lectura de actividades
-├── storage_manager.py       # Fachada: unifica JSON y MongoDB, gestiona conexión Docker
+├── storage.py               # MongoStorage — guardado/lectura de actividades en MongoDB
+├── storage_manager.py       # Fachada: gestiona conexión MongoDB e inicio de Docker
 ├── downloader.py            # OAuth2 Strava, descarga lista y detalles de actividades
 ├── docker-compose.yml       # MongoDB 7 en el puerto 27017 (inicio automático)
 └── ui/
@@ -153,14 +152,7 @@ strava_viewer/
 ```
 
 ### Almacenamiento
-La aplicación soporta dos backends de almacenamiento en paralelo, gestionados por `StorageManager`:
-
-| Backend | Formato | Ubicación predeterminada | Cuándo se usa |
-|---|---|---|---|
-| **JSONStorage** | Un archivo `.json` por carrera | `./activities/` | Siempre disponible, sin conexión |
-| **MongoStorage** | Colección MongoDB | `localhost:27017` | Si MongoDB es accesible |
-
-`StorageManager` intenta la conexión a MongoDB al inicio en un hilo en segundo plano. Si está disponible, la Biblioteca y las Estadísticas leen desde MongoDB; de lo contrario desde archivos JSON.
+La aplicación utiliza **MongoDB** como único backend de almacenamiento, gestionado por `StorageManager`. La conexión se intenta al inicio en un hilo en segundo plano; si MongoDB no está disponible, la Biblioteca y las Estadísticas permanecerán vacías hasta la conexión.
 
 ### Conexión MongoDB
 `StorageManager.connect_mongo(auto_start=True)` intenta:
@@ -214,9 +206,6 @@ python main.py
 Todos los parámetros se encuentran en `config.py`:
 
 ```python
-# Directorio de guardado de archivos JSON
-JSON_STORAGE_DIR = "activities"
-
 # MongoDB
 MONGO_URI        = "mongodb://localhost:27017"
 MONGO_DB         = "strava"
@@ -274,7 +263,6 @@ Los datos de MongoDB se guardan en un volumen Docker persistente y sobreviven a 
 |---|---|
 | `.strava_token.json` | Token OAuth de Strava (access + refresh token) |
 | `settings.json` | Preferencias de usuario locales (ej. objetivo de km anual) |
-| `strava_activities/` | Archivos JSON de las actividades descargadas |
 
 ## Uso de IA
 

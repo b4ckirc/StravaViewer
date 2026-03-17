@@ -1,6 +1,6 @@
 # ⬡ Strava Viewer 3.0
 
-Desktop application to analyze, visualize, and compare running activities downloaded from Strava. Native GUI (tkinter), light/dark theme, MongoDB support and local JSON storage.
+Desktop application to analyze, visualize, and compare running activities downloaded from Strava. Native GUI (tkinter), light/dark theme and MongoDB as the sole storage backend.
 
 ---
 
@@ -11,8 +11,7 @@ Desktop application to analyze, visualize, and compare running activities downlo
 ## Features
 
 ### Opening activities
-- Open a single JSON file exported from Strava via the **Open File** button
-- Or download all your runs directly from Strava with **Download from Strava**
+- Download all your runs directly from Strava with the **Download from Strava** button — activities are saved to MongoDB
 
 ### Dashboard
 Complete overview of the open activity:
@@ -73,7 +72,7 @@ List of all runs saved in the database, with:
 - **Semantic** pace color: green < 5:00/km, yellow < 6:30/km, red above
 - Row hover with visual highlighting
 - Open activity with 📂, add to comparison with ➕, delete with 🗑
-- Active data source indicator (MongoDB or JSON File)
+- MongoDB connection status indicator
 
 ### Calendar
 Monthly view of all runs with month-by-month navigation:
@@ -101,12 +100,12 @@ Aggregate statistics on **all** runs in the database (ignores filters and pagina
 - **Performance curve** — log-log plot of distance vs time on best efforts (from 400m to marathon) with power law fit `t = A × d^b`; times used are `moving_time` (pauses excluded); "Last days" and "Races only" filters; the exponent `b` reveals athletic profile (sprinter vs endurance runner, comparison with Riegel's b=1.06); ℹ button with theory and interpretive guide
 - **Performance prediction (Monte Carlo)** — estimate of time over any distance with simulation of 5000 scenarios; configurable parameters: target distance (standard or custom in km), positive elevation of the route, historical time window (last N days), minimum and maximum length of runs from which to retrieve best efforts (min/max km), races only filter; elevation correction is customized: calculated via linear regression on your real splits (sec/km per 1% gradient), with fallback to Minetti model if data is insufficient; the result is a histogram with P10/P25/P50/P75/P90 percentiles and a diagnostic panel with data used in the fit, the b coefficient and the raw base time; ℹ button with complete guide on parameters, calculation and interpretation of results
 - **Race analysis and VDOT** — analyzes all activities classified as "Race" on Strava (`workout_type = 1`) and calculates for each the VDOT according to Jack Daniels' formula (aerobic capacity index derived from actual distance and time, without lab testing); shows three stat cards (total races, best VDOT, most recent VDOT), a line chart of VDOT evolution over time with dashed line at historical maximum, a paginated race table (10 per page, clickable to open the activity) with date, km, time, VDOT and name, and a prediction table for 1K / 5K / 10K / half marathon / marathon calculated from the VDOT of the last recorded race; ℹ button with formula explanation, reference value table (beginner → elite) and guide to interpreting predictions
-- **Recurring routes** — automatically detects routes you have run at least 3 times by grouping activities by starting area (~300 m) and distance (±1 km); for each group shows: scrollable list with most frequent name, distance, number of runs, period and city/coordinates; scatter chart of pace over time with green→red coloring (faster→slower), dashed trend line, highlighting of the best run and the latest; header with best pace, average pace and trend indicator (improved/worsened/stable); list of group runs with date, km, pace, HR and name, clickable to open the activity; city is retrieved first from Strava metadata, then via Nominatim reverse geocoding (OpenStreetMap) with persistent cache on MongoDB or JSON file, sequential thread with 1 second pause between requests to respect rate limits
+- **Recurring routes** — automatically detects routes you have run at least 3 times by grouping activities by starting area (~300 m) and distance (±1 km); for each group shows: scrollable list with most frequent name, distance, number of runs, period and city/coordinates; scatter chart of pace over time with green→red coloring (faster→slower), dashed trend line, highlighting of the best run and the latest; header with best pace, average pace and trend indicator (improved/worsened/stable); list of group runs with date, km, pace, HR and name, clickable to open the activity; city is retrieved first from Strava metadata, then via Nominatim reverse geocoding (OpenStreetMap) with persistent cache on MongoDB, sequential thread with 1 second pause between requests to respect rate limits
 
 ### Database
 From the **Database** menu in the topbar:
 - **Export ZIP** — exports all database activities to a `.zip` archive (one JSON file per run); useful as backup or to move the database to another machine
-- **Import ZIP** — imports a previously exported `.zip` archive; activities already present are skipped (deduplication by Strava ID); new ones are saved to JSON and, if available, to MongoDB
+- **Import ZIP** — imports a previously exported `.zip` archive; activities already present are skipped (deduplication by Strava ID); new ones are saved to MongoDB
 - **Runs heatmap** — generates an interactive map in the browser with all GPS polylines overlaid; dark CartoDB background, each track in semi-transparent orange; tooltip with name and date on hover
 
 ### Theme
@@ -129,8 +128,8 @@ strava_viewer/
 ├── main.py                  # Entry point — starts StravaApp
 ├── config.py                # Constants: colors, Strava URLs, MongoDB parameters
 ├── models.py                # ActivityData class — Strava JSON parsing, computed properties
-├── storage.py               # JSONStorage and MongoStorage — activity save/read
-├── storage_manager.py       # Facade: unifies JSON and MongoDB, manages Docker connection
+├── storage.py               # MongoStorage — activity save/read on MongoDB
+├── storage_manager.py       # Facade: manages MongoDB connection and Docker startup
 ├── downloader.py            # OAuth2 Strava, download activity list and details
 ├── docker-compose.yml       # MongoDB 7 on port 27017 (automatic startup)
 └── ui/
@@ -153,14 +152,7 @@ strava_viewer/
 ```
 
 ### Storage
-The application supports two storage backends in parallel, managed by `StorageManager`:
-
-| Backend | Format | Default location | When used |
-|---|---|---|---|
-| **JSONStorage** | One `.json` file per run | `./activities/` | Always available, offline |
-| **MongoStorage** | MongoDB collection | `localhost:27017` | If MongoDB is reachable |
-
-`StorageManager` attempts the MongoDB connection at startup in a background thread. If available, Library and Statistics read from MongoDB; otherwise from JSON files.
+The application uses **MongoDB** as the sole storage backend, managed by `StorageManager`. The connection is attempted at startup in a background thread; if MongoDB is unavailable the Library and Statistics will be empty until connected.
 
 ### MongoDB Connection
 `StorageManager.connect_mongo(auto_start=True)` attempts:
@@ -214,9 +206,6 @@ python main.py
 All parameters are in `config.py`:
 
 ```python
-# JSON file save directory
-JSON_STORAGE_DIR = "activities"
-
 # MongoDB
 MONGO_URI        = "mongodb://localhost:27017"
 MONGO_DB         = "strava"
@@ -274,7 +263,6 @@ MongoDB data is saved in a persistent Docker volume and survives restarts.
 |---|---|
 | `.strava_token.json` | Strava OAuth token (access + refresh token) |
 | `settings.json` | Local user preferences (e.g. annual km goal) |
-| `strava_activities/` | JSON files of downloaded activities |
 
 ## AI Usage
 
