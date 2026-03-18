@@ -1,10 +1,60 @@
 # ── ui/tab_dashboard.py ───────────────────────────────────────────────────────
 import tkinter as tk
+import tkinter.filedialog as fd
+import tkinter.messagebox as mb
 import webbrowser
+from datetime import datetime, timedelta
 from config import C
 from models import fmt_dist, fmt_time
 from ui.widgets import StatCard, make_scrollable, section_label, clear
 from i18n import t
+
+
+def _save_gpx(a):
+    path = fd.asksaveasfilename(
+        defaultextension=".gpx",
+        filetypes=[("GPX files", "*.gpx"), ("All files", "*.*")],
+        initialfile=f"{a.name.replace(' ', '_')}.gpx",
+    )
+    if not path:
+        return
+
+    try:
+        start_dt = datetime.fromisoformat(a.start_date.replace("Z", ""))
+    except Exception:
+        start_dt = datetime.utcnow()
+
+    pts = a.gps_points
+    n = len(pts)
+    elapsed = a.elapsed_time or 0
+
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<gpx version="1.1" creator="StravaViewer"',
+        '  xmlns="http://www.topografix.com/GPX/1/1">',
+        f'  <metadata><name>{a.name}</name></metadata>',
+        "  <trk>",
+        f"    <name>{a.name}</name>",
+        f"    <type>{a.sport_type}</type>",
+        "    <trkseg>",
+    ]
+
+    for i, (lat, lon) in enumerate(pts):
+        if n > 1:
+            pt_dt = start_dt + timedelta(seconds=elapsed * i / (n - 1))
+        else:
+            pt_dt = start_dt
+        ts = pt_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        lines.append(f'      <trkpt lat="{lat:.6f}" lon="{lon:.6f}">')
+        lines.append(f"        <time>{ts}</time>")
+        lines.append("      </trkpt>")
+
+    lines += ["    </trkseg>", "  </trk>", "</gpx>"]
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+    mb.showinfo("GPX", f"Saved: {path}")
 
 
 def render(tab, activity):
@@ -28,6 +78,12 @@ def render(tab, activity):
     top_row.pack(fill="x")
     tk.Label(top_row, text=a.name, font=("Segoe UI", 17, "bold"),
              fg=C["text"], bg=C["surface"]).pack(side="left")
+    if a.gps_points:
+        tk.Button(top_row, text=t("stat_save_gpx"), font=("Segoe UI", 8, "bold"),
+                  bg=C["surface2"], fg=C["green"], bd=0, padx=10, pady=4,
+                  cursor="hand2", activebackground=C["border"], relief="flat",
+                  command=lambda: _save_gpx(a)
+                  ).pack(side="right", padx=(0, 6))
     if a.strava_id:
         tk.Button(top_row, text=t("stat_open_strava"), font=("Segoe UI", 8, "bold"),
                   bg=C["surface2"], fg=C["accent"], bd=0, padx=10, pady=4,

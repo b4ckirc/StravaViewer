@@ -198,6 +198,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
     "stat_avg_speed":        {"it": "Velocità media",  "en": "Avg speed",      "de": "Durchschnittsgeschw.","fr": "Vitesse moy.","es": "Velocidad media"},
     "stat_stops":            {"it": "Soste totali",    "en": "Total stops",    "de": "Gesamtpausen",   "fr": "Pauses totales", "es": "Paradas totales"},
     "stat_open_strava":      {"it": "🟠 Apri su Strava","en": "🟠 Open on Strava","de": "🟠 Auf Strava öffnen","fr": "🟠 Voir sur Strava","es": "🟠 Abrir en Strava"},
+    "stat_save_gpx":         {"it": "💾 Salva GPX",     "en": "💾 Save GPX",     "de": "💾 GPX speichern",   "fr": "💾 Enregistrer GPX","es": "💾 Guardar GPX"},
 
     # ── Stats tab ─────────────────────────────────────────────────────────────
     "stats_global_title":    {"it": "STATISTICHE GLOBALI",       "en": "GLOBAL STATISTICS",     "de": "GLOBALE STATISTIKEN",    "fr": "STATISTIQUES GLOBALES",  "es": "ESTADÍSTICAS GLOBALES"},
