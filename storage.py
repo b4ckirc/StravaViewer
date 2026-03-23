@@ -192,6 +192,32 @@ class MongoStorage:
             for doc in self._coll.aggregate(pipeline)
         ]
 
+    def device_stats(self) -> list[dict]:
+        """Aggregate per-device statistics (km, activities, date range)."""
+        pipeline = [
+            {"$match": {"device_name": {"$exists": True, "$type": "string", "$ne": ""}}},
+            {"$group": {
+                "_id":           "$device_name",
+                "total_km":      {"$sum": {"$divide": ["$distance", 1000]}},
+                "activity_count":{"$sum": 1},
+                "total_time":    {"$sum": "$moving_time"},
+                "first_used":    {"$min": "$start_date_local"},
+                "last_used":     {"$max": "$start_date_local"},
+            }},
+            {"$sort": {"total_km": -1}},
+        ]
+        return [
+            {
+                "name":           doc["_id"],
+                "total_km":       doc.get("total_km", 0),
+                "activity_count": doc.get("activity_count", 0),
+                "total_time":     doc.get("total_time", 0),
+                "first_used":     (doc.get("first_used") or "")[:10],
+                "last_used":      (doc.get("last_used") or "")[:10],
+            }
+            for doc in self._coll.aggregate(pipeline)
+        ]
+
     def gear_monthly_km(self) -> list[dict]:
         """Returns monthly km per gear: [{gear, month, km}]."""
         pipeline = [

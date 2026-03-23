@@ -43,6 +43,7 @@ def render(tab, storage_mgr):
     gear_list    = storage_mgr.gear_stats()
     monthly_raw  = storage_mgr.gear_monthly_km()
     gear_cfg     = storage_mgr.load_gear_settings()   # {name: {threshold, dismissed}}
+    device_list  = storage_mgr.device_stats()
 
     active       = [g for g in gear_list if not gear_cfg.get(g["name"], {}).get("dismissed", False)]
     retired      = [g for g in gear_list if     gear_cfg.get(g["name"], {}).get("dismissed", False)]
@@ -50,7 +51,7 @@ def render(tab, storage_mgr):
 
     _render_header(tab, active)
 
-    if not gear_list:
+    if not gear_list and not device_list:
         no_data(tab, t("gear_no_data"))
         return
 
@@ -71,6 +72,15 @@ def render(tab, storage_mgr):
     # ── Dismissed gear (collapsible) ──────────────────────────────────────────
     if retired:
         _render_dismissed_section(scrollable, retired, active_names, storage_mgr, _refresh)
+
+    # ── Devices ───────────────────────────────────────────────────────────────
+    section_label(scrollable, t("gear_section_devices"))
+    if device_list:
+        _render_device_cards(scrollable, device_list)
+    else:
+        tk.Label(scrollable, text=t("gear_no_devices"),
+                 font=FONT["body"], fg=C["text_dim"],
+                 bg=C["bg"]).pack(anchor="w", padx=24, pady=8)
 
     # ── Monthly chart with toggles ────────────────────────────────────────────
     if HAS_MPL and monthly_raw and active:
@@ -279,6 +289,48 @@ def _render_dismissed_section(parent, retired, active_names, storage_mgr, refres
         ]:
             tk.Label(stats_row, text=piece, font=FONT["caption"],
                      fg=fg, bg=C["surface2"]).pack(side="left", padx=(0, 16))
+
+
+# ── Device cards ─────────────────────────────────────────────────────────────
+
+_DEVICE_COLORS = ["#a371f7", "#79c0ff", "#56d364", "#ffa657", "#f78166"]
+
+
+def _render_device_cards(parent, device_list):
+    from models import fmt_time
+    for idx, dev in enumerate(device_list):
+        color = _DEVICE_COLORS[idx % len(_DEVICE_COLORS)]
+        km    = dev["total_km"]
+        count = dev["activity_count"]
+
+        card = tk.Frame(parent, bg=C["surface2"],
+                        highlightthickness=1, highlightbackground=C["border"])
+        card.pack(fill="x", padx=20, pady=6)
+
+        tk.Frame(card, bg=color, width=5).pack(side="left", fill="y")
+        body = tk.Frame(card, bg=C["surface2"])
+        body.pack(side="left", fill="both", expand=True, padx=16, pady=12)
+
+        # Row 1: device name
+        row1 = tk.Frame(body, bg=C["surface2"])
+        row1.pack(fill="x")
+        tk.Label(row1, text=f"⌚  {dev['name']}",
+                 font=("Segoe UI", 11, "bold"), fg=C["text"],
+                 bg=C["surface2"]).pack(side="left")
+
+        # Row 2: stats strip
+        stats_row = tk.Frame(body, bg=C["surface2"])
+        stats_row.pack(fill="x", pady=(8, 0))
+        period = f"{dev['first_used']} → {dev['last_used']}" if dev['first_used'] else "–"
+        total_h = fmt_time(dev["total_time"])
+        for piece, fg in [
+            (f"{km:.0f} km  {t('gear_device_total_km')}",                   color),
+            (f"{count} {t('gear_device_activities')}",                       C["blue"]),
+            (f"{t('gear_device_period')}: {period}",                         C["text_dim"]),
+            (total_h,                                                         C["text_dim"]),
+        ]:
+            tk.Label(stats_row, text=piece, font=FONT["caption"],
+                     fg=fg, bg=C["surface2"]).pack(side="left", padx=(0, 20))
 
 
 # ── Chart section (toggles + grouped bars) ───────────────────────────────────

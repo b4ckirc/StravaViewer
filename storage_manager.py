@@ -200,6 +200,14 @@ class StorageManager:
                 pass
         return []
 
+    def device_stats(self) -> list[dict]:
+        if self.mongo_ok and self.mongo_storage:
+            try:
+                return self.mongo_storage.device_stats()
+            except Exception:
+                pass
+        return []
+
     def scan_effort_names(self) -> set:
         if self.mongo_ok and self.mongo_storage:
             try:

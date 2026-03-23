@@ -1556,6 +1556,12 @@ NOTA DEL ENTRENADOR: este modelo no conoce tu estado de forma actual. Consulta e
         "es": "## Rastreador de equipamiento / zapatillas\n\nEsta sección agrega automáticamente los km por elemento de equipamiento configurado en Strava.\n\n# Cómo funciona\n\n• Los datos de equipamiento provienen directamente de las actividades de Strava descargadas.\n• Por equipamiento: km totales, número de carreras, ritmo medio, fechas de primer/último uso.\n• La barra de progreso muestra cuán cerca estás del umbral de reemplazo configurable.\n\n# Umbral de reemplazo\n\n• El valor predeterminado es 700 km, adecuado para la mayoría de las zapatillas de running.\n• Personalizable por zapatilla con el campo de texto y el botón Guardar.\n• Los umbrales se guardan en MongoDB.\n\n# Indicadores de estado\n\n• ✓ OK — menos del 80% del umbral alcanzado.\n• → Cerca del límite — entre el 80% y el 100%.\n• ⚠ Reemplazar pronto — umbral superado.\n\nNOTA: El equipamiento no aparece aquí si no se ha configurado en Strava.",
     },
 
+    "gear_section_devices":   {"it": "DISPOSITIVI",              "en": "DEVICES",               "de": "GERÄTE",                 "fr": "APPAREILS",              "es": "DISPOSITIVOS"},
+    "gear_device_activities": {"it": "attività",                 "en": "activities",            "de": "Aktivitäten",            "fr": "activités",              "es": "actividades"},
+    "gear_device_total_km":   {"it": "km totali",                "en": "total km",              "de": "Gesamt-km",              "fr": "km totaux",              "es": "km totales"},
+    "gear_device_period":     {"it": "Periodo",                  "en": "Period",                "de": "Zeitraum",               "fr": "Période",                "es": "Período"},
+    "gear_no_devices":        {"it": "Nessun dispositivo rilevato.", "en": "No devices detected.", "de": "Keine Geräte erkannt.", "fr": "Aucun appareil détecté.", "es": "No se detectaron dispositivos."},
+
     # ── Intervals tab ────────────────────────────────────────────────────────
     "tab_intervals":              {"it": "Intervalli",            "en": "Intervals",             "de": "Intervalle",             "fr": "Intervalles",            "es": "Intervalos"},
     "intervals_title":            {"it": "RILEVAMENTO INTERVALLI","en": "INTERVAL DETECTION",    "de": "INTERVALL-ERKENNUNG",    "fr": "DÉTECTION D'INTERVALLES","es": "DETECCIÓN DE INTERVALOS"},
