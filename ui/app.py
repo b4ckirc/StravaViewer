@@ -200,21 +200,58 @@ class StravaApp(tk.Tk):
         sidebar.pack(side="left", fill="y")
         sidebar.pack_propagate(False)
 
-        # ── Donation button (packed bottom-first so it stays at the bottom) ──
+        # ── Donation button pinned at bottom ──────────────────────────────────
         self._build_donate_widget(sidebar)
 
-        # Logo sidebar
-        tk.Label(sidebar, text="⬡", font=("Courier", 20, "bold"),
+        # ── Logo pinned at top ────────────────────────────────────────────────
+        top_area = tk.Frame(sidebar, bg=C["surface"])
+        top_area.pack(side="top", fill="x")
+        tk.Label(top_area, text="⬡", font=("Courier", 20, "bold"),
                  fg=C["accent"], bg=C["surface"]).pack(pady=(18, 2))
-        tk.Label(sidebar, text=f"v{APP_VERSION}",
+        tk.Label(top_area, text=f"v{APP_VERSION}",
                  font=("Segoe UI", 7), fg=C["text_dim"],
                  bg=C["surface"]).pack()
-        tk.Frame(sidebar, bg=C["border"], height=1).pack(
+        tk.Frame(top_area, bg=C["border"], height=1).pack(
             fill="x", padx=16, pady=(10, 6))
 
-        # Groups tab
+        # ── Scrollable nav area ───────────────────────────────────────────────
+        nav_outer = tk.Frame(sidebar, bg=C["surface"])
+        nav_outer.pack(side="top", fill="both", expand=True)
+
+        nav_canvas = tk.Canvas(nav_outer, bg=C["surface"], highlightthickness=0,
+                               bd=0, width=176)
+        nav_canvas.pack(side="left", fill="both", expand=True)
+
+        nav_scroll = ttk.Scrollbar(nav_outer, orient="vertical",
+                                   command=nav_canvas.yview)
+
+        nav_inner = tk.Frame(nav_canvas, bg=C["surface"])
+        nav_win = nav_canvas.create_window((0, 0), window=nav_inner, anchor="nw")
+
+        def _on_nav_configure(e):
+            nav_canvas.configure(scrollregion=nav_canvas.bbox("all"))
+            # show scrollbar only when content overflows
+            if nav_inner.winfo_reqheight() > nav_canvas.winfo_height():
+                nav_scroll.pack(side="right", fill="y")
+            else:
+                nav_scroll.pack_forget()
+
+        def _on_canvas_resize(e):
+            nav_canvas.itemconfig(nav_win, width=e.width)
+            _on_nav_configure(None)
+
+        nav_inner.bind("<Configure>", _on_nav_configure)
+        nav_canvas.bind("<Configure>", _on_canvas_resize)
+        nav_canvas.configure(yscrollcommand=nav_scroll.set)
+
+        def _on_mousewheel(e):
+            nav_canvas.yview_scroll(int(-1 * (e.delta / 120)), "units")
+        nav_canvas.bind("<MouseWheel>", _on_mousewheel)
+        nav_inner.bind("<MouseWheel>", _on_mousewheel)
+
+        # ── Nav items inside scrollable frame ─────────────────────────────────
         def _section(text):
-            tk.Label(sidebar, text=text.upper(),
+            tk.Label(nav_inner, text=text.upper(),
                      font=("Segoe UI", 7, "bold"), fg=C["text_dim"],
                      bg=C["surface"]).pack(anchor="w", padx=16, pady=(8, 2))
 
@@ -223,13 +260,13 @@ class StravaApp(tk.Tk):
         global_tabs   = [td for td in _TAB_DEFS if td[3] == "global"]
 
         for attr, icon, label_key, _ in activity_tabs:
-            self._make_nav_item(sidebar, attr, icon, t(label_key))
+            self._make_nav_item(nav_inner, attr, icon, t(label_key))
 
-        tk.Frame(sidebar, bg=C["border"], height=1).pack(
+        tk.Frame(nav_inner, bg=C["border"], height=1).pack(
             fill="x", padx=16, pady=(8, 4))
         _section(t("sidebar_database"))
         for attr, icon, label_key, _ in global_tabs:
-            self._make_nav_item(sidebar, attr, icon, t(label_key))
+            self._make_nav_item(nav_inner, attr, icon, t(label_key))
 
         # Separator sidebar / content
         tk.Frame(body, bg=C["border"], width=1).pack(side="left", fill="y")
@@ -279,10 +316,20 @@ class StravaApp(tk.Tk):
                 for w in (container, strip, icon_lbl, text_lbl):
                     w.config(bg=C["surface"])
 
+        def _mousewheel(e):
+            # bubble scroll up to the nearest Canvas ancestor
+            w = parent
+            while w is not None:
+                if isinstance(w, tk.Canvas):
+                    w.yview_scroll(int(-1 * (e.delta / 120)), "units")
+                    break
+                w = w.master
+
         for w in (container, strip, icon_lbl, text_lbl):
-            w.bind("<Button-1>", _click)
-            w.bind("<Enter>",    _enter)
-            w.bind("<Leave>",    _leave)
+            w.bind("<Button-1>",   _click)
+            w.bind("<Enter>",      _enter)
+            w.bind("<Leave>",      _leave)
+            w.bind("<MouseWheel>", _mousewheel)
 
         self._tab_buttons[attr] = (container, strip, icon_lbl, text_lbl)
 
